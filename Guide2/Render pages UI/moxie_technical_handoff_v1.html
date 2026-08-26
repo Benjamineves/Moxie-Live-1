@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moxie · Technical Handoff v1</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',system-ui,sans-serif;background:#f5f2ec;color:#0d1f35;-webkit-font-smoothing:antialiased;line-height:1.6}
+
+:root{
+  --navy:#0d1f35;--navy2:#132943;--navy-deep:#071020;
+  --gold:#c9a84c;--gold-dim:rgba(201,168,76,.12);--gold-line:rgba(201,168,76,.3);
+  --cream:#f5f2ec;--cream2:#ede9e0;--white:#fff;
+  --text:#0d1f35;--text2:#3a5068;--text3:#6b8299;--divider:rgba(13,31,53,.1);
+  --aqua-bright:#17C3B2;--aqua-lagoon:#1FA394;
+  --green-bg:#E1F5EE;--green-fg:#085041;
+  --blue-bg:#E6F1FB;--blue-fg:#0C447C;
+  --amber-bg:#FAEEDA;--amber-fg:#633806;
+  --red-bg:#FAECE7;--red-fg:#712B13;
+  --gray-bg:#F1EFE8;--gray-fg:#888780;
+  --purple-bg:#EEEDFE;--purple-fg:#3C3489;
+}
+
+/* ── LAYOUT ── */
+.page{display:grid;grid-template-columns:240px 1fr;min-height:100vh}
+@media(max-width:900px){.page{grid-template-columns:1fr}}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  background:var(--navy-deep);
+  padding:32px 20px 40px;
+  position:sticky;top:0;height:100vh;overflow-y:auto;
+  scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.1) transparent;
+}
+@media(max-width:900px){.sidebar{display:none}}
+.sidebar-logo{display:flex;align-items:center;gap:10px;margin-bottom:32px}
+.sidebar-wordmark{font-family:'Cormorant Garamond',serif;font-size:18px;font-style:italic;color:var(--white)}
+.sidebar-wordmark .m{color:var(--gold)}
+.sidebar-version{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.3);font-weight:500;margin-top:2px}
+.nav-section{margin-bottom:24px}
+.nav-section-label{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.3);font-weight:500;padding:0 4px;margin-bottom:8px}
+.nav-link{display:block;padding:7px 10px;font-size:12px;color:rgba(255,255,255,.5);text-decoration:none;border-radius:4px;transition:all .15s;font-weight:400}
+.nav-link:hover{color:rgba(255,255,255,.8);background:rgba(255,255,255,.05)}
+.nav-link.active{color:var(--gold);background:rgba(201,168,76,.1)}
+.nav-link .nav-dot{display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:8px;vertical-align:middle}
+
+/* ── MAIN CONTENT ── */
+.main{padding:48px 56px 80px;max-width:900px}
+@media(max-width:768px){.main{padding:32px 20px 60px}}
+
+/* ── TYPOGRAPHY ── */
+.doc-title{font-family:'Cormorant Garamond',serif;font-size:42px;font-weight:300;color:var(--navy);line-height:1;margin-bottom:8px}
+.doc-title em{font-style:italic;color:var(--gold)}
+.doc-subtitle{font-size:15px;color:var(--text2);font-weight:300;margin-bottom:32px;line-height:1.6}
+.doc-meta{display:flex;gap:24px;flex-wrap:wrap;padding:16px 0;border-top:1px solid var(--divider);border-bottom:1px solid var(--divider);margin-bottom:48px}
+.doc-meta-item{font-size:12px}
+.doc-meta-k{color:var(--text3);text-transform:uppercase;letter-spacing:.1em;font-size:10px;font-weight:500;display:block;margin-bottom:2px}
+.doc-meta-v{color:var(--navy);font-weight:500}
+
+h2{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;color:var(--navy);margin:48px 0 8px;padding-top:8px;border-top:1px solid var(--divider)}
+h2 em{font-style:italic;color:var(--gold)}
+h2:first-of-type{margin-top:0;border-top:none}
+h3{font-size:14px;font-weight:600;color:var(--navy);margin:28px 0 10px;letter-spacing:.02em}
+p{font-size:14px;color:var(--text2);margin-bottom:12px;font-weight:300;line-height:1.75}
+p strong{color:var(--navy);font-weight:600}
+.section-intro{font-size:15px;color:var(--text2);font-weight:300;margin-bottom:28px;line-height:1.7;padding-left:14px;border-left:2px solid var(--gold-line)}
+
+/* ── TABLES ── */
+table{width:100%;border-collapse:collapse;margin-bottom:24px;font-size:13px}
+th{text-align:left;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);font-weight:600;padding:8px 12px;background:var(--cream2);border-bottom:1px solid var(--divider)}
+td{padding:10px 12px;border-bottom:1px solid var(--divider);vertical-align:top;color:var(--text2)}
+tr:last-child td{border-bottom:none}
+td:first-child{font-weight:500;color:var(--navy);font-size:12px}
+td code{font-family:monospace;font-size:11px;background:var(--cream2);padding:2px 6px;border-radius:3px;color:var(--navy)}
+
+/* ── CODE BLOCKS ── */
+pre{background:var(--navy-deep);border-radius:0;padding:20px;overflow-x:auto;margin-bottom:20px;border-left:3px solid var(--gold-line)}
+code{font-family:'DM Mono',monospace,monospace;font-size:12px;line-height:1.6;color:#e2d9c5}
+code .key{color:var(--aqua-bright)}
+code .val{color:#dfc06a}
+code .comment{color:rgba(255,255,255,.3)}
+code .str{color:#b5d9a0}
+code .type{color:#f0a898}
+
+/* ── CALLOUT BOXES ── */
+.callout{padding:16px 18px;margin-bottom:20px;border-left:3px solid;font-size:13px;line-height:1.6}
+.callout.info{background:var(--blue-bg);border-color:var(--blue-fg);color:var(--blue-fg)}
+.callout.warn{background:var(--amber-bg);border-color:var(--amber-fg);color:var(--amber-fg)}
+.callout.go{background:var(--green-bg);border-color:var(--green-fg);color:var(--green-fg)}
+.callout strong{font-weight:700}
+.callout code{background:rgba(0,0,0,.1);color:inherit}
+
+/* ── PRIORITY BADGES ── */
+.priority{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:10px;font-size:9px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;vertical-align:middle}
+.priority.p0{background:var(--red-bg);color:var(--red-fg)}
+.priority.p1{background:var(--amber-bg);color:var(--amber-fg)}
+.priority.p2{background:var(--blue-bg);color:var(--blue-fg)}
+.priority.p3{background:var(--gray-bg);color:var(--gray-fg)}
+.priority.done{background:var(--green-bg);color:var(--green-fg)}
+
+/* Role chips */
+.role-chip{display:inline-flex;align-items:center;padding:2px 8px;border-radius:8px;font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin:1px}
+.role-chip.pub{background:var(--gray-bg);color:var(--gray-fg)}
+.role-chip.own{background:var(--amber-bg);color:var(--amber-fg)}
+.role-chip.mar{background:var(--blue-bg);color:var(--blue-fg)}
+.role-chip.cg {background:var(--red-bg);color:var(--red-fg)}
+.role-chip.all{background:var(--navy);color:var(--gold)}
+
+/* ── FILE INVENTORY ── */
+.file-card{
+  display:flex;align-items:flex-start;gap:14px;
+  padding:16px;border:1px solid var(--divider);
+  background:var(--white);margin-bottom:8px;
+}
+.file-icon{
+  width:36px;height:36px;border-radius:4px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:9px;font-weight:700;flex-shrink:0;
+}
+.file-icon.html{background:var(--blue-bg);color:var(--blue-fg)}
+.file-name{font-size:13px;font-weight:600;color:var(--navy);margin-bottom:2px}
+.file-desc{font-size:12px;color:var(--text2);font-weight:300;line-height:1.5}
+.file-tags{margin-top:6px;display:flex;gap:4px;flex-wrap:wrap}
+
+/* Divider rule */
+.rule{height:1px;background:var(--divider);margin:40px 0}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ── SIDEBAR ── -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <svg width="22" height="22" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect x="15" y="25" width="10" height="10" fill="#c9a84c"/><rect x="15" y="35" width="10" height="10" fill="#c9a84c"/><rect x="15" y="45" width="10" height="10" fill="#c9a84c"/><rect x="15" y="55" width="10" height="10" fill="#c9a84c"/><rect x="15" y="65" width="10" height="10" fill="#c9a84c"/><rect x="15" y="75" width="10" height="10" fill="#c9a84c"/>
+      <rect x="25" y="35" width="10" height="10" fill="#c9a84c"/><rect x="35" y="45" width="10" height="10" fill="#c9a84c"/><rect x="45" y="35" width="10" height="10" fill="#c9a84c"/><rect x="55" y="45" width="10" height="10" fill="#c9a84c"/><rect x="65" y="35" width="10" height="10" fill="#c9a84c"/>
+      <rect x="75" y="25" width="10" height="10" fill="#c9a84c"/><rect x="75" y="35" width="10" height="10" fill="#c9a84c"/><rect x="75" y="45" width="10" height="10" fill="#c9a84c"/><rect x="75" y="55" width="10" height="10" fill="#c9a84c"/><rect x="75" y="65" width="10" height="10" fill="#c9a84c"/><rect x="75" y="75" width="10" height="10" fill="#c9a84c"/>
+      <rect x="85" y="85" width="8" height="8" fill="#17C3B2"/>
+    </svg>
+    <div>
+      <div class="sidebar-wordmark"><span class="m">M</span>oxie</div>
+      <div class="sidebar-version">Tech Handoff · v1</div>
+    </div>
+  </div>
+
+  <div class="nav-section">
+    <div class="nav-section-label">Overview</div>
+    <a href="#files" class="nav-link"><span class="nav-dot" style="background:#c9a84c"></span>File inventory</a>
+    <a href="#architecture" class="nav-link"><span class="nav-dot" style="background:#17C3B2"></span>Architecture</a>
+    <a href="#priority" class="nav-link"><span class="nav-dot" style="background:#E8A838"></span>Build priority</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Data Model</div>
+    <a href="#data-user" class="nav-link"><span class="nav-dot" style="background:#c9a84c"></span>User / owner</a>
+    <a href="#data-vessel" class="nav-link"><span class="nav-dot" style="background:#c9a84c"></span>Vessel profile</a>
+    <a href="#data-docs" class="nav-link"><span class="nav-dot" style="background:#c9a84c"></span>Documents</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Auth &amp; Roles</div>
+    <a href="#roles" class="nav-link"><span class="nav-dot" style="background:#888780"></span>Role system</a>
+    <a href="#qr-routing" class="nav-link"><span class="nav-dot" style="background:#17C3B2"></span>QR routing</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">API</div>
+    <a href="#endpoints" class="nav-link"><span class="nav-dot" style="background:#0C447C"></span>Endpoints</a>
+    <a href="#field-map" class="nav-link"><span class="nav-dot" style="background:#0C447C"></span>Field → role map</a>
+  </div>
+  <div class="nav-section">
+    <div class="nav-section-label">Design System</div>
+    <a href="#tokens" class="nav-link"><span class="nav-dot" style="background:#c9a84c"></span>Tokens</a>
+    <a href="#assets" class="nav-link"><span class="nav-dot" style="background:#c9a84c"></span>Assets &amp; marks</a>
+    <a href="#questions" class="nav-link"><span class="nav-dot" style="background:#712B13"></span>Open questions</a>
+  </div>
+</nav>
+
+<!-- ── MAIN ── -->
+<main class="main">
+
+  <div class="doc-title"><em>Technical</em><br>Handoff.</div>
+  <div class="doc-subtitle">Everything the backend needs to implement Moxie v1 — data model, auth logic, API endpoints, field-to-role mapping, and design token reference. All HTML design files are production-quality specs ready for direct implementation.</div>
+  <div class="doc-meta">
+    <div class="doc-meta-item"><span class="doc-meta-k">Version</span><span class="doc-meta-v">1.0 · June 2025</span></div>
+    <div class="doc-meta-item"><span class="doc-meta-k">Prepared by</span><span class="doc-meta-v">Moxie Design</span></div>
+    <div class="doc-meta-item"><span class="doc-meta-k">For</span><span class="doc-meta-v">Backend / Full-stack developer</span></div>
+    <div class="doc-meta-item"><span class="doc-meta-k">Stack assumption</span><span class="doc-meta-v">Flexible — see Architecture</span></div>
+    <div class="doc-meta-item"><span class="doc-meta-k">First live profiles</span><span class="doc-meta-v">MXE-00001 (Nimbus T8), MXE-00002 (Beneteau 30.1)</span></div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════ -->
+  <h2 id="files">Design File <em>Inventory</em></h2>
+  <p class="section-intro">Seven HTML files constitute the complete v1 design system. Each is a self-contained, styled, interactive prototype ready to implement. Open each in a browser — they are the spec.</p>
+
+  <div class="file-card">
+    <div class="file-icon html">HTML</div>
+    <div>
+      <div class="file-name">moxie_homepage_v2.html</div>
+      <div class="file-desc">Marketing homepage — what someone sees when they type moxieyachting.com. Static page. No auth. Waitlist email capture form. Ticker, hero, how-it-works, role overview, contact.</div>
+      <div class="file-tags"><span class="priority done">Static</span><span class="role-chip pub">No auth required</span></div>
+    </div>
+  </div>
+
+  <div class="file-card">
+    <div class="file-icon html">HTML</div>
+    <div>
+      <div class="file-name">moxie_vessel_intake_form.html</div>
+      <div class="file-desc">4-step owner onboarding form. Collects all vessel data, uploads documents, ends with QR sticker reveal and MXE assignment. Requires owner auth. Live preview panel updates in real time.</div>
+      <div class="file-tags"><span class="priority p0">P0 — critical path</span><span class="role-chip own">Owner auth</span></div>
+    </div>
+  </div>
+
+  <div class="file-card">
+    <div class="file-icon html">HTML</div>
+    <div>
+      <div class="file-name">moxie_scan_success.html</div>
+      <div class="file-desc">Scan-confirmation animation — 2.4 second bridge between QR scan and profile load. Aqua ring pulse, Pixel M reveal, checkmark draw, vessel name flash, loading bar. Auto-redirects to profile URL with role param.</div>
+      <div class="file-tags"><span class="priority p0">P0 — critical path</span><span class="role-chip all">No auth — pre-auth</span></div>
+    </div>
+  </div>
+
+  <div class="file-card">
+    <div class="file-icon html">HTML</div>
+    <div>
+      <div class="file-name">moxie_vessel_profile_all_roles.html</div>
+      <div class="file-desc">All four role renders in one file with a demo switcher. Public, Marina Operator, Coast Guard, and Owner views of the same vessel (MXE-00001, Discovery One). This is the single most important implementation target — one URL, four conditional renders.</div>
+      <div class="file-tags"><span class="priority p0">P0 — critical path</span><span class="role-chip pub">Public</span><span class="role-chip own">Owner</span><span class="role-chip mar">Marina</span><span class="role-chip cg">CG</span></div>
+    </div>
+  </div>
+
+  <div class="file-card">
+    <div class="file-icon html">HTML</div>
+    <div>
+      <div class="file-name">moxie_vessel_profile_owner.html</div>
+      <div class="file-desc">Standalone owner profile with My Fleet switcher (both vessels — Nimbus and Beneteau), document status strip, emergency contact, documents drawer, bottom nav. Includes fleet panel bottom sheet.</div>
+      <div class="file-tags"><span class="priority p0">P0</span><span class="role-chip own">Owner auth</span></div>
+    </div>
+  </div>
+
+  <div class="file-card">
+    <div class="file-icon html">HTML</div>
+    <div>
+      <div class="file-name">moxie_qr_roles.html</div>
+      <div class="file-desc">QR role overview page — explains the four-role access model to potential customers and partners.</div>
+      <div class="file-tags"><span class="priority p2">P2</span><span class="role-chip pub">No auth</span></div>
+    </div>
+  </div>
+
+  <div class="file-card">
+    <div class="file-icon html">HTML</div>
+    <div>
+      <div class="file-name">Moxie___Brand_Guide_Complete_v1.pdf</div>
+      <div class="file-desc">Complete brand guide v1.1 — all color tokens, typography specs, Pixel M and Anchored M construction, four-role aqua system, QR sticker specs. All design decisions in the HTML files trace back to this document.</div>
+      <div class="file-tags"><span class="priority done">Reference</span></div>
+    </div>
+  </div>
+
+
+  <!-- ═══════════════════════════════════════ -->
+  <h2 id="architecture">System <em>Architecture</em></h2>
+  <p class="section-intro">The core architectural fact: one vessel profile URL, four conditional render states gated by authenticated role. Everything else follows from this.</p>
+
+  <h3>URL structure</h3>
+  <pre><code><span class="comment">-- Public (no auth, default)</span>
+moxie.sh/<span class="key">MXE-00001</span>
+
+<span class="comment">-- Scan entry point (pre-auth animation, then redirects)</span>
+moxie.sh/<span class="key">MXE-00001</span>?<span class="val">scan=1</span>
+
+<span class="comment">-- Owner (authenticated, session cookie or JWT)</span>
+moxie.sh/<span class="key">MXE-00001</span>?<span class="val">role=owner</span>
+
+<span class="comment">-- Marina operator (authenticated via marina account)</span>
+moxie.sh/<span class="key">MXE-00001</span>?<span class="val">role=marina</span>&amp;<span class="val">mid=portobello-01</span>
+
+<span class="comment">-- Coast Guard (authenticated via CG credentials)</span>
+moxie.sh/<span class="key">MXE-00001</span>?<span class="val">role=coastguard</span></code></pre>
+
+  <h3>Rendering logic (pseudocode)</h3>
+  <pre><code><span class="key">function</span> renderVesselProfile(mxeId, session) {
+  <span class="key">const</span> vessel = <span class="str">db.vessels.find(mxeId)</span>
+  <span class="key">const</span> role   = <span class="str">session?.role ?? 'public'</span>
+
+  <span class="comment">// Same data, filtered by role tier</span>
+  <span class="key">return</span> {
+    <span class="val">public</span>:     filterFields(vessel, ROLE_PUBLIC),
+    <span class="val">owner</span>:      filterFields(vessel, ROLE_OWNER),     <span class="comment">// requires vessel.ownerId === session.userId</span>
+    <span class="val">marina</span>:     filterFields(vessel, ROLE_MARINA),    <span class="comment">// requires marina auth</span>
+    <span class="val">coastguard</span>: filterFields(vessel, ROLE_CG),        <span class="comment">// requires CG auth</span>
+  }[role]
+}</code></pre>
+
+  <h3>Recommended stack</h3>
+  <p>Stack is flexible — use whatever you're comfortable with. Constraints that matter: <strong>short memorable URLs</strong> (moxie.sh/MXE-XXXXX), <strong>file storage</strong> for document uploads (S3 or equivalent), <strong>role-based JWT or session auth</strong>, and a <strong>QR code generator</strong> that can encode the scan URL. A simple Node/Express + PostgreSQL + S3 stack covers everything. A serverless approach (Vercel + Supabase + S3) would also work well and deploys fast.</p>
+
+  <div class="callout info"><strong>Note on moxie.sh vs moxieyachting.com:</strong> The short domain moxie.sh is ideal for QR codes — fewer characters = denser QR = better scan reliability. The marketing site lives at moxieyachting.com. Both can run on the same backend.</div>
+
+
+  <!-- ═══════════════════════════════════════ -->
+  <h2 id="priority">Build <em>Priority</em></h2>
+  <p class="section-intro">Ordered by what gets Ben a live, scannable profile for Discovery One as fast as possible. Each milestone is a demonstrable product moment.</p>
+
+  <table>
+    <thead><tr><th>Priority</th><th>Milestone</th><th>What it unlocks</th><th>Files needed</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><span class="priority p0">P0-A</span></td>
+        <td>Static public profile render</td>
+        <td>Scan QR → see Discovery One's public profile. First live demo.</td>
+        <td><code>moxie_vessel_profile_all_roles.html</code> (public render only), hardcoded data</td>
+      </tr>
+      <tr>
+        <td><span class="priority p0">P0-B</span></td>
+        <td>Scan-success animation → redirect</td>
+        <td>Scanning feels like a product, not a link click. Adds the Moxie brand moment.</td>
+        <td><code>moxie_scan_success.html</code>, wire <code>setTimeout → redirect</code></td>
+      </tr>
+      <tr>
+        <td><span class="priority p0">P0-C</span></td>
+        <td>Owner auth + owner profile render</td>
+        <td>Ben can log in, see his full profile, edit it. Real product for the founder.</td>
+        <td><code>moxie_vessel_profile_owner.html</code>, JWT auth, session role</td>
+      </tr>
+      <tr>
+        <td><span class="priority p0">P0-D</span></td>
+        <td>Vessel intake form → creates DB record</td>
+        <td>New vessels can be registered by owner. Second vessel (Polaris) added.</td>
+        <td><code>moxie_vessel_intake_form.html</code>, POST /vessels, file upload to S3</td>
+      </tr>
+      <tr>
+        <td><span class="priority p1">P1-A</span></td>
+        <td>Marina operator render + auth</td>
+        <td>Emery Cove pilot demo. Show harbor master what they see when they scan.</td>
+        <td>Marina accounts, <code>moxie_vessel_profile_all_roles.html</code> marina render</td>
+      </tr>
+      <tr>
+        <td><span class="priority p1">P1-B</span></td>
+        <td>QR code generation + sticker PDF</td>
+        <td>Produce the actual printable sticker file for hull placement.</td>
+        <td>QR library, sticker PDF generator, 3" × 3" 600dpi output</td>
+      </tr>
+      <tr>
+        <td><span class="priority p2">P2-A</span></td>
+        <td>Document upload + storage</td>
+        <td>Insurance cards, registration docs actually stored and accessible.</td>
+        <td>S3 bucket, signed URLs, MIME type validation</td>
+      </tr>
+      <tr>
+        <td><span class="priority p2">P2-B</span></td>
+        <td>Coast Guard render</td>
+        <td>Full compliance view. Required before any law enforcement demo.</td>
+        <td>CG auth method TBD, <code>moxie_vessel_profile_all_roles.html</code> CG render</td>
+      </tr>
+      <tr>
+        <td><span class="priority p3">P3</span></td>
+        <td>Marketing site with waitlist backend</td>
+        <td>Captures emails from moxieyachting.com. Can use a simple form service initially.</td>
+        <td><code>moxie_homepage_v2.html</code>, email capture endpoint or Mailchimp/Loops hook</td>
+      </tr>
+    </tbody>
+  </table>
+
+
+  <!-- ═══════════════════════════════════════ -->
+  <h2 id="data-user">Data Model — <em>User</em></h2>
+
+  <pre><code><span class="type">users</span> {
+  id            <span class="key">uuid</span>         PRIMARY KEY
+  email         <span class="key">text</span>         UNIQUE NOT NULL
+  phone         <span class="key">text</span>
+  full_name     <span class="key">text</span>
+  role          <span class="key">enum</span>         <span class="comment">('owner','marina_operator','coastguard','admin')</span>
+  marina_id     <span class="key">uuid</span>         REFERENCES marinas(id)   <span class="comment">-- if marina_operator</span>
+  created_at    <span class="key">timestamp</span>
+  last_login    <span class="key">timestamp</span>
+}</code></pre>
+
+  <div class="callout info"><strong>One owner, multiple vessels:</strong> The relationship is one-to-many. A user owns N vessels. Each vessel has one <code>owner_id</code> foreign key. The "My Fleet" UI queries <code>vessels WHERE owner_id = session.userId</code>.</div>
+
+
+  <!-- ═══════════════════════════════════════ -->
+  <h2 id="data-vessel">Data Model — <em>Vessel Profile</em></h2>
+
+  <pre><code><span class="type">vessels</span> {
+  <span class="comment">-- Identity</span>
+  id              <span class="key">uuid</span>        PRIMARY KEY
+  mxe_id          <span class="key">text</span>        UNIQUE  <span class="comment">-- e.g. 'MXE-00001', human-readable, used in URL</span>
+  owner_id        <span class="key">uuid</span>        REFERENCES users(id)
+
+  <span class="comment">-- Public fields (visible to all roles)</span>
+  vessel_name     <span class="key">text</span>        NOT NULL
+  vessel_type     <span class="key">text</span>        <span class="comment">-- 'Power' | 'Sail' | 'Catamaran' | 'PWC' etc</span>
+  make            <span class="key">text</span>
+  model           <span class="key">text</span>
+  year            <span class="key">integer</span>
+  length_ft       <span class="key">numeric</span>
+  draft_ft        <span class="key">numeric</span>
+  public_notes    <span class="key">text</span>        <span class="comment">-- owner-written public description</span>
+  marina_name     <span class="key">text</span>
+  marina_city     <span class="key">text</span>
+
+  <span class="comment">-- Marina-only fields</span>
+  slip_number     <span class="key">text</span>
+  marina_phone    <span class="key">text</span>
+  is_liveaboard   <span class="key">boolean</span>
+  slip_notes      <span class="key">text</span>
+  marina_id       <span class="key">uuid</span>        REFERENCES marinas(id)
+
+  <span class="comment">-- Owner + Marina fields</span>
+  owner_phone     <span class="key">text</span>
+  owner_email     <span class="key">text</span>
+  emg_name        <span class="key">text</span>
+  emg_phone       <span class="key">text</span>
+  emg_relationship<span class="key">text</span>
+
+  <span class="comment">-- Owner-only fields</span>
+  hin             <span class="key">text</span>        <span class="comment">-- also shared with CG</span>
+  engine          <span class="key">text</span>
+  fuel_type       <span class="key">text</span>
+  max_persons     <span class="key">integer</span>
+  reg_number      <span class="key">text</span>
+  reg_expiry      <span class="key">date</span>
+  ins_carrier     <span class="key">text</span>
+  ins_broker      <span class="key">text</span>
+  ins_policy      <span class="key">text</span>
+  ins_expiry      <span class="key">date</span>
+  ins_liability   <span class="key">text</span>
+
+  <span class="comment">-- Coast Guard additional</span>
+  uscg_doc_number <span class="key">text</span>
+  official_number <span class="key">text</span>
+  home_port       <span class="key">text</span>
+  flag            <span class="key">text</span>        DEFAULT 'United States'
+  lifejackets     <span class="key">integer</span>
+  fire_ext        <span class="key">text</span>
+  flares          <span class="key">text</span>
+  sound_device    <span class="key">boolean</span>
+
+  <span class="comment">-- Meta</span>
+  profile_complete<span class="key">boolean</span>     DEFAULT false
+  created_at      <span class="key">timestamp</span>
+  updated_at      <span class="key">timestamp</span>
+  photo_url       <span class="key">text</span>        <span class="comment">-- S3 URL for vessel hero photo</span>
+}</code></pre>
+
+
+  <!-- ═══════════════════════════════════════ -->
+  <h2 id="data-docs">Data Model — <em>Documents</em></h2>
+
+  <pre><code><span class="type">vessel_documents</span> {
+  id            <span class="key">uuid</span>       PRIMARY KEY
+  vessel_id     <span class="key">uuid</span>       REFERENCES vessels(id)
+  doc_type      <span class="key">enum</span>       <span class="comment">('registration','insurance','boater_card','charter','service','other')</span>
+  file_name     <span class="key">text</span>
+  file_size     <span class="key">integer</span>    <span class="comment">-- bytes</span>
+  mime_type     <span class="key">text</span>
+  s3_key        <span class="key">text</span>       <span class="comment">-- S3 object key (never exposed directly to client)</span>
+  expiry_date   <span class="key">date</span>       <span class="comment">-- drives the green/amber/red status dots</span>
+  visibility    <span class="key">enum</span>       DEFAULT 'owner' <span class="comment">('owner' | 'marina' | 'coastguard')</span>
+  uploaded_at   <span class="key">timestamp</span>
+}</code></pre>
+
+  <div class="callout warn"><strong>Document access:</strong> Never serve S3 file URLs directly. Generate signed URLs server-side with short TTLs (15 min). The client never sees the S3 key.</div>
+
+
+  <!-- ═══════════════════════════════════════ -->
+  <h2 id="roles">Auth &amp; <em>Role System</em></h2>
+  <p class="section-intro">Four roles, each with a distinct field visibility tier. A user can hold multiple roles (Ben is owner of two vessels; future marina operators are a separate account type).</p>
+
+  <table>
+    <thead><tr><th>Role</th><th>Auth method</th><th>Color accent</th><th>Field tier</th></tr></thead>
+    <tbody>
+      <tr><td><span class="role-chip pub">Public</span></td><td>None — unauthenticated default</td><td>Gray (#888780)</td><td>Vessel name, make, model, year, length, type, draft, marina name + city, public notes, Moxie badge</td></tr>
+      <tr><td><span class="role-chip own">Owner</span></td><td>Email/password or magic link. JWT with <code>role: owner</code> + <code>userId</code>. Must verify <code>vessel.owner_id === userId</code></td><td>Gold (#c9a84c)</td><td>All fields. Edit access. My Fleet switcher. Document upload/download.</td></tr>
+      <tr><td><span class="role-chip mar">Marina</span></td><td>Marina account login. JWT with <code>role: marina</code> + <code>marina_id</code>. No vessel ownership check needed.</td><td>Lagoon aqua (#1FA394)</td><td>Public + slip, marina phone, owner name/phone/email, insurance status + carrier + expiry, registration status. No policy numbers. No HIN.</td></tr>
+      <tr><td><span class="role-chip cg">Coast Guard</span></td><td>Separate CG credential system. TBD — could be a unique one-time access code per boarding, or a standing CG account. Open question (see §Open Questions).</td><td>Red (#712B13)</td><td>Everything including HIN, policy number, USCG doc number, official number, full owner contact.</td></tr>
+    </tbody>
+  </table>
+
+
+  <!-- ═══════════════════════════════════════ -->
+  <h2 id="qr-routing">QR Routing <em>Logic</em></h2>
+
+  <p>Every QR sticker encodes a single URL: <code>https://moxie.sh/MXE-00001</code>. The server handles role detection and the scan animation as follows:</p>
+
+  <pre><code><span class="comment">-- Request flow on QR scan:</span>
+
+1. Phone camera scans QR
+2. Browser navigates to moxie.sh/<span class="key">MXE-00001</span>
+
+3. Server checks session:
+   - No session or unknown role → serve <span class="val">scan_success.html</span> with vessel preview data
+                                   → after 2.4s, redirect to profile with <span class="val">role=public</span>
+   - Valid owner session         → redirect immediately to profile with <span class="val">role=owner</span>
+   - Valid marina session        → redirect immediately to profile with <span class="val">role=marina</span>
+   - Valid CG session            → redirect immediately to profile with <span class="val">role=coastguard</span>
+
+4. Profile page receives role param → renders appropriate tier
+
+<span class="comment">-- The scan animation receives minimal vessel data for the name flash:</span>
+GET /api/vessels/<span class="key">MXE-00001</span>/preview
+→ { vessel_name, make, model, year, type }  <span class="comment">-- public fields only, no auth required</span></code></pre>
+
+
+  <!-- ═══════════════════════════════════════ -->
+  <h2 id="endpoints">API <em>Endpoints</em></h2>
+
+  <table>
+    <thead><tr><th>Method + Path</th><th>Auth</th><th>Purpose</th></tr></thead>
+    <tbody>
+      <tr><td><code>GET /api/vessels/:mxeId/preview</code></td><td>None</td><td>Minimal public data for scan animation. Returns name, make, model, year, type only.</td></tr>
+      <tr><td><code>GET /api/vessels/:mxeId?role=public</code></td><td>None</td><td>Full public profile render data.</td></tr>
+      <tr><td><code>GET /api/vessels/:mxeId?role=owner</code></td><td>Owner JWT</td><td>Full owner-tier data including all private fields. Validates vessel.owner_id === user.id.</td></tr>
+      <tr><td><code>GET /api/vessels/:mxeId?role=marina</code></td><td>Marina JWT</td><td>Marina-tier data. Validates marina session.</td></tr>
+      <tr><td><code>GET /api/vessels/:mxeId?role=coastguard</code></td><td>CG auth</td><td>Full compliance data including HIN, policy numbers.</td></tr>
+      <tr><td><code>GET /api/users/:userId/fleet</code></td><td>Owner JWT</td><td>Returns array of vessels owned by user. Drives My Fleet switcher.</td></tr>
+      <tr><td><code>POST /api/vessels</code></td><td>Owner JWT</td><td>Create new vessel from intake form. Auto-assigns next MXE-XXXXX ID. Returns vessel + mxe_id.</td></tr>
+      <tr><td><code>PATCH /api/vessels/:mxeId</code></td><td>Owner JWT</td><td>Update vessel fields. Owner only.</td></tr>
+      <tr><td><code>POST /api/vessels/:mxeId/documents</code></td><td>Owner JWT</td><td>Upload document. Returns signed S3 URL for direct upload + doc record.</td></tr>
+      <tr><td><code>GET /api/vessels/:mxeId/documents/:docId</code></td><td>Owner / Marina / CG JWT</td><td>Generate signed 15-min S3 URL for document access. Role validated server-side.</td></tr>
+      <tr><td><code>GET /api/vessels/:mxeId/qr.pdf</code></td><td>Owner JWT</td><td>Generate QR sticker PDF at 600dpi, 3"×3", brand-spec colorway. Returns PDF stream.</td></tr>
+      <tr><td><code>POST /api/auth/login</code></td><td>None</td><td>Email + password or magic link. Returns JWT.</td></tr>
+      <tr><td><code>POST /api/auth/register</code></td><td>None</td><td>New owner account creation.</td></tr>
+      <tr><td><code>POST /api/waitlist</code></td><td>None</td><td>Homepage email capture. Stores email + timestamp.</td></tr>
+    </tbody>
+  </table>
+
+
+  <!-- ═══════════════════════════════════════ -->
+  <h2 id="field-map">Field → <em>Role Visibility Map</em></h2>
+  <p class="section-intro">Every field in the vessel profile, mapped to which roles can see it. This is the exact conditional logic needed for the profile render.</p>
+
+  <table>
+    <thead><tr><th>Field</th><th>Public</th><th>Owner</th><th>Marina</th><th>CG</th></tr></thead>
+    <tbody>
+      <tr><td>vessel_name</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+      <tr><td>vessel_type, make, model, year</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+      <tr><td>length_ft, draft_ft</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+      <tr><td>marina_name, marina_city</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+      <tr><td>public_notes</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+      <tr><td>mxe_id</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+      <tr><td>photo_url</td><td>✓</td><td>✓</td><td>✓</td><td>✓</td></tr>
+      <tr><td>slip_number, marina_phone</td><td>—</td><td>✓</td><td>✓</td><td>—</td></tr>
+      <tr><td>is_liveaboard, slip_notes</td><td>—</td><td>✓</td><td>✓</td><td>—</td></tr>
+      <tr><td>owner_name, owner_phone, owner_email</td><td>—</td><td>✓</td><td>✓</td><td>✓</td></tr>
+      <tr><td>emg_name, emg_phone, emg_relationship</td><td>—</td><td>✓</td><td>✓</td><td>✓</td></tr>
+      <tr><td>ins_carrier, ins_expiry (status only)</td><td>—</td><td>✓</td><td>✓ status</td><td>✓</td></tr>
+      <tr><td>ins_policy, ins_liability</td><td>—</td><td>✓</td><td>—</td><td>✓</td></tr>
+      <tr><td>ins_broker</td><td>—</td><td>✓</td><td>—</td><td>✓</td></tr>
+      <tr><td>reg_number, reg_expiry (status only)</td><td>—</td><td>✓</td><td>✓ status</td><td>✓</td></tr>
+      <tr><td>hin</td><td>—</td><td>✓ masked</td><td>—</td><td>✓ full</td></tr>
+      <tr><td>uscg_doc_number, official_number</td><td>—</td><td>✓</td><td>—</td><td>✓</td></tr>
+      <tr><td>engine, fuel_type</td><td>—</td><td>✓</td><td>—</td><td>✓</td></tr>
+      <tr><td>max_persons, lifejackets, fire_ext, flares</td><td>—</td><td>✓</td><td>—</td><td>✓</td></tr>
+      <tr><td>Documents (files)</td><td>—</td><td>✓ all</td><td>✓ insurance, registration</td><td>✓ all</td></tr>
+    </tbody>
+  </table>
+
+
+  <!-- ═══════════════════════════════════════ -->
+  <h2 id="tokens">Design System — <em>Tokens</em></h2>
+  <p class="section-intro">All CSS custom properties used across every design file. Copy this :root block into your global stylesheet — it is the single source of truth for all visual decisions.</p>
+
+  <pre><code><span class="key">:root</span> {
+  <span class="comment">/* Primary palette */</span>
+  <span class="val">--navy</span>:       <span class="str">#0d1f35</span>;  <span class="comment">/* Primary backgrounds, text, headers */</span>
+  <span class="val">--navy2</span>:      <span class="str">#132943</span>;  <span class="comment">/* Secondary dark surfaces, fleet switcher */</span>
+  <span class="val">--navy3</span>:      <span class="str">#1a3a5c</span>;  <span class="comment">/* Tertiary dark, gradient endpoints */</span>
+  <span class="val">--navy-deep</span>:  <span class="str">#071020</span>;  <span class="comment">/* QR dark cells, owner bar, footer */</span>
+  <span class="val">--gold</span>:       <span class="str">#c9a84c</span>;  <span class="comment">/* Primary accent, CTAs (on dark), marks */</span>
+  <span class="val">--gold-lt</span>:    <span class="str">#dfc06a</span>;  <span class="comment">/* Hover states, hero italic accent */</span>
+  <span class="val">--gold-dim</span>:   <span class="str">rgba(201,168,76,.15)</span>;  <span class="comment">/* Subtle tint backgrounds */</span>
+  <span class="val">--gold-line</span>:  <span class="str">rgba(201,168,76,.35)</span>;  <span class="comment">/* Borders, dividers */</span>
+
+  <span class="comment">/* Neutrals */</span>
+  <span class="val">--cream</span>:      <span class="str">#f5f2ec</span>;  <span class="comment">/* Page background, light sections */</span>
+  <span class="val">--cream2</span>:     <span class="str">#ede9e0</span>;  <span class="comment">/* Alternating section background */</span>
+  <span class="val">--white</span>:      <span class="str">#ffffff</span>;  <span class="comment">/* Profile body, form backgrounds */</span>
+  <span class="val">--divider</span>:    <span class="str">rgba(13,31,53,.1)</span>;
+
+  <span class="comment">/* Text hierarchy */</span>
+  <span class="val">--text</span>:       <span class="str">#0d1f35</span>;
+  <span class="val">--text2</span>:      <span class="str">#3a5068</span>;
+  <span class="val">--text3</span>:      <span class="str">#6b8299</span>;
+
+  <span class="comment">/* Aqua system (Brand Guide Part II) — each shade has a specific role */</span>
+  <span class="val">--aqua-bright</span>:  <span class="str">#17C3B2</span>;  <span class="comment">/* PRIMARY — CTAs, signal pixel, scan animation */</span>
+  <span class="val">--aqua-vapor</span>:   <span class="str">#13F1D1</span>;  <span class="comment">/* LIVE STATE — scan success pulse, hover states. Screen only, never print */</span>
+  <span class="val">--aqua-lagoon</span>:  <span class="str">#1FA394</span>;  <span class="comment">/* INSTITUTIONAL — marina partner pages, B2B surfaces */</span>
+  <span class="val">--aqua-abyss</span>:   <span class="str">#0B6E6A</span>;  <span class="comment">/* DEPTH — marina bar background, typography on aqua fields */</span>
+
+  <span class="comment">/* Functional role accent colors */</span>
+  <span class="val">--green-bg</span>:  <span class="str">#E1F5EE</span>;  <span class="val">--green-fg</span>:  <span class="str">#085041</span>;  <span class="comment">/* Owner / success */</span>
+  <span class="val">--blue-bg</span>:   <span class="str">#E6F1FB</span>;  <span class="val">--blue-fg</span>:   <span class="str">#0C447C</span>;  <span class="comment">/* Marina / info */</span>
+  <span class="val">--amber-bg</span>:  <span class="str">#FAEEDA</span>;  <span class="val">--amber-fg</span>:  <span class="str">#633806</span>;  <span class="comment">/* Private / warning */</span>
+  <span class="val">--red-bg</span>:    <span class="str">#FAECE7</span>;  <span class="val">--red-fg</span>:    <span class="str">#712B13</span>;  <span class="comment">/* Emergency / Coast Guard */</span>
+  <span class="val">--gray-bg</span>:   <span class="str">#F1EFE8</span>;  <span class="val">--gray-fg</span>:   <span class="str">#888780</span>;  <span class="comment">/* Public / neutral */</span>
+  <span class="val">--purple-bg</span>: <span class="str">#EEEDFE</span>;  <span class="val">--purple-fg</span>: <span class="str">#3C3489</span>;  <span class="comment">/* Admin */</span>
+}</code></pre>
+
+
+  <!-- ═══════════════════════════════════════ -->
+  <h2 id="assets">Design Assets — <em>Marks &amp; Typography</em></h2>
+
+  <h3>Pixel M (the digital signal mark)</h3>
+  <p>Used in: nav bar, owner chrome, footer, scan animation, app icon. Built as an inline SVG — no external asset needed. Two scale variants:</p>
+  <table>
+    <thead><tr><th>Size</th><th>Usage</th><th>Corner brackets</th><th>Signal pixel</th></tr></thead>
+    <tbody>
+      <tr><td>16px favicon</td><td>Browser tab</td><td>Omit</td><td>Omit</td></tr>
+      <tr><td>22–28px</td><td>Nav bar, owner bar</td><td>Include at 55% opacity</td><td>Omit</td></tr>
+      <tr><td>56px+</td><td>App icon, QR sticker, scan animation</td><td>Include</td><td>Bright Aqua #17C3B2</td></tr>
+    </tbody>
+  </table>
+  <p>The SVG source for all sizes is embedded in every HTML design file — extract from any file's <code>&lt;svg&gt;</code> block.</p>
+
+  <h3>Typography</h3>
+  <table>
+    <thead><tr><th>Font</th><th>Weights</th><th>Usage</th><th>Load via</th></tr></thead>
+    <tbody>
+      <tr><td>Cormorant Garamond</td><td>300, 300 italic, 400, 400 italic</td><td>All headings, vessel names, wordmark, hero display</td><td>Google Fonts CDN (already in all files)</td></tr>
+      <tr><td>DM Sans</td><td>300, 400, 500</td><td>All body text, labels, buttons, nav links, form inputs</td><td>Google Fonts CDN (already in all files)</td></tr>
+    </tbody>
+  </table>
+
+  <h3>QR sticker spec (for PDF generation)</h3>
+  <table>
+    <thead><tr><th>Property</th><th>Value</th></tr></thead>
+    <tbody>
+      <tr><td>Size — standard</td><td>3" × 3" at 600dpi</td></tr>
+      <tr><td>Size — premium</td><td>4" × 4" at 600dpi</td></tr>
+      <tr><td>Error correction</td><td>Level H (30% damage tolerance — critical for marine)</td></tr>
+      <tr><td>Dark cell color</td><td>#071020 (navy-deep)</td></tr>
+      <tr><td>Light cell</td><td>#c9a84c (gold) — for Navy+Gold primary colorway</td></tr>
+      <tr><td>Signal pixel (bottom-right)</td><td>#17C3B2 (aqua-bright) — 1 module</td></tr>
+      <tr><td>Corner radius</td><td>10–14px at screen resolution; rounded corners in print</td></tr>
+      <tr><td>Wordmark above QR</td><td>Cormorant Garamond, italic, 18pt — "Moxie" with gold M</td></tr>
+      <tr><td>Gold rule</td><td>#c9a84c, 0.4pt, divides QR from caption</td></tr>
+      <tr><td>Caption below rule</td><td>DM Sans Medium, 8pt, uppercase, letter-spacing .22em — "REGISTERED VESSEL / SCAN · MXE-XXXXX"</td></tr>
+      <tr><td>Substrate (print)</td><td>3M IJ180Cv3 with 8518 gloss overlaminate</td></tr>
+      <tr><td>QR library recommendation</td><td><code>qrcode</code> (npm) with SVG output, then compose sticker in <code>sharp</code> or a PDF library</td></tr>
+    </tbody>
+  </table>
+
+
+  <!-- ═══════════════════════════════════════ -->
+  <h2 id="questions">Open <em>Questions</em></h2>
+  <p class="section-intro">Items that need a decision before or during P1 build. Most don't block P0.</p>
+
+  <table>
+    <thead><tr><th>Question</th><th>Context</th><th>Blocks</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Coast Guard auth method</td>
+        <td>How does a CG officer authenticate? Options: (a) a per-vessel one-time access code generated on demand, (b) standing CG accounts provisioned by Moxie, (c) no auth but a "request access" flow that notifies the owner. Option (a) is simplest for v1.</td>
+        <td>P2-B</td>
+      </tr>
+      <tr>
+        <td>Marina operator provisioning</td>
+        <td>How does a marina get an account? Moxie admin creates it manually for v1 (Emery Cove pilot). Self-serve marina signup is a later feature.</td>
+        <td>P1-A</td>
+      </tr>
+      <tr>
+        <td>Short domain (moxie.sh)</td>
+        <td>Has this domain been acquired? QR codes benefit significantly from shorter URLs. moxieyachting.com works but produces denser QR grids.</td>
+        <td>P1-B</td>
+      </tr>
+      <tr>
+        <td>MXE ID format</td>
+        <td>Current design uses MXE-00001 through MXE-99999 (5 digits). Should this be longer to avoid guessable sequential IDs? Consider MXE-[random 6 char] instead of sequential.</td>
+        <td>P0-A</td>
+      </tr>
+      <tr>
+        <td>Boat photo upload</td>
+        <td>The vessel hero currently shows a decorative navy/gold background. Owner can upload a real boat photo. Where in the flow does this happen — during intake (Step 1) or as an edit after registration?</td>
+        <td>P0-D</td>
+      </tr>
+      <tr>
+        <td>Document expiry notifications</td>
+        <td>The red/amber/green status dots are powered by <code>expiry_date</code> fields. Should Moxie send email reminders when insurance or registration is approaching expiry? Simple scheduled job, high value for owners.</td>
+        <td>P2-A</td>
+      </tr>
+      <tr>
+        <td>Multi-owner vessels</td>
+        <td>Not in scope for v1. Ben owns both vessels outright. But charter vessels (Polaris) have complex ownership. Defer.</td>
+        <td>Future</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="callout go"><strong>Ready to build:</strong> P0-A (static public profile, hardcoded data) can be deployed in a single afternoon — just serve <code>moxie_vessel_profile_all_roles.html</code> at a real URL with the public render active. That gives Ben a live, scannable profile link to share immediately while the full backend is built.</div>
+
+  <div class="rule"></div>
+  <p style="font-size:12px;color:var(--text3);text-align:center">Moxie Marine Technology · Technical Handoff v1 · June 2025 · For internal use</p>
+
+</main>
+</div>
+
+<script>
+// Highlight active nav link on scroll
+const sections = document.querySelectorAll('[id]');
+const navLinks = document.querySelectorAll('.nav-link');
+window.addEventListener('scroll', () => {
+  let current = '';
+  sections.forEach(s => {
+    if(window.scrollY >= s.offsetTop - 80) current = s.id;
+  });
+  navLinks.forEach(a => {
+    a.classList.toggle('active', a.getAttribute('href') === '#'+current);
+  });
+});
+</nav>
+</script>
+</body>
+</html>

@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moxie — Your Boat's Digital Home</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{font-family:'DM Sans',system-ui,sans-serif;background:#f5f2ec;color:#0d1f35;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+:root{--navy:#0d1f35;--navy2:#132943;--navy3:#1a3a5c;--navy-deep:#071020;--gold:#c9a84c;--gold-lt:#dfc06a;--gold-dim:rgba(201,168,76,0.15);--gold-line:rgba(201,168,76,0.35);--cream:#f5f2ec;--cream2:#ede9e0;--white:#fff;--text:#0d1f35;--text2:#3a5068;--text3:#6b8299;--divider:rgba(13,31,53,0.1);--aqua-bright:#17C3B2;--aqua-vapor:#13F1D1;--aqua-lagoon:#1FA394;--aqua-abyss:#0B6E6A;--green-bg:#E1F5EE;--green-fg:#085041;--blue-bg:#E6F1FB;--blue-fg:#0C447C;--red-bg:#FAECE7;--red-fg:#712B13;--gray-bg:#F1EFE8;--gray-fg:#888780}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;justify-content:space-between;align-items:center;padding:20px 48px;background:rgba(245,242,236,0.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--divider);transition:padding .3s}
+.nav-brand{display:flex;align-items:center;gap:12px;text-decoration:none}
+.nav-pixel-m{width:28px;height:28px;flex-shrink:0}
+.nav-wordmark{font-family:'Cormorant Garamond',Georgia,serif;font-size:22px;font-weight:400;font-style:italic;color:var(--navy);letter-spacing:.02em}
+.nav-wordmark span{color:var(--gold)}
+.nav-links{display:flex;gap:32px;align-items:center}
+.nav-links a{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--text2);text-decoration:none;font-weight:500;transition:color .2s}
+.nav-links a:hover{color:var(--gold)}
+.nav-cta{background:var(--navy);color:var(--gold)!important;padding:9px 22px;border:1px solid var(--navy);transition:background .2s,color .2s!important}
+.nav-cta:hover{background:var(--gold)!important;color:var(--navy)!important;border-color:var(--gold)!important}
+@media(max-width:768px){nav{padding:18px 24px}.nav-links{display:none}}
+#hero{min-height:100vh;background:var(--navy);display:flex;flex-direction:column;justify-content:flex-end;position:relative;overflow:hidden}
+.hero-topbar{position:absolute;top:0;left:0;right:0;height:3px;background:var(--gold);z-index:20}
+.hero-bg-circle{position:absolute;z-index:1;border-radius:50%}
+.hero-bg-circle.gold{width:clamp(300px,45vw,600px);height:clamp(300px,45vw,600px);top:-8%;right:-5%;background:radial-gradient(circle,var(--gold) 0%,rgba(201,168,76,.7) 60%,transparent 100%);opacity:.15}
+.hero-bg-circle.aqua{width:clamp(200px,30vw,420px);height:clamp(200px,30vw,420px);bottom:-5%;left:-3%;background:radial-gradient(circle,var(--aqua-bright) 0%,rgba(23,195,178,.5) 60%,transparent 100%);opacity:.08}
+.hero-lines{position:absolute;inset:0;z-index:1;overflow:hidden}
+.hero-lines::before{content:'';position:absolute;top:-20%;left:-10%;right:-10%;bottom:-20%;background:repeating-linear-gradient(-8deg,transparent,transparent 60px,rgba(201,168,76,.02) 60px,rgba(201,168,76,.02) 61px)}
+.hero-watermark{position:absolute;bottom:-.12em;left:-.02em;z-index:2;font-family:'Cormorant Garamond',serif;font-size:clamp(140px,22vw,300px);font-weight:300;font-style:italic;color:rgba(255,255,255,.03);line-height:1;pointer-events:none;letter-spacing:-.02em;white-space:nowrap}
+.hero-content{position:relative;z-index:10;padding:0 48px 80px;max-width:1200px;animation:heroFadeUp 1s .2s both}
+@media(max-width:768px){.hero-content{padding:0 24px 64px}}
+@keyframes heroFadeUp{from{opacity:0;transform:translateY(28px)}to{opacity:1;transform:translateY(0)}}
+.hero-eyebrow{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);font-weight:400;margin-bottom:20px;display:flex;align-items:center;gap:14px}
+.hero-eyebrow::before{content:'';display:inline-block;width:32px;height:1px;background:var(--gold)}
+.hero-h1{font-family:'Cormorant Garamond',Georgia,serif;font-size:clamp(52px,8vw,110px);font-weight:300;line-height:.93;color:var(--white);letter-spacing:-.01em;margin-bottom:28px}
+.hero-h1 em{font-style:italic;color:var(--gold-lt)}
+.hero-sub{font-size:clamp(15px,1.6vw,18px);color:rgba(255,255,255,.55);font-weight:300;line-height:1.7;max-width:520px;margin-bottom:48px}
+.hero-ctas{display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+.btn-primary{display:inline-flex;align-items:center;gap:10px;background:var(--aqua-bright);color:var(--navy);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:600;padding:16px 32px;text-decoration:none;transition:background .2s,gap .2s;font-family:'DM Sans',sans-serif}
+.btn-primary:hover{background:var(--aqua-vapor);gap:16px}
+.btn-gold{background:var(--gold)!important;color:var(--navy)!important}
+.btn-gold:hover{background:var(--gold-lt)!important}
+.btn-secondary{display:inline-flex;align-items:center;gap:10px;background:transparent;color:rgba(255,255,255,.7);font-size:12px;letter-spacing:.18em;text-transform:uppercase;font-weight:500;padding:16px 0;text-decoration:none;border-bottom:1px solid rgba(255,255,255,.2);transition:color .2s,border-color .2s;font-family:'DM Sans',sans-serif}
+.btn-secondary:hover{color:var(--gold);border-color:var(--gold)}
+.hero-scroll{position:absolute;bottom:32px;right:48px;z-index:10;display:flex;flex-direction:column;align-items:center;gap:8px;animation:heroFadeUp 1s 1s both}
+.hero-scroll-line{width:1px;height:48px;background:linear-gradient(to bottom,rgba(201,168,76,.6),transparent);animation:scrollPulse 2s ease-in-out infinite}
+@keyframes scrollPulse{0%,100%{opacity:.4;transform:scaleY(1)}50%{opacity:1;transform:scaleY(1.1)}}
+.hero-scroll span{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.3);writing-mode:vertical-rl}
+.ticker{background:var(--gold);padding:11px 0;overflow:hidden;white-space:nowrap}
+.ticker-track{display:inline-flex;animation:ticker 40s linear infinite}
+.ticker-track span{font-size:10px;letter-spacing:.22em;text-transform:uppercase;font-weight:600;color:var(--navy);padding:0 32px;font-family:'DM Sans',sans-serif}
+.ticker-track .sep{color:rgba(13,31,53,.3)}
+@keyframes ticker{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+section{padding:100px 48px}
+@media(max-width:768px){section{padding:72px 24px}}
+.container{max-width:1160px;margin:0 auto}
+.section-eyebrow{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:16px;display:flex;align-items:center;gap:12px}
+.section-eyebrow::before{content:'';display:inline-block;width:24px;height:1px;background:var(--gold)}
+.fade-in{opacity:0;transform:translateY(20px);transition:opacity .6s,transform .6s}
+.fade-in.visible{opacity:1;transform:translateY(0)}
+#qr-hero{background:var(--navy);position:relative;overflow:hidden}
+#qr-hero::before{content:'';position:absolute;top:-80px;right:-80px;width:400px;height:400px;border-radius:50%;background:radial-gradient(circle,rgba(201,168,76,.08) 0%,transparent 70%)}
+.qr-hero-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center}
+@media(max-width:900px){.qr-hero-grid{grid-template-columns:1fr;gap:48px}}
+.qr-hero-text .section-eyebrow{color:var(--aqua-bright)}
+.qr-hero-text .section-eyebrow::before{background:var(--aqua-bright)}
+.qr-hero-h2{font-family:'Cormorant Garamond',serif;font-size:clamp(36px,5vw,62px);font-weight:300;line-height:1.05;color:var(--white);margin-bottom:28px}
+.qr-hero-h2 em{font-style:italic;color:var(--gold-lt)}
+.qr-hero-h2 .aq{color:var(--aqua-bright);font-style:italic}
+.qr-hero-body{font-size:15px;color:rgba(255,255,255,.55);line-height:1.8;margin-bottom:40px;max-width:480px;font-weight:300}
+.qr-sticker-showcase{display:flex;justify-content:center;align-items:center}
+.qr-sticker{width:240px;padding:24px 24px 20px;background:var(--navy);border-radius:14px;border:1px solid rgba(201,168,76,.2);box-shadow:0 24px 64px rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.05);text-align:center;position:relative}
+.qr-sticker-wordmark{font-family:'Cormorant Garamond',serif;font-size:18px;font-weight:400;font-style:italic;margin-bottom:16px;color:var(--white)}
+.qr-sticker-wordmark .m{color:var(--gold)}
+.qr-grid-art{display:grid;grid-template-columns:repeat(9,1fr);grid-template-rows:repeat(9,1fr);gap:2px;width:160px;height:160px;margin:0 auto 12px}
+.qr-grid-art .cell{border-radius:1px;transition:background .3s}
+.qr-grid-art .gd{background:var(--gold)}
+.qr-grid-art .lt{background:transparent}
+.qr-grid-art .signal{background:var(--aqua-bright);transition:all .4s ease}
+.qr-rule{width:100%;height:1px;background:var(--gold);opacity:.5;margin:12px 0 10px}
+.qr-caption{font-size:8px;letter-spacing:.22em;text-transform:uppercase;font-weight:500;color:rgba(255,255,255,.5);line-height:1.6}
+#how{background:var(--cream)}
+.how-header{margin-bottom:72px}
+.how-h2{font-family:'Cormorant Garamond',serif;font-size:clamp(36px,5vw,62px);font-weight:300;line-height:1.05;color:var(--navy)}
+.how-h2 em{font-style:italic;color:var(--gold)}
+.how-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;background:var(--divider)}
+@media(max-width:900px){.how-grid{grid-template-columns:1fr}}
+.how-card{background:var(--white);padding:48px 40px;position:relative;transition:background .3s}
+.how-card:hover{background:#fdfbf7}
+.how-num{font-family:'Cormorant Garamond',serif;font-size:72px;font-weight:300;font-style:italic;color:var(--gold-dim);line-height:1;margin-bottom:24px;transition:color .3s}
+.how-card:hover .how-num{color:rgba(201,168,76,.25)}
+.how-icon{width:40px;height:40px;margin-bottom:20px;display:flex;align-items:center;justify-content:center}
+.how-icon svg{width:28px;height:28px;stroke:var(--gold);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.how-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;color:var(--navy);margin-bottom:14px;line-height:1.2}
+.how-body{font-size:14px;color:var(--text2);line-height:1.85}
+#who{background:var(--navy);position:relative;overflow:hidden}
+#who::before{content:'';position:absolute;top:-100px;right:-100px;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(201,168,76,.06) 0%,transparent 70%)}
+.who-header{margin-bottom:64px;position:relative;z-index:2}
+.who-h2{font-family:'Cormorant Garamond',serif;font-size:clamp(36px,5vw,62px);font-weight:300;line-height:1.05;color:var(--white)}
+.who-h2 em{font-style:italic;color:var(--gold-lt)}
+.who-grid{display:grid;grid-template-columns:1fr 1fr;gap:2px;background:rgba(255,255,255,.06);position:relative;z-index:2}
+@media(max-width:800px){.who-grid{grid-template-columns:1fr}}
+.who-card{padding:48px 40px;background:rgba(255,255,255,.03);position:relative;overflow:hidden;transition:background .3s}
+.who-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--gold);transform:scaleX(0);transform-origin:left;transition:transform .4s ease}
+.who-card:hover::before{transform:scaleX(1)}
+.who-card:hover{background:rgba(255,255,255,.06)}
+.role-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;border-radius:20px;font-size:9px;letter-spacing:.16em;text-transform:uppercase;font-weight:500;margin-bottom:20px}
+.role-badge.owner{background:var(--green-bg);color:var(--green-fg)}
+.role-badge.marina{background:var(--blue-bg);color:var(--blue-fg)}
+.role-badge.public{background:var(--gray-bg);color:var(--gray-fg)}
+.role-badge.coastguard{background:var(--red-bg);color:var(--red-fg)}
+.who-card-title{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:300;color:var(--white);margin-bottom:16px;line-height:1.2}
+.who-card-body{font-size:14px;color:rgba(255,255,255,.5);line-height:1.85;margin-bottom:28px}
+.who-list{list-style:none}
+.who-list li{display:flex;align-items:flex-start;gap:12px;font-size:13px;color:rgba(255,255,255,.6);padding:8px 0;border-bottom:1px solid rgba(255,255,255,.06);line-height:1.5}
+.who-list li:last-child{border-bottom:none}
+.who-list li::before{content:'';width:4px;height:4px;border-radius:50%;background:var(--gold);flex-shrink:0;margin-top:7px}
+#profile{background:var(--cream2)}
+.profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center}
+@media(max-width:900px){.profile-grid{grid-template-columns:1fr;gap:48px}}
+.phone-mock{width:280px;height:560px;background:var(--navy);border-radius:36px;border:8px solid var(--navy2);box-shadow:0 32px 80px rgba(13,31,53,.35),0 0 0 1px rgba(255,255,255,.08);overflow:hidden;position:relative;flex-shrink:0;margin:0 auto}
+.phone-notch{width:80px;height:22px;background:var(--navy2);border-radius:0 0 14px 14px;margin:0 auto;position:relative;z-index:2}
+.phone-screen{overflow:hidden;height:calc(100% - 22px)}
+.phone-hero-section{height:180px;background:linear-gradient(160deg,var(--navy) 0%,var(--navy2) 50%,var(--navy3) 100%);display:flex;flex-direction:column;justify-content:flex-end;padding:18px;position:relative;overflow:hidden}
+.phone-hero-section::before{content:'';position:absolute;top:-30px;right:-30px;width:140px;height:140px;border-radius:50%;background:var(--gold);opacity:.9}
+.phone-moxie-tag{position:absolute;top:14px;left:18px;font-family:'Cormorant Garamond',serif;font-size:12px;font-style:italic;color:var(--gold)}
+.phone-vessel-name{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;color:#fff;font-style:italic;position:relative;z-index:1}
+.phone-vessel-model{font-size:9px;color:rgba(255,255,255,.5);letter-spacing:.12em;text-transform:uppercase;margin-top:3px;position:relative;z-index:1}
+.phone-body{padding:16px 18px;background:var(--white);height:100%}
+.phone-specs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px}
+.phone-spec-k{font-size:7px;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:2px}
+.phone-spec-v{font-size:12px;font-weight:600;color:var(--navy)}
+.phone-divider{height:1px;background:var(--divider);margin:14px 0}
+.phone-marina-row{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+.phone-marina-icon{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.phone-marina-icon svg{width:14px;height:14px;stroke:var(--gold);fill:none;stroke-width:1.5}
+.phone-marina-name{font-size:11px;font-weight:600;color:var(--navy)}
+.phone-marina-label{font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+.phone-qr-section{text-align:center;margin-top:16px}
+.phone-qr-mini{display:inline-grid;grid-template-columns:repeat(7,7px);grid-template-rows:repeat(7,7px);gap:1px;background:var(--navy);border-radius:6px;padding:8px}
+.phone-qr-mini .dk{background:var(--gold);border-radius:.5px}
+.phone-qr-mini .lt{background:rgba(255,255,255,.06);border-radius:.5px}
+.phone-qr-mini .sig{background:var(--aqua-bright);border-radius:.5px}
+.phone-scan-label{font-size:7px;letter-spacing:.16em;text-transform:uppercase;color:var(--text3);margin-top:8px;font-weight:500}
+.profile-h2{font-family:'Cormorant Garamond',serif;font-size:clamp(32px,4.5vw,52px);font-weight:300;line-height:1.1;color:var(--navy);margin-bottom:24px}
+.profile-h2 em{font-style:italic;color:var(--gold)}
+.profile-body{font-size:15px;color:var(--text2);line-height:1.8;margin-bottom:36px;font-weight:300}
+.qr-features{margin-bottom:36px}
+.qr-feature{display:flex;gap:16px;padding:16px 0;border-bottom:1px solid var(--divider)}
+.qr-feature:last-child{border-bottom:none}
+.qr-feature-icon{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.qr-feature-icon svg{width:18px;height:18px;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.qr-feature-icon.oi{background:var(--green-bg)}.qr-feature-icon.oi svg{stroke:var(--green-fg)}
+.qr-feature-icon.mi{background:var(--blue-bg)}.qr-feature-icon.mi svg{stroke:var(--blue-fg)}
+.qr-feature-icon.ci{background:var(--red-bg)}.qr-feature-icon.ci svg{stroke:var(--red-fg)}
+.qr-feature-title{font-size:14px;font-weight:500;color:var(--navy);margin-bottom:4px}
+.qr-feature-body{font-size:13px;color:var(--text2);line-height:1.6;font-weight:300}
+#contact{background:var(--cream)}
+.contact-inner{max-width:640px;margin:0 auto;text-align:center}
+.contact-eyebrow{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:16px}
+.contact-h2{font-family:'Cormorant Garamond',serif;font-size:clamp(36px,5vw,56px);font-weight:300;line-height:1.1;color:var(--navy);margin-bottom:24px}
+.contact-h2 em{font-style:italic;color:var(--gold)}
+.contact-body{font-size:15px;color:var(--text2);line-height:1.8;margin-bottom:36px;font-weight:300}
+.email-form{display:flex;gap:0;margin-bottom:16px;border:1px solid var(--divider);background:var(--white)}
+.email-input{flex:1;padding:16px 20px;border:none;background:transparent;font-family:'DM Sans',sans-serif;font-size:14px;color:var(--navy);outline:none}
+.email-input::placeholder{color:var(--text3)}
+.email-submit{background:var(--navy);color:var(--gold);border:none;padding:16px 28px;cursor:pointer;font-family:'DM Sans',sans-serif;font-size:11px;letter-spacing:.14em;text-transform:uppercase;font-weight:500;transition:background .2s}
+.email-submit:hover{background:var(--navy2)}
+.contact-note{font-size:12px;color:var(--text3);margin-bottom:48px}
+.contact-divider{height:1px;background:var(--divider);margin-bottom:36px}
+.contact-info{display:flex;gap:40px;flex-wrap:wrap;justify-content:center;text-align:left}
+.ci-label{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:4px;font-weight:500}
+.ci-val{font-size:14px;color:var(--navy)}
+.ci-val a{color:var(--navy);text-decoration:none;border-bottom:1px solid var(--divider);transition:border-color .2s}
+.ci-val a:hover{border-color:var(--gold)}
+footer{background:var(--navy-deep);padding:48px;text-align:center;border-top:1px solid rgba(201,168,76,.15)}
+.footer-brand-row{display:flex;align-items:center;justify-content:center;gap:12px;margin-bottom:20px}
+.footer-wordmark{font-family:'Cormorant Garamond',serif;font-size:18px;font-style:italic;color:var(--white)}
+.footer-wordmark .m{color:var(--gold)}
+.footer-aqua{width:8px;height:8px;background:var(--aqua-bright);display:inline-block}
+.footer-legal{font-size:11px;color:rgba(255,255,255,.35);line-height:1.6}
+</style>
+</head>
+<body>
+<nav>
+  <a href="#" class="nav-brand">
+    <svg class="nav-pixel-m" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="25" height="10" rx="1" fill="#c9a84c" opacity=".55"/><rect x="0" y="0" width="10" height="25" rx="1" fill="#c9a84c" opacity=".55"/>
+      <rect x="75" y="0" width="25" height="10" rx="1" fill="#c9a84c" opacity=".55"/><rect x="90" y="0" width="10" height="25" rx="1" fill="#c9a84c" opacity=".55"/>
+      <rect x="0" y="90" width="25" height="10" rx="1" fill="#c9a84c" opacity=".55"/><rect x="0" y="75" width="10" height="25" rx="1" fill="#c9a84c" opacity=".55"/>
+      <rect x="15" y="25" width="10" height="10" fill="#c9a84c"/><rect x="15" y="35" width="10" height="10" fill="#c9a84c"/><rect x="15" y="45" width="10" height="10" fill="#c9a84c"/><rect x="15" y="55" width="10" height="10" fill="#c9a84c"/><rect x="15" y="65" width="10" height="10" fill="#c9a84c"/><rect x="15" y="75" width="10" height="10" fill="#c9a84c"/>
+      <rect x="25" y="35" width="10" height="10" fill="#c9a84c"/><rect x="35" y="45" width="10" height="10" fill="#c9a84c"/><rect x="45" y="35" width="10" height="10" fill="#c9a84c"/><rect x="55" y="45" width="10" height="10" fill="#c9a84c"/><rect x="65" y="35" width="10" height="10" fill="#c9a84c"/>
+      <rect x="75" y="25" width="10" height="10" fill="#c9a84c"/><rect x="75" y="35" width="10" height="10" fill="#c9a84c"/><rect x="75" y="45" width="10" height="10" fill="#c9a84c"/><rect x="75" y="55" width="10" height="10" fill="#c9a84c"/><rect x="75" y="65" width="10" height="10" fill="#c9a84c"/><rect x="75" y="75" width="10" height="10" fill="#c9a84c"/>
+    </svg>
+    <span class="nav-wordmark"><span>M</span>oxie</span>
+  </a>
+  <div class="nav-links">
+    <a href="#qr-hero">The QR</a>
+    <a href="#how">How it works</a>
+    <a href="#who">Who it's for</a>
+    <a href="#contact">Contact</a>
+    <a href="#contact" class="nav-cta">Get early access</a>
+  </div>
+</nav>
+
+<section id="hero">
+  <div class="hero-topbar"></div>
+  <div class="hero-bg-circle gold"></div>
+  <div class="hero-bg-circle aqua"></div>
+  <div class="hero-lines"></div>
+  <div class="hero-watermark">Moxie</div>
+  <div class="hero-content">
+    <div class="hero-eyebrow">The digital dry bag</div>
+    <h1 class="hero-h1">Your Boat's<br><em>Digital</em> Home.</h1>
+    <p class="hero-sub">A weatherproof QR sticker on the hull. A persistent digital profile for every vessel. What people see depends on who they are.</p>
+    <div class="hero-ctas">
+      <a href="#contact" class="btn-primary">Get early access &nbsp;→</a>
+      <a href="#qr-hero" class="btn-secondary">See how it works &nbsp;→</a>
+    </div>
+  </div>
+  <div class="hero-scroll"><div class="hero-scroll-line"></div><span>Scroll</span></div>
+</section>
+
+<div class="ticker"><div class="ticker-track">
+  <span>Your boat's digital home</span><span class="sep">◆</span><span>Role-gated access</span><span class="sep">◆</span><span>Weatherproof vinyl QR</span><span class="sep">◆</span><span>Free for boat owners</span><span class="sep">◆</span><span>Emergency data for Coast Guard</span><span class="sep">◆</span><span>Marina operator tools</span><span class="sep">◆</span>
+  <span>Your boat's digital home</span><span class="sep">◆</span><span>Role-gated access</span><span class="sep">◆</span><span>Weatherproof vinyl QR</span><span class="sep">◆</span><span>Free for boat owners</span><span class="sep">◆</span><span>Emergency data for Coast Guard</span><span class="sep">◆</span><span>Marina operator tools</span><span class="sep">◆</span>
+</div></div>
+
+<section id="qr-hero">
+  <div class="container">
+    <div class="qr-hero-grid fade-in">
+      <div class="qr-hero-text">
+        <div class="section-eyebrow">The QR sticker</div>
+        <h2 class="qr-hero-h2">One sticker.<br>Every <span class="aq">identity.</span></h2>
+        <p class="qr-hero-body">A single weatherproof vinyl QR sticker goes on the stern, dock box, or companionway. Anyone with a phone can scan it. What they see depends on who they are — your personal information is never exposed to the public.</p>
+        <a href="#contact" class="btn-primary">Get your sticker free &nbsp;→</a>
+      </div>
+      <div class="qr-sticker-showcase">
+        <div class="qr-sticker">
+          <div class="qr-sticker-wordmark"><span class="m">M</span>oxie</div>
+          <div class="qr-grid-art">
+            <div class="cell gd"></div><div class="cell gd"></div><div class="cell gd"></div><div class="cell lt"></div><div class="cell gd"></div><div class="cell lt"></div><div class="cell gd"></div><div class="cell gd"></div><div class="cell gd"></div>
+            <div class="cell gd"></div><div class="cell lt"></div><div class="cell gd"></div><div class="cell gd"></div><div class="cell lt"></div><div class="cell gd"></div><div class="cell gd"></div><div class="cell lt"></div><div class="cell gd"></div>
+            <div class="cell gd"></div><div class="cell gd"></div><div class="cell gd"></div><div class="cell lt"></div><div class="cell gd"></div><div class="cell gd"></div><div class="cell gd"></div><div class="cell gd"></div><div class="cell gd"></div>
+            <div class="cell lt"></div><div class="cell lt"></div><div class="cell lt"></div><div class="cell gd"></div><div class="cell lt"></div><div class="cell gd"></div><div class="cell lt"></div><div class="cell lt"></div><div class="cell lt"></div>
+            <div class="cell gd"></div><div class="cell lt"></div><div class="cell gd"></div><div class="cell gd"></div><div class="cell gd"></div><div class="cell lt"></div><div class="cell gd"></div><div class="cell lt"></div><div class="cell gd"></div>
+            <div class="cell lt"></div><div class="cell lt"></div><div class="cell lt"></div><div class="cell gd"></div><div class="cell lt"></div><div class="cell gd"></div><div class="cell lt"></div><div class="cell lt"></div><div class="cell lt"></div>
+            <div class="cell gd"></div><div class="cell gd"></div><div class="cell gd"></div><div class="cell lt"></div><div class="cell gd"></div><div class="cell lt"></div><div class="cell gd"></div><div class="cell gd"></div><div class="cell gd"></div>
+            <div class="cell gd"></div><div class="cell lt"></div><div class="cell gd"></div><div class="cell gd"></div><div class="cell lt"></div><div class="cell gd"></div><div class="cell gd"></div><div class="cell lt"></div><div class="cell gd"></div>
+            <div class="cell gd"></div><div class="cell gd"></div><div class="cell gd"></div><div class="cell lt"></div><div class="cell gd"></div><div class="cell lt"></div><div class="cell gd"></div><div class="cell gd"></div><div class="cell signal"></div>
+          </div>
+          <div class="qr-rule"></div>
+          <div class="qr-caption">Registered vessel<br>Scan · MXE-00001</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="how">
+  <div class="container">
+    <div class="how-header fade-in">
+      <div class="section-eyebrow">How it works</div>
+      <h2 class="how-h2">Three steps.<br><em>Always working.</em></h2>
+    </div>
+    <div class="how-grid fade-in">
+      <div class="how-card">
+        <div class="how-num">01</div>
+        <div class="how-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h7v7h-7z" fill="rgba(201,168,76,0.15)"/></svg></div>
+        <h3 class="how-title">We create your vessel profile</h3>
+        <p class="how-body">Make, model, year, HIN, home marina, insurance, registration — everything in one persistent digital identity. You control what's shared and with whom.</p>
+      </div>
+      <div class="how-card">
+        <div class="how-num">02</div>
+        <div class="how-icon"><svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg></div>
+        <h3 class="how-title">Sticker goes on the boat</h3>
+        <p class="how-body">A premium weatherproof vinyl QR sticker — 3M marine-grade with gloss overlaminate. Designed to last, built to look right on a yacht.</p>
+      </div>
+      <div class="how-card">
+        <div class="how-num">03</div>
+        <div class="how-icon"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div>
+        <h3 class="how-title">Anyone can scan it</h3>
+        <p class="how-body">A marina operator sees emergency contacts. The Coast Guard sees registration. The public sees vessel specs. The owner sees everything — and can edit.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="who">
+  <div class="container">
+    <div class="who-header fade-in">
+      <div class="section-eyebrow">Who it's for</div>
+      <h2 class="who-h2">One scan.<br><em>Four audiences.</em></h2>
+    </div>
+    <div class="who-grid fade-in">
+      <div class="who-card"><span class="role-badge owner">Boat Owner</span><h3 class="who-card-title">Your boat's command center</h3><p class="who-card-body">Full read/write access to every field. Insurance docs, registration, maintenance logs — always with the boat, always current.</p><ul class="who-list"><li>Store insurance, registration, boater card</li><li>Manage who sees what</li><li>Edit from any phone — no app needed</li></ul></div>
+      <div class="who-card"><span class="role-badge marina">Marina Operator</span><h3 class="who-card-title">Every slip, verified</h3><p class="who-card-body">Emergency contacts, insurance verification, and vessel data — accessible by scanning the QR on the dock box or hull.</p><ul class="who-list"><li>Emergency contact access in seconds</li><li>Insurance verification on demand</li><li>Slip occupancy management</li></ul></div>
+      <div class="who-card"><span class="role-badge public">General Public</span><h3 class="who-card-title">Admirers welcome</h3><p class="who-card-body">Vessel specs — make, model, year, type. Nothing private. The digital equivalent of reading the name on the transom.</p><ul class="who-list"><li>Make, model, year, vessel type</li><li>No personal data exposed</li><li>Clean, beautiful profile page</li></ul></div>
+      <div class="who-card"><span class="role-badge coastguard">Coast Guard</span><h3 class="who-card-title">Boarding inspections in seconds</h3><p class="who-card-body">Registration number, expiry, HIN, and insurance — everything needed for a boarding inspection, instantly.</p><ul class="who-list"><li>Registration & HIN verification</li><li>Insurance status & expiry</li><li>Emergency & safety data</li></ul></div>
+    </div>
+  </div>
+</section>
+
+<section id="profile">
+  <div class="container">
+    <div class="profile-grid fade-in">
+      <div class="phone-mock">
+        <div class="phone-notch"></div>
+        <div class="phone-screen">
+          <div class="phone-hero-section">
+            <span class="phone-moxie-tag"><span class="m">M</span>oxie</span>
+            <div class="phone-vessel-name">Discovery One</div>
+            <div class="phone-vessel-model">2023 Nimbus T8 · Power</div>
+          </div>
+          <div class="phone-body">
+            <div class="phone-specs">
+              <div><div class="phone-spec-k">Make</div><div class="phone-spec-v">Nimbus</div></div>
+              <div><div class="phone-spec-k">Year</div><div class="phone-spec-v">2023</div></div>
+              <div><div class="phone-spec-k">Length</div><div class="phone-spec-v">26'</div></div>
+              <div><div class="phone-spec-k">Type</div><div class="phone-spec-v">Power</div></div>
+              <div><div class="phone-spec-k">Model</div><div class="phone-spec-v">T8</div></div>
+              <div><div class="phone-spec-k">HIN</div><div class="phone-spec-v">···1234</div></div>
+            </div>
+            <div class="phone-divider"></div>
+            <div class="phone-marina-row">
+              <div class="phone-marina-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></div>
+              <div><div class="phone-marina-name">Portobello Marina</div><div class="phone-marina-label">Home marina · Oakland, CA</div></div>
+            </div>
+            <div class="phone-divider"></div>
+            <div class="phone-qr-section">
+              <div class="phone-qr-mini">
+                <div class="dk"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="dk"></div>
+                <div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div>
+                <div class="dk"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="dk"></div>
+                <div class="lt"></div><div class="lt"></div><div class="lt"></div><div class="dk"></div><div class="lt"></div><div class="lt"></div><div class="lt"></div>
+                <div class="dk"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="dk"></div>
+                <div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div>
+                <div class="dk"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="sig"></div>
+              </div>
+              <div class="phone-scan-label">Scan or tap to verify</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="profile-text">
+        <div class="section-eyebrow">The vessel profile</div>
+        <h2 class="profile-h2">What people see<br>when they <em>scan.</em></h2>
+        <p class="profile-body">The mobile vessel profile is the #1 user-facing touchpoint. Clean, fast, and role-gated — it shows exactly the right information to the right person.</p>
+        <div class="qr-features">
+          <div class="qr-feature"><div class="qr-feature-icon oi"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><div><div class="qr-feature-title">Owner — full control</div><div class="qr-feature-body">Read/write access to every field. Insurance, registration, maintenance — always current.</div></div></div>
+          <div class="qr-feature"><div class="qr-feature-icon mi"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div><div><div class="qr-feature-title">Marina — emergency & insurance</div><div class="qr-feature-body">Reach any boat owner in seconds. No more paper chase.</div></div></div>
+          <div class="qr-feature"><div class="qr-feature-icon ci"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div><div class="qr-feature-title">Coast Guard — full verification</div><div class="qr-feature-body">Registration, HIN, expiry, and insurance — boarding inspections in seconds.</div></div></div>
+        </div>
+        <a href="#contact" class="btn-primary btn-gold">Create your profile &nbsp;→</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="contact">
+  <div class="container">
+    <div class="contact-inner fade-in">
+      <div class="contact-eyebrow">Early access</div>
+      <h2 class="contact-h2">Be first<br><em>on the water.</em></h2>
+      <p class="contact-body">Moxie is rolling out marina by marina across California, starting in the SF Bay Area. Join the waitlist and we'll reach out when your marina is next.</p>
+      <div class="email-form"><input class="email-input" type="email" placeholder="your@email.com"><button class="email-submit">Join waitlist</button></div>
+      <div class="contact-note">Free for boat owners · No spam · Unsubscribe anytime</div>
+      <div class="contact-divider"></div>
+      <div class="contact-info">
+        <div><div class="ci-label">Contact</div><div class="ci-val">Ben Eves</div></div>
+        <div><div class="ci-label">Email</div><div class="ci-val"><a href="mailto:ben@moxieyachting.com">ben@moxieyachting.com</a></div></div>
+        <div><div class="ci-label">Phone</div><div class="ci-val"><a href="tel:+13124650672">312-465-0672</a></div></div>
+        <div><div class="ci-label">Based in</div><div class="ci-val">Northern California</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="footer-brand-row">
+    <svg width="20" height="20" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect x="15" y="25" width="10" height="10" fill="#c9a84c"/><rect x="15" y="35" width="10" height="10" fill="#c9a84c"/><rect x="15" y="45" width="10" height="10" fill="#c9a84c"/><rect x="15" y="55" width="10" height="10" fill="#c9a84c"/><rect x="15" y="65" width="10" height="10" fill="#c9a84c"/><rect x="15" y="75" width="10" height="10" fill="#c9a84c"/>
+      <rect x="25" y="35" width="10" height="10" fill="#c9a84c"/><rect x="35" y="45" width="10" height="10" fill="#c9a84c"/><rect x="45" y="35" width="10" height="10" fill="#c9a84c"/><rect x="55" y="45" width="10" height="10" fill="#c9a84c"/><rect x="65" y="35" width="10" height="10" fill="#c9a84c"/>
+      <rect x="75" y="25" width="10" height="10" fill="#c9a84c"/><rect x="75" y="35" width="10" height="10" fill="#c9a84c"/><rect x="75" y="45" width="10" height="10" fill="#c9a84c"/><rect x="75" y="55" width="10" height="10" fill="#c9a84c"/><rect x="75" y="65" width="10" height="10" fill="#c9a84c"/><rect x="75" y="75" width="10" height="10" fill="#c9a84c"/>
+      <rect x="85" y="85" width="8" height="8" fill="#17C3B2"/>
+    </svg>
+    <span class="footer-wordmark"><span class="m">M</span>oxie</span>
+    <span class="footer-aqua"></span>
+  </div>
+  <div class="footer-legal">Ben Eves · CA Yacht Salesperson Lic. S-1-4046-0001 · © 2026 Moxie Marine Technology · moxieyachting.com</div>
+</footer>
+
+<script>
+const observer=new IntersectionObserver(e=>{e.forEach((e,i)=>{e.isIntersecting&&(setTimeout(()=>e.target.classList.add('visible'),i*80),observer.unobserve(e.target))})},{threshold:.1});
+document.querySelectorAll('.fade-in').forEach(el=>observer.observe(el));
+document.querySelector('.email-submit').addEventListener('click',()=>{const i=document.querySelector('.email-input');i.value&&i.value.includes('@')&&(i.value='',i.placeholder="You're on the list!",i.style.borderColor='rgba(23,195,178,.5)',document.querySelector('.email-submit').textContent='✓ Done',document.querySelector('.email-submit').style.background='#17C3B2')});
+const sig=document.querySelector('.qr-grid-art .signal');sig&&setInterval(()=>{sig.style.background='#13F1D1';sig.style.transform='scale(1.3)';setTimeout(()=>{sig.style.background='#17C3B2';sig.style.transform='scale(1)'},600)},3000);
+</script>
+</body>
+</html>

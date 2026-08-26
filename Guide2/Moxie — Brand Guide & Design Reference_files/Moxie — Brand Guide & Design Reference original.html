@@ -1,0 +1,1146 @@
+<!DOCTYPE html>
+<html lang="en"><head>
+<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moxie — Brand Guide &amp; Design Reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com/">
+<link href="Moxie%20%E2%80%94%20Brand%20Guide%20&amp;%20Design%20Reference_files/css2.css" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  background: #f5f2ec;
+  color: #0d1f35;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ══════════════════════════════════════════════
+   MOXIE DESIGN TOKENS — CANONICAL REFERENCE
+   ══════════════════════════════════════════════ */
+:root {
+  /* Primary Navy Scale */
+  --navy:      #0d1f35;
+  --navy2:     #132943;
+  --navy3:     #1a3a5c;
+  --navy-deep: #071020;
+
+  /* Gold Scale */
+  --gold:      #c9a84c;
+  --gold-lt:   #dfc06a;
+  --gold-dim:  rgba(201,168,76,0.15);
+  --gold-line: rgba(201,168,76,0.35);
+
+  /* Neutrals */
+  --cream:     #f5f2ec;
+  --cream2:    #ede9e0;
+  --white:     #ffffff;
+
+  /* Text Hierarchy */
+  --text:      #0d1f35;
+  --text2:     #3a5068;
+  --text3:     #6b8299;
+
+  /* Functional Accents */
+  --green-bg:  #E1F5EE;  --green-fg:  #085041;
+  --amber-bg:  #FAEEDA;  --amber-fg:  #633806;
+  --blue-bg:   #E6F1FB;  --blue-fg:   #0C447C;
+  --red-bg:    #FAECE7;  --red-fg:    #712B13;
+  --gray-bg:   #F1EFE8;  --gray-fg:   #888780;
+  --purple-bg: #EEEDFE;  --purple-fg: #3C3489;
+
+  /* Utility */
+  --divider:   rgba(13,31,53,0.1);
+  --border:    rgba(0,0,0,0.12);
+  --gold-bg:   #FDFBF4;
+  --gold-border: rgba(201,168,76,0.3);
+}
+
+/* Layout */
+.page { max-width: 900px; margin: 0 auto; padding: 60px 32px; }
+section { margin-bottom: 72px; }
+
+/* Headers */
+h1 {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 48px; font-weight: 300; font-style: italic;
+  color: var(--navy); letter-spacing: -0.01em;
+  margin-bottom: 8px;
+}
+h1 span { color: var(--gold); }
+.subtitle {
+  font-size: 13px; letter-spacing: 0.18em; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 48px;
+}
+h2 {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 32px; font-weight: 400; color: var(--navy);
+  margin-bottom: 8px; letter-spacing: -0.01em;
+}
+h2 em { font-style: italic; color: var(--gold); }
+.section-desc {
+  font-size: 14px; color: var(--text2); line-height: 1.7;
+  margin-bottom: 32px; max-width: 640px;
+}
+h3 {
+  font-size: 11px; letter-spacing: 0.16em; text-transform: uppercase;
+  color: var(--text3); font-weight: 500; margin-bottom: 16px;
+  padding-bottom: 8px; border-bottom: 1px solid var(--divider);
+}
+
+/* ── COVER ── */
+.cover {
+  background: var(--navy);
+  padding: 80px 48px;
+  margin: -60px -32px 60px;
+  position: relative; overflow: hidden;
+}
+.cover::before {
+  content: '';
+  position: absolute; top: -100px; right: -100px;
+  width: 400px; height: 400px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(201,168,76,0.08) 0%, transparent 70%);
+}
+.cover-brand {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 64px; font-weight: 300; font-style: italic;
+  color: var(--white); margin-bottom: 4px;
+}
+.cover-brand span { color: var(--gold); }
+.cover-tagline {
+  font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase;
+  color: rgba(201,168,76,0.6); margin-bottom: 40px;
+}
+.cover-title {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 28px; font-weight: 300; color: rgba(255,255,255,0.7);
+  margin-bottom: 8px;
+}
+.cover-date {
+  font-size: 12px; color: rgba(255,255,255,0.3);
+  letter-spacing: 0.08em;
+}
+
+/* ── COLOR SWATCHES ── */
+.swatch-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px; margin-bottom: 32px;
+}
+.swatch {
+  border-radius: 12px; overflow: hidden;
+  border: 1px solid var(--divider);
+  background: var(--white);
+}
+.swatch-color {
+  height: 80px;
+  display: flex; align-items: flex-end; padding: 8px 12px;
+}
+.swatch-info { padding: 12px; }
+.swatch-name { font-size: 12px; font-weight: 500; color: var(--text); margin-bottom: 2px; }
+.swatch-var { font-size: 10px; color: var(--text3); font-family: 'DM Sans', monospace; }
+.swatch-hex { font-size: 11px; color: var(--text2); font-family: 'DM Sans', monospace; font-weight: 500; }
+
+/* ── TYPOGRAPHY SAMPLES ── */
+.type-sample {
+  padding: 32px; margin-bottom: 16px;
+  border-radius: 12px; border: 1px solid var(--divider);
+  background: var(--white);
+}
+.type-sample-dark {
+  background: var(--navy); border-color: rgba(255,255,255,0.08);
+}
+.type-meta {
+  font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--text3); margin-bottom: 12px;
+}
+.type-meta-dark { color: rgba(255,255,255,0.35); }
+
+/* ── QR SAMPLES ── */
+.qr-showcase {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 24px; margin-bottom: 32px;
+}
+@media (max-width: 640px) { .qr-showcase { grid-template-columns: 1fr; } }
+.qr-card {
+  padding: 32px; text-align: center;
+  border-radius: 12px; border: 1px solid var(--divider);
+}
+.qr-card-dark { background: var(--navy); border-color: rgba(201,168,76,0.2); }
+.qr-card-cream { background: var(--cream2); }
+.qr-card-white { background: var(--white); }
+
+.qr-block {
+  display: inline-flex; flex-direction: column; align-items: center;
+  gap: 8px; margin-bottom: 16px;
+}
+.qr-grid-demo {
+  display: grid; grid-template-columns: repeat(7,10px); grid-template-rows: repeat(7,10px);
+  gap: 1.5px;
+}
+.qd { border-radius: 1px; }
+.ql { background: transparent; }
+
+.qr-label-below {
+  font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  font-weight: 500;
+}
+
+/* ── LOGO LOCKUPS ── */
+.lockup-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 24px; margin-bottom: 32px;
+}
+@media (max-width: 640px) { .lockup-grid { grid-template-columns: 1fr; } }
+.lockup-card {
+  padding: 48px 32px; text-align: center;
+  border-radius: 12px; display: flex;
+  flex-direction: column; align-items: center; justify-content: center;
+  min-height: 200px;
+}
+.lockup-dark { background: var(--navy); border: 1px solid rgba(201,168,76,0.15); }
+.lockup-cream { background: var(--cream2); border: 1px solid var(--divider); }
+.lockup-white { background: var(--white); border: 1px solid var(--divider); }
+.lockup-gold { background: var(--gold); border: 1px solid rgba(0,0,0,0.08); }
+
+.lockup-label {
+  font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase;
+  margin-top: 16px; font-weight: 500;
+}
+
+/* ── STICKER MOCKUPS ── */
+.sticker-row {
+  display: flex; gap: 32px; justify-content: center;
+  flex-wrap: wrap; margin-bottom: 32px;
+}
+.sticker-mock {
+  width: 140px; height: 140px;
+  border-radius: 14px; display: flex;
+  flex-direction: column; align-items: center;
+  justify-content: center; gap: 6px;
+  position: relative;
+}
+.sticker-navy {
+  background: var(--navy-deep);
+  border: 2px solid rgba(201,168,76,0.5);
+  box-shadow: 0 8px 24px rgba(13,31,53,0.3);
+}
+.sticker-white {
+  background: var(--white);
+  border: 2px solid var(--divider);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+}
+.sticker-gold {
+  background: var(--gold);
+  border: 2px solid rgba(0,0,0,0.1);
+  box-shadow: 0 8px 24px rgba(201,168,76,0.3);
+}
+
+/* ── BRAND CONTEXT CARD ── */
+.context-card {
+  background: var(--white);
+  border: 1px solid var(--divider);
+  border-radius: 16px; padding: 40px;
+  margin-bottom: 24px;
+}
+.context-card h4 {
+  font-family: 'Cormorant Garamond', Georgia, serif;
+  font-size: 22px; font-weight: 400; color: var(--navy);
+  margin-bottom: 12px;
+}
+.context-card h4 em { color: var(--gold); font-style: italic; }
+.context-card p {
+  font-size: 14px; color: var(--text2); line-height: 1.8;
+  margin-bottom: 16px;
+}
+.context-card p:last-child { margin-bottom: 0; }
+
+.context-highlight {
+  background: var(--gold-bg);
+  border: 1px solid var(--gold-border);
+  border-radius: 12px; padding: 24px;
+  margin-bottom: 24px;
+}
+.context-highlight p { font-size: 14px; color: var(--text); line-height: 1.7; }
+.context-highlight strong { color: var(--navy); }
+
+/* ── PHONE MOCKUP ── */
+.phone-demo-wrap {
+  display: flex; justify-content: center;
+  padding: 48px 0; margin-bottom: 32px;
+}
+.phone-mock {
+  width: 280px; height: 560px;
+  background: var(--navy);
+  border-radius: 36px;
+  border: 8px solid var(--navy2);
+  box-shadow: 0 32px 80px rgba(13,31,53,0.35), 0 0 0 1px rgba(255,255,255,0.08);
+  overflow: hidden;
+}
+.phone-notch {
+  width: 80px; height: 22px;
+  background: var(--navy2);
+  border-radius: 0 0 14px 14px;
+  margin: 0 auto;
+}
+.phone-screen { padding: 0; overflow: hidden; }
+.phone-hero-img {
+  height: 170px;
+  background: linear-gradient(135deg, #132943 0%, #1a3a5c 50%, #0f2233 100%);
+  display: flex; flex-direction: column;
+  justify-content: flex-end; padding: 16px;
+  position: relative;
+}
+.phone-hero-img::before {
+  content: '';
+  position: absolute; top: -20px; right: -20px;
+  width: 120px; height: 120px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(201,168,76,0.12) 0%, transparent 70%);
+}
+.phone-moxie-tag {
+  position: absolute; top: 14px; right: 14px;
+  color: var(--gold); font-style: italic;
+  font-family: 'Cormorant Garamond', serif; font-size: 12px;
+}
+.phone-vessel-name {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 22px; font-weight: 300; color: #fff; font-style: italic;
+}
+.phone-vessel-model {
+  font-size: 9px; color: rgba(255,255,255,0.5);
+  letter-spacing: 0.12em; text-transform: uppercase; margin-top: 2px;
+}
+.phone-body { padding: 16px; background: #fff; }
+.phone-specs {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px; margin-bottom: 14px;
+}
+.phone-spec-k {
+  font-size: 7px; text-transform: uppercase;
+  letter-spacing: 0.1em; color: #aaa; margin-bottom: 1px;
+}
+.phone-spec-v { font-size: 12px; font-weight: 600; color: var(--navy); }
+.phone-divider { height: 1px; background: #f0f0f0; margin: 14px 0; }
+.phone-marina-row {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 16px;
+}
+.phone-marina-dot {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: rgba(201,168,76,0.12);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; flex-shrink: 0;
+}
+.phone-marina-name { font-size: 11px; font-weight: 600; color: var(--navy); }
+.phone-marina-label {
+  font-size: 8px; color: #aaa;
+  text-transform: uppercase; letter-spacing: 0.08em;
+}
+.phone-qr-area {
+  width: 64px; height: 64px; margin: 8px auto 0;
+  background: var(--navy); border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  padding: 8px;
+}
+.phone-qr-grid {
+  display: grid; grid-template-columns: repeat(6,7px); grid-template-rows: repeat(6,7px);
+  gap: 1px;
+}
+.pqd { background: var(--gold); border-radius: 0.5px; }
+.pql { background: transparent; }
+
+/* ── TOKEN TABLE ── */
+.token-table {
+  width: 100%; border-collapse: collapse;
+  font-size: 13px; margin-bottom: 32px;
+}
+.token-table th {
+  text-align: left; font-size: 10px; font-weight: 600;
+  letter-spacing: 0.1em; text-transform: uppercase;
+  color: var(--text3); padding: 8px 12px;
+  border-bottom: 2px solid var(--divider);
+}
+.token-table td {
+  padding: 10px 12px; border-bottom: 1px solid var(--divider);
+  vertical-align: middle;
+}
+.token-table .tok-swatch {
+  width: 24px; height: 24px; border-radius: 6px;
+  display: inline-block; vertical-align: middle;
+  margin-right: 8px; border: 1px solid rgba(0,0,0,0.08);
+}
+.token-table code {
+  font-family: 'DM Sans', monospace; font-size: 12px;
+  background: var(--cream2); padding: 2px 6px; border-radius: 4px;
+}
+
+/* ── UTILITY ── */
+.divider-line {
+  height: 1px; background: var(--divider);
+  margin: 48px 0;
+}
+.note {
+  font-size: 12px; color: var(--text3); line-height: 1.7;
+  padding: 16px; background: var(--cream2); border-radius: 8px;
+  border-left: 3px solid var(--gold);
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ══════════════════════════════════════════════
+     COVER
+     ══════════════════════════════════════════════ -->
+<div class="cover">
+  <div class="cover-brand"><span>M</span>oxie</div>
+  <div class="cover-tagline">Your boat's digital home</div>
+  <div style="height:32px"></div>
+  <div class="cover-title">Brand Guide &amp; Design Reference</div>
+  <div class="cover-date">April 2026 · For Claude Design Import</div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     1. BRAND CONTEXT
+     ══════════════════════════════════════════════ -->
+<section id="context">
+  <h2>Brand <em>Context</em></h2>
+  <p class="section-desc">Essential brand positioning and audience context for anyone designing Moxie materials.</p>
+
+  <div class="context-highlight">
+    <p><strong>Moxie is a premium marine technology and services company</strong>
+ building the digital identity layer for yachts and vessels. The core 
+product is a QR-based "digital dry bag" — a persistent digital profile 
+for every boat, accessible by scanning a weatherproof sticker on the 
+hull. Think of it as the boat equivalent of a car's glove box, but 
+digital, always current, and role-gated by who scans it.</p>
+  </div>
+
+  <div class="context-card">
+    <h4>Who <em>we serve</em></h4>
+    <p>Moxie's primary customers are affluent yacht owners — typically 
+high-net-worth individuals who own vessels valued at $150K–$2M+. These 
+are people who expect the same digital sophistication from their boating
+ experience that they get from luxury automotive, private aviation, or 
+premium real estate. They are accustomed to brands like Hermès, Porsche,
+ and Four Seasons. Design that looks "tech startup" or "SaaS dashboard" 
+will immediately feel wrong to this audience.</p>
+    <p>Secondary customers include marina operators (enterprise B2B), 
+yacht brokerages, marine title/escrow companies, and yacht clubs. These 
+audiences expect professionalism and authority, not playfulness.</p>
+  </div>
+
+  <div class="context-card">
+    <h4>Brand <em>personality</em></h4>
+    <p><strong>Moxie should feel like a private yacht club's concierge desk, not a tech company's landing page.</strong>
+ The brand sits at the intersection of nautical heritage and modern 
+digital precision. It is confident and quiet — never shouty, never 
+gimmicky. The gold-and-navy palette evokes brass hardware, teak decks, 
+and midnight water. Typography is editorial and elegant, with serif 
+headings that feel like a luxury lifestyle magazine, not a startup pitch
+ deck.</p>
+    <p>Key brand attributes: <strong>Authoritative. Elegant. Trustworthy. Premium. Maritime.</strong></p>
+    <p>What Moxie is NOT: playful, techy, startup-y, casual, 
+minimalist-corporate, or Silicon Valley. Never use rounded sans-serif 
+logos, gradient backgrounds, or tech-bro aesthetics.</p>
+  </div>
+
+  <div class="context-card">
+    <h4>The <em>digital dry bag</em></h4>
+    <p>Moxie's signature product is the QR sticker system. A single 
+weatherproof vinyl sticker goes on the stern, dock box, or companionway 
+of a vessel. When scanned, it shows a role-gated digital profile: the 
+general public sees vessel specs, the marina operator sees emergency 
+contacts and insurance, the owner sees everything and can edit. Coast 
+Guard and first responders see critical safety data.</p>
+    <p>This QR sticker is a physical branding touchpoint that lives on 
+$200K+ yachts. It must look premium — it sits alongside the vessel's 
+name decal and hull graphics. Think of it as jewelry for the boat, not a
+ shipping label.</p>
+  </div>
+
+  <div class="context-card">
+    <h4>Geographic <em>context</em></h4>
+    <p>Moxie is headquartered in Northern California, with initial 
+deployment in the San Francisco Bay Area — specifically Emery Cove 
+Marina (Emeryville) and Sausalito/Clipper Yacht Harbor. The Bay Area 
+yachting community is affluent, environmentally conscious, and 
+tech-literate but design-discerning. Future expansion targets the 
+Pacific Northwest and Florida.</p>
+  </div>
+
+  <div class="context-card">
+    <h4>Competitive <em>positioning</em></h4>
+    <p>There is no direct competitor doing what Moxie does. The closest 
+analogs are BoatCloud (basic vessel documentation) and YachtWorld 
+(listings marketplace). Both are utilitarian and ugly. Moxie's design 
+advantage is a core differentiator — the brand should feel like it 
+belongs next to Boat International magazine, not next to a government 
+registry website.</p>
+  </div>
+</section>
+
+<div class="divider-line"></div>
+
+
+<!-- ══════════════════════════════════════════════
+     2. COLOR PALETTE
+     ══════════════════════════════════════════════ -->
+<section id="colors">
+  <h2>Color <em>Palette</em></h2>
+  <p class="section-desc">The Moxie palette is anchored in deep navy and
+ warm gold — evoking brass fittings, midnight water, and heritage yacht 
+clubs. Extended with warm creams and functional accent colors.</p>
+
+  <h3>Primary Colors</h3>
+  <div class="swatch-grid">
+    <div class="swatch">
+      <div class="swatch-color" style="background:#0d1f35;"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Navy (Primary)</div>
+        <div class="swatch-hex">#0d1f35</div>
+        <div class="swatch-var">--navy</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#132943;"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Navy 2</div>
+        <div class="swatch-hex">#132943</div>
+        <div class="swatch-var">--navy2</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#1a3a5c;"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Navy 3</div>
+        <div class="swatch-hex">#1a3a5c</div>
+        <div class="swatch-var">--navy3</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#071020;"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Navy Deep</div>
+        <div class="swatch-hex">#071020</div>
+        <div class="swatch-var">--navy-deep</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#c9a84c;"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Gold (Primary)</div>
+        <div class="swatch-hex">#c9a84c</div>
+        <div class="swatch-var">--gold</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#dfc06a;"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Gold Light</div>
+        <div class="swatch-hex">#dfc06a</div>
+        <div class="swatch-var">--gold-lt</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Neutral Backgrounds</h3>
+  <div class="swatch-grid">
+    <div class="swatch">
+      <div class="swatch-color" style="background:#f5f2ec; border-bottom:1px solid var(--divider);"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Cream</div>
+        <div class="swatch-hex">#f5f2ec</div>
+        <div class="swatch-var">--cream</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#ede9e0; border-bottom:1px solid var(--divider);"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Cream 2</div>
+        <div class="swatch-hex">#ede9e0</div>
+        <div class="swatch-var">--cream2</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#ffffff; border-bottom:1px solid var(--divider);"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">White</div>
+        <div class="swatch-hex">#ffffff</div>
+        <div class="swatch-var">--white</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Text Hierarchy</h3>
+  <div class="swatch-grid">
+    <div class="swatch">
+      <div class="swatch-color" style="background:#0d1f35;"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Text Primary</div>
+        <div class="swatch-hex">#0d1f35</div>
+        <div class="swatch-var">--text</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#3a5068;"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Text Secondary</div>
+        <div class="swatch-hex">#3a5068</div>
+        <div class="swatch-var">--text2</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#6b8299;"></div>
+      <div class="swatch-info">
+        <div class="swatch-name">Text Tertiary</div>
+        <div class="swatch-hex">#6b8299</div>
+        <div class="swatch-var">--text3</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Functional Accent Colors</h3>
+  <div class="swatch-grid">
+    <div class="swatch">
+      <div class="swatch-color" style="background:#E1F5EE;"><span style="font-size:11px;font-weight:600;color:#085041;">Owner / Success</span></div>
+      <div class="swatch-info">
+        <div class="swatch-hex">#E1F5EE bg · #085041 fg</div>
+        <div class="swatch-var">--green-bg / --green-fg</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#E6F1FB;"><span style="font-size:11px;font-weight:600;color:#0C447C;">Marina / Info</span></div>
+      <div class="swatch-info">
+        <div class="swatch-hex">#E6F1FB bg · #0C447C fg</div>
+        <div class="swatch-var">--blue-bg / --blue-fg</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#FAEEDA;"><span style="font-size:11px;font-weight:600;color:#633806;">Warning / Private</span></div>
+      <div class="swatch-info">
+        <div class="swatch-hex">#FAEEDA bg · #633806 fg</div>
+        <div class="swatch-var">--amber-bg / --amber-fg</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#FAECE7;"><span style="font-size:11px;font-weight:600;color:#712B13;">Emergency / Coast Guard</span></div>
+      <div class="swatch-info">
+        <div class="swatch-hex">#FAECE7 bg · #712B13 fg</div>
+        <div class="swatch-var">--red-bg / --red-fg</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#EEEDFE;"><span style="font-size:11px;font-weight:600;color:#3C3489;">Admin</span></div>
+      <div class="swatch-info">
+        <div class="swatch-hex">#EEEDFE bg · #3C3489 fg</div>
+        <div class="swatch-var">--purple-bg / --purple-fg</div>
+      </div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-color" style="background:#F1EFE8;"><span style="font-size:11px;font-weight:600;color:#888780;">Public / Neutral</span></div>
+      <div class="swatch-info">
+        <div class="swatch-hex">#F1EFE8 bg · #888780 fg</div>
+        <div class="swatch-var">--gray-bg / --gray-fg</div>
+      </div>
+    </div>
+  </div>
+
+  <h3>Complete Token Table</h3>
+  <table class="token-table">
+    <thead>
+      <tr><th>Token</th><th>Value</th><th>Usage</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><code>--navy</code></td><td><span class="tok-swatch" style="background:#0d1f35;"></span>#0d1f35</td><td>Primary backgrounds, text, headers</td></tr>
+      <tr><td><code>--navy2</code></td><td><span class="tok-swatch" style="background:#132943;"></span>#132943</td><td>Secondary dark surfaces, card backgrounds</td></tr>
+      <tr><td><code>--navy3</code></td><td><span class="tok-swatch" style="background:#1a3a5c;"></span>#1a3a5c</td><td>Tertiary dark, gradient endpoints</td></tr>
+      <tr><td><code>--navy-deep</code></td><td><span class="tok-swatch" style="background:#071020;"></span>#071020</td><td>QR code dark cells, deepest background</td></tr>
+      <tr><td><code>--gold</code></td><td><span class="tok-swatch" style="background:#c9a84c;"></span>#c9a84c</td><td>Primary accent, CTAs, QR cells, highlights</td></tr>
+      <tr><td><code>--gold-lt</code></td><td><span class="tok-swatch" style="background:#dfc06a;"></span>#dfc06a</td><td>Hover states, lighter accents</td></tr>
+      <tr><td><code>--gold-dim</code></td><td><span class="tok-swatch" style="background:rgba(201,168,76,0.15);border:1px solid rgba(201,168,76,0.3);"></span>rgba(201,168,76,0.15)</td><td>Subtle gold tint backgrounds</td></tr>
+      <tr><td><code>--gold-line</code></td><td><span class="tok-swatch" style="background:rgba(201,168,76,0.35);"></span>rgba(201,168,76,0.35)</td><td>Decorative lines, borders</td></tr>
+      <tr><td><code>--cream</code></td><td><span class="tok-swatch" style="background:#f5f2ec;border:1px solid #ddd;"></span>#f5f2ec</td><td>Page background, light sections</td></tr>
+      <tr><td><code>--cream2</code></td><td><span class="tok-swatch" style="background:#ede9e0;border:1px solid #ddd;"></span>#ede9e0</td><td>Alternating section background</td></tr>
+      <tr><td><code>--divider</code></td><td>rgba(13,31,53,0.1)</td><td>Lines, borders, separators</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<div class="divider-line"></div>
+
+
+<!-- ══════════════════════════════════════════════
+     3. TYPOGRAPHY
+     ══════════════════════════════════════════════ -->
+<section id="typography">
+  <h2>Typography</h2>
+  <p class="section-desc">Moxie uses two typefaces: Cormorant Garamond 
+for display/editorial headings and DM Sans for body/UI text. The pairing
+ creates a luxury editorial feel — think Boat International, not 
+TechCrunch.</p>
+
+  <h3>Display — Cormorant Garamond</h3>
+  <div class="note" style="margin-bottom:24px;">
+    Google Fonts: <code>Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400</code><br>
+    Fallback stack: <code>'Cormorant Garamond', Georgia, serif</code>
+  </div>
+
+  <div class="type-sample">
+    <div class="type-meta">Light 300 · 48px · Hero headlines</div>
+    <div style="font-family:'Cormorant Garamond',serif; font-size:48px; font-weight:300; color:var(--navy); line-height:1.05;">
+      Your Boat's Digital Home
+    </div>
+  </div>
+
+  <div class="type-sample">
+    <div class="type-meta">Light 300 Italic · 48px · Headlines with gold accent</div>
+    <div style="font-family:'Cormorant Garamond',serif; font-size:48px; font-weight:300; font-style:italic; color:var(--navy); line-height:1.05;">
+      Every vessel deserves <span style="color:var(--gold);">an identity.</span>
+    </div>
+  </div>
+
+  <div class="type-sample type-sample-dark">
+    <div class="type-meta type-meta-dark">Light 300 · 36px · Section headings on dark</div>
+    <div style="font-family:'Cormorant Garamond',serif; font-size:36px; font-weight:300; color:#fff; line-height:1.1;">
+      On the boat. <em style="color:var(--gold-lt);">Always working.</em>
+    </div>
+  </div>
+
+  <div class="type-sample">
+    <div class="type-meta">Regular 400 Italic · 22px · Wordmark / brand name</div>
+    <div style="font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:400; font-style:italic; color:var(--navy); letter-spacing:0.02em;">
+      <span style="color:var(--gold);">M</span>oxie
+    </div>
+  </div>
+
+  <div class="type-sample">
+    <div class="type-meta">Regular 400 · 22px · Card titles</div>
+    <div style="font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:400; color:var(--navy); line-height:1.2;">
+      Reach any boat owner in seconds. No more paper chase.
+    </div>
+  </div>
+
+  <div class="type-sample type-sample-dark">
+    <div class="type-meta type-meta-dark">Light 300 Italic · 20px · Vessel names (profile hero)</div>
+    <div style="font-family:'Cormorant Garamond',serif; font-size:20px; font-weight:300; color:#fff; font-style:italic;">
+      Discovery One
+    </div>
+    <div style="font-size:9px; color:rgba(255,255,255,0.5); letter-spacing:0.12em; text-transform:uppercase; margin-top:4px;">
+      2023 Nimbus T8 · Power
+    </div>
+  </div>
+
+  <h3>Body — DM Sans</h3>
+  <div class="note" style="margin-bottom:24px;">
+    Google Fonts: <code>DM+Sans:wght@300;400;500</code><br>
+    Fallback stack: <code>'DM Sans', system-ui, sans-serif</code>
+  </div>
+
+  <div class="type-sample">
+    <div class="type-meta">Regular 400 · 15px · Body text</div>
+    <div style="font-size:15px; color:var(--text2); line-height:1.8; max-width:560px;">
+      A weatherproof vinyl QR sticker goes on your stern, dock box, or 
+companionway. Anyone with a phone can scan it. What they see depends on 
+who they are. Your personal information is never exposed to the public —
+ you decide what's shared and with whom.
+    </div>
+  </div>
+
+  <div class="type-sample">
+    <div class="type-meta">Medium 500 · 12px · Navigation links, buttons</div>
+    <div style="font-size:12px; letter-spacing:0.12em; text-transform:uppercase; font-weight:500; color:var(--text2);">
+      How it works &nbsp;&nbsp; For owners &nbsp;&nbsp; For marinas &nbsp;&nbsp; Get early access
+    </div>
+  </div>
+
+  <div class="type-sample">
+    <div class="type-meta">Medium 500 · 10–11px · Eyebrow labels, section tags</div>
+    <div style="font-size:10px; letter-spacing:0.22em; text-transform:uppercase; font-weight:500; color:var(--gold);">
+      ── The digital dry bag ──
+    </div>
+  </div>
+
+  <div class="type-sample">
+    <div class="type-meta">Light 300 · 13px · Secondary body, feature descriptions</div>
+    <div style="font-size:13px; font-weight:300; color:var(--text3); line-height:1.7;">
+      As of January 1, 2025, all motorized vessel operators must carry a
+ California Boater Card. Store your copy in Moxie so it's always with 
+the boat.
+    </div>
+  </div>
+
+  <h3>Typography Rules</h3>
+  <div class="context-card" style="font-size:14px; color:var(--text2); line-height:1.8;">
+    <p><strong>Headlines:</strong> Always Cormorant Garamond. Use Light 
+300 weight for large display. Italic for emphasis and vessel names. Gold
+ accent on key words using <code>&lt;em&gt;</code> or <code>&lt;span&gt;</code> styling.</p>
+    <p><strong>Body text:</strong> Always DM Sans. Never use Cormorant for body paragraphs. Default weight is 400 at 14–15px with generous line-height (1.7–1.8).</p>
+    <p><strong>Labels/eyebrows:</strong> DM Sans Medium 500, 10–11px, 
+heavy letter-spacing (0.16–0.22em), always uppercase. Often flanked by 
+gold dashes or decorative lines.</p>
+    <p><strong>Vessel names:</strong> Cormorant Garamond Light Italic. Always italic. This is the editorial "boat name" treatment used across all touchpoints.</p>
+    <p><strong>CTAs/buttons:</strong> DM Sans, 11–12px, uppercase, letter-spacing 0.12–0.18em. Font-weight 500–600.</p>
+  </div>
+</section>
+
+<div class="divider-line"></div>
+
+
+<!-- ══════════════════════════════════════════════
+     4. LOGO & WORDMARK
+     ══════════════════════════════════════════════ -->
+<section id="logo">
+  <h2>Logo &amp; <em>Wordmark</em></h2>
+  <p class="section-desc">The Moxie wordmark is purely typographic — 
+Cormorant Garamond, Regular 400, Italic. The "M" is rendered in gold, 
+the rest in the appropriate contrast color. No icon, no symbol — the 
+type IS the brand.</p>
+
+  <div class="lockup-grid">
+    <div class="lockup-card lockup-dark">
+      <div style="font-family:'Cormorant Garamond',serif; font-size:40px; font-weight:400; font-style:italic; color:#fff; letter-spacing:0.02em;">
+        <span style="color:var(--gold);">M</span>oxie
+      </div>
+      <div class="lockup-label" style="color:rgba(255,255,255,0.4);">On Navy</div>
+    </div>
+    <div class="lockup-card lockup-cream">
+      <div style="font-family:'Cormorant Garamond',serif; font-size:40px; font-weight:400; font-style:italic; color:var(--navy); letter-spacing:0.02em;">
+        <span style="color:var(--gold);">M</span>oxie
+      </div>
+      <div class="lockup-label" style="color:var(--text3);">On Cream</div>
+    </div>
+    <div class="lockup-card lockup-white">
+      <div style="font-family:'Cormorant Garamond',serif; font-size:40px; font-weight:400; font-style:italic; color:var(--navy); letter-spacing:0.02em;">
+        <span style="color:var(--gold);">M</span>oxie
+      </div>
+      <div class="lockup-label" style="color:var(--text3);">On White</div>
+    </div>
+    <div class="lockup-card lockup-gold">
+      <div style="font-family:'Cormorant Garamond',serif; font-size:40px; font-weight:400; font-style:italic; color:var(--navy); letter-spacing:0.02em;">
+        Moxie
+      </div>
+      <div class="lockup-label" style="color:rgba(13,31,53,0.5);">On Gold (no split)</div>
+    </div>
+  </div>
+
+  <h3>Wordmark with Tagline</h3>
+  <div class="lockup-grid">
+    <div class="lockup-card lockup-dark" style="gap:6px;">
+      <div style="font-family:'Cormorant Garamond',serif; font-size:32px; font-weight:400; font-style:italic; color:#fff; letter-spacing:0.02em;">
+        <span style="color:var(--gold);">M</span>oxie
+      </div>
+      <div style="font-size:9px; letter-spacing:0.22em; text-transform:uppercase; color:rgba(201,168,76,0.6);">
+        Your boat's digital home
+      </div>
+      <div class="lockup-label" style="color:rgba(255,255,255,0.4);">With tagline</div>
+    </div>
+    <div class="lockup-card lockup-cream" style="gap:6px;">
+      <div style="display:flex; align-items:baseline; gap:10px;">
+        <div style="font-family:'Cormorant Garamond',serif; font-size:22px; font-weight:400; font-style:italic; color:var(--navy); letter-spacing:0.02em;">
+          <span style="color:var(--gold);">M</span>oxie
+        </div>
+        <div style="font-size:10px; letter-spacing:0.18em; text-transform:uppercase; color:var(--text3);">
+          Your boat's digital home
+        </div>
+      </div>
+      <div class="lockup-label" style="color:var(--text3);">Inline (nav style)</div>
+    </div>
+  </div>
+
+  <h3>"Powered by" Badge</h3>
+  <div style="display:flex; gap:24px; flex-wrap:wrap; margin-bottom:32px;">
+    <div style="background:var(--navy); padding:8px 16px; border-radius:6px; display:inline-flex; align-items:center; gap:8px;">
+      <span style="font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:rgba(255,255,255,0.4);">Powered by</span>
+      <span style="font-family:'Cormorant Garamond',serif; font-size:16px; font-weight:400; font-style:italic; color:var(--gold);">Moxie</span>
+    </div>
+    <div style="background:var(--white); padding:8px 16px; border-radius:6px; border:1px solid var(--divider); display:inline-flex; align-items:center; gap:8px;">
+      <span style="font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:var(--text3);">Powered by</span>
+      <span style="font-family:'Cormorant Garamond',serif; font-size:16px; font-weight:400; font-style:italic; color:var(--navy);"><span style="color:var(--gold);">M</span>oxie</span>
+    </div>
+  </div>
+</section>
+
+<div class="divider-line"></div>
+
+
+<!-- ══════════════════════════════════════════════
+     5. QR CODE DESIGN
+     ══════════════════════════════════════════════ -->
+<section id="qr">
+  <h2>QR Code <em>Design</em></h2>
+  <p class="section-desc">The QR code is Moxie's primary physical 
+touchpoint. It appears on yacht hulls, dock boxes, and marketing 
+materials. Three colorway treatments are defined.</p>
+
+  <h3>QR Colorways</h3>
+  <div class="qr-showcase">
+    <!-- Navy + Gold (Primary) -->
+    <div class="qr-card qr-card-dark">
+      <div class="qr-block">
+        <div class="qr-grid-demo">
+          <div class="qd" style="background:#c9a84c;"></div><div class="qd" style="background:#c9a84c;"></div><div class="qd" style="background:#c9a84c;"></div><div class="ql"></div><div class="qd" style="background:#c9a84c;"></div><div class="ql"></div><div class="qd" style="background:#c9a84c;"></div>
+          <div class="qd" style="background:#c9a84c;"></div><div class="ql"></div><div class="qd" style="background:#c9a84c;"></div><div class="qd" style="background:#c9a84c;"></div><div class="ql"></div><div class="qd" style="background:#c9a84c;"></div><div class="ql"></div>
+          <div class="qd" style="background:#c9a84c;"></div><div class="ql"></div><div class="ql"></div><div class="qd" style="background:#c9a84c;"></div><div class="qd" style="background:#c9a84c;"></div><div class="ql"></div><div class="qd" style="background:#c9a84c;"></div>
+          <div class="ql"></div><div class="qd" style="background:#c9a84c;"></div><div class="qd" style="background:#c9a84c;"></div><div class="ql"></div><div class="qd" style="background:#c9a84c;"></div><div class="qd" style="background:#c9a84c;"></div><div class="ql"></div>
+          <div class="qd" style="background:#c9a84c;"></div><div class="qd" style="background:#c9a84c;"></div><div class="ql"></div><div class="qd" style="background:#c9a84c;"></div><div class="ql"></div><div class="qd" style="background:#c9a84c;"></div><div class="qd" style="background:#c9a84c;"></div>
+          <div class="qd" style="background:#c9a84c;"></div><div class="ql"></div><div class="qd" style="background:#c9a84c;"></div><div class="qd" style="background:#c9a84c;"></div><div class="qd" style="background:#c9a84c;"></div><div class="ql"></div><div class="qd" style="background:#c9a84c;"></div>
+          <div class="ql"></div><div class="qd" style="background:#c9a84c;"></div><div class="ql"></div><div class="qd" style="background:#c9a84c;"></div><div class="ql"></div><div class="qd" style="background:#c9a84c;"></div><div class="ql"></div>
+        </div>
+        <div class="qr-label-below" style="color:var(--gold);">Moxie</div>
+      </div>
+      <div style="font-size:11px; color:rgba(255,255,255,0.5);">Navy + Gold</div>
+      <div style="font-size:10px; color:rgba(255,255,255,0.3);">Primary · Hull stickers</div>
+    </div>
+
+    <!-- White + Navy -->
+    <div class="qr-card qr-card-white">
+      <div class="qr-block">
+        <div class="qr-grid-demo">
+          <div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div>
+          <div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div>
+          <div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div>
+          <div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div>
+          <div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div>
+          <div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div>
+          <div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div>
+        </div>
+        <div class="qr-label-below" style="color:var(--navy);">Moxie</div>
+      </div>
+      <div style="font-size:11px; color:var(--text2);">White + Navy</div>
+      <div style="font-size:10px; color:var(--text3);">Print / light surfaces</div>
+    </div>
+
+    <!-- Gold + Navy -->
+    <div class="qr-card" style="background:var(--gold); border-color:rgba(0,0,0,0.1);">
+      <div class="qr-block">
+        <div class="qr-grid-demo">
+          <div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div>
+          <div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div>
+          <div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div>
+          <div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div>
+          <div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div>
+          <div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div>
+          <div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div>
+        </div>
+        <div class="qr-label-below" style="color:var(--navy);">Moxie</div>
+      </div>
+      <div style="font-size:11px; color:var(--navy);">Gold + Navy</div>
+      <div style="font-size:10px; color:rgba(13,31,53,0.5);">Premium / limited edition</div>
+    </div>
+  </div>
+
+  <h3>QR Sticker Mockups</h3>
+  <div class="sticker-row">
+    <div class="sticker-mock sticker-navy">
+      <div style="display:grid;grid-template-columns:repeat(6,9px);grid-template-rows:repeat(6,9px);gap:1px;">
+        <div class="qd" style="background:#c9a84c;"></div><div class="qd" style="background:#c9a84c;"></div><div class="qd" style="background:#c9a84c;"></div><div class="ql"></div><div class="qd" style="background:#c9a84c;"></div><div class="ql"></div>
+        <div class="qd" style="background:#c9a84c;"></div><div class="ql"></div><div class="qd" style="background:#c9a84c;"></div><div class="qd" style="background:#c9a84c;"></div><div class="ql"></div><div class="qd" style="background:#c9a84c;"></div>
+        <div class="qd" style="background:#c9a84c;"></div><div class="ql"></div><div class="ql"></div><div class="qd" style="background:#c9a84c;"></div><div class="qd" style="background:#c9a84c;"></div><div class="ql"></div>
+        <div class="ql"></div><div class="qd" style="background:#c9a84c;"></div><div class="qd" style="background:#c9a84c;"></div><div class="ql"></div><div class="qd" style="background:#c9a84c;"></div><div class="qd" style="background:#c9a84c;"></div>
+        <div class="qd" style="background:#c9a84c;"></div><div class="qd" style="background:#c9a84c;"></div><div class="ql"></div><div class="qd" style="background:#c9a84c;"></div><div class="ql"></div><div class="qd" style="background:#c9a84c;"></div>
+        <div class="qd" style="background:#c9a84c;"></div><div class="ql"></div><div class="qd" style="background:#c9a84c;"></div><div class="qd" style="background:#c9a84c;"></div><div class="qd" style="background:#c9a84c;"></div><div class="ql"></div>
+      </div>
+      <div style="font-size:8px; letter-spacing:0.22em; color:var(--gold); text-transform:uppercase; font-weight:500;">Moxie</div>
+    </div>
+    <div class="sticker-mock sticker-white">
+      <div style="display:grid;grid-template-columns:repeat(6,9px);grid-template-rows:repeat(6,9px);gap:1px;">
+        <div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div>
+        <div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div>
+        <div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div>
+        <div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div>
+        <div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div>
+        <div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div>
+      </div>
+      <div style="font-size:8px; letter-spacing:0.22em; color:var(--navy); text-transform:uppercase; font-weight:500;">Moxie</div>
+    </div>
+    <div class="sticker-mock sticker-gold">
+      <div style="display:grid;grid-template-columns:repeat(6,9px);grid-template-rows:repeat(6,9px);gap:1px;">
+        <div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div>
+        <div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div>
+        <div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div>
+        <div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div>
+        <div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div>
+        <div class="qd" style="background:#071020;"></div><div class="ql"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="qd" style="background:#071020;"></div><div class="ql"></div>
+      </div>
+      <div style="font-size:8px; letter-spacing:0.22em; color:var(--navy); text-transform:uppercase; font-weight:500;">Moxie</div>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>QR Code Specs:</strong> Error correction Level H (survives 
+30% damage — critical for marine environment). Print size 3"×3" minimum 
+at 600px. Dark cell color: <code>#071020</code> (navy-deep). Sticker 
+format: weatherproof vinyl with rounded corners (10–14px radius). 
+"Moxie" text below QR grid in uppercase DM Sans or Cormorant italic.
+  </div>
+</section>
+
+<div class="divider-line"></div>
+
+
+<!-- ══════════════════════════════════════════════
+     6. PHONE MOCKUP — VESSEL PROFILE
+     ══════════════════════════════════════════════ -->
+<section id="mockup">
+  <h2>Vessel Profile <em>Mockup</em></h2>
+  <p class="section-desc">The mobile vessel profile is the #1 
+user-facing touchpoint — what people see when they scan the QR. This is 
+the reference layout showing Discovery One (2023 Nimbus T8).</p>
+
+  <div class="phone-demo-wrap">
+    <div class="phone-mock">
+      <div class="phone-notch"></div>
+      <div class="phone-screen">
+        <div class="phone-hero-img">
+          <span class="phone-moxie-tag">Moxie</span>
+          <div class="phone-vessel-name">Discovery One</div>
+          <div class="phone-vessel-model">2023 Nimbus T8 · Power</div>
+        </div>
+        <div class="phone-body">
+          <div class="phone-specs">
+            <div><div class="phone-spec-k">Make</div><div class="phone-spec-v">Nimbus</div></div>
+            <div><div class="phone-spec-k">Year</div><div class="phone-spec-v">2023</div></div>
+            <div><div class="phone-spec-k">Length</div><div class="phone-spec-v">26'</div></div>
+          </div>
+          <div class="phone-specs">
+            <div><div class="phone-spec-k">Type</div><div class="phone-spec-v">Power</div></div>
+            <div><div class="phone-spec-k">Model</div><div class="phone-spec-v">T8</div></div>
+            <div><div class="phone-spec-k">HIN</div><div class="phone-spec-v">···1234</div></div>
+          </div>
+          <div class="phone-divider"></div>
+          <div class="phone-marina-row">
+            <div class="phone-marina-dot">⚓</div>
+            <div>
+              <div class="phone-marina-name">Portobello Marina</div>
+              <div class="phone-marina-label">Home Marina · Oakland, CA</div>
+            </div>
+          </div>
+          <div class="phone-divider"></div>
+          <div class="phone-qr-area">
+            <div class="phone-qr-grid">
+              <div class="pqd"></div><div class="pqd"></div><div class="pqd"></div><div class="pql"></div><div class="pqd"></div><div class="pql"></div>
+              <div class="pqd"></div><div class="pql"></div><div class="pqd"></div><div class="pqd"></div><div class="pql"></div><div class="pqd"></div>
+              <div class="pqd"></div><div class="pql"></div><div class="pql"></div><div class="pqd"></div><div class="pqd"></div><div class="pql"></div>
+              <div class="pql"></div><div class="pqd"></div><div class="pqd"></div><div class="pql"></div><div class="pqd"></div><div class="pqd"></div>
+              <div class="pqd"></div><div class="pqd"></div><div class="pql"></div><div class="pqd"></div><div class="pql"></div><div class="pqd"></div>
+              <div class="pqd"></div><div class="pql"></div><div class="pqd"></div><div class="pqd"></div><div class="pqd"></div><div class="pql"></div>
+            </div>
+          </div>
+          <div style="text-align:center; margin-top:6px;">
+            <span style="font-size:8px; letter-spacing:0.15em; color:#aaa; text-transform:uppercase;">Scan or tap to verify</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="divider-line"></div>
+
+
+<!-- ══════════════════════════════════════════════
+     7. BUTTON & UI PATTERNS
+     ══════════════════════════════════════════════ -->
+<section id="ui">
+  <h2>UI <em>Patterns</em></h2>
+  <p class="section-desc">Standard button styles, badge treatments, and interactive patterns used across Moxie touchpoints.</p>
+
+  <h3>Buttons</h3>
+  <div style="display:flex; gap:16px; flex-wrap:wrap; margin-bottom:32px; align-items:center;">
+    <div style="background:var(--gold); color:var(--navy); font-size:11px; letter-spacing:0.18em; text-transform:uppercase; font-weight:600; padding:14px 28px; font-family:'DM Sans',sans-serif; cursor:pointer;">
+      Get early access →
+    </div>
+    <div style="background:var(--navy); color:var(--gold); font-size:11px; letter-spacing:0.18em; text-transform:uppercase; font-weight:600; padding:14px 28px; font-family:'DM Sans',sans-serif; border:1px solid var(--navy); cursor:pointer;">
+      Learn more →
+    </div>
+    <div style="background:transparent; color:var(--text2); font-size:11px; letter-spacing:0.18em; text-transform:uppercase; font-weight:500; padding:14px 28px; font-family:'DM Sans',sans-serif; border:1px solid var(--divider); cursor:pointer;">
+      Discuss a partnership →
+    </div>
+  </div>
+
+  <h3>Buttons on Dark</h3>
+  <div style="background:var(--navy); padding:32px; border-radius:12px; display:flex; gap:16px; flex-wrap:wrap; margin-bottom:32px; align-items:center;">
+    <div style="background:var(--gold); color:var(--navy); font-size:11px; letter-spacing:0.18em; text-transform:uppercase; font-weight:600; padding:14px 28px; font-family:'DM Sans',sans-serif; cursor:pointer;">
+      Create your profile →
+    </div>
+    <div style="background:transparent; color:rgba(255,255,255,0.6); font-size:11px; letter-spacing:0.18em; text-transform:uppercase; font-weight:500; padding:14px 28px; font-family:'DM Sans',sans-serif; border:1px solid rgba(255,255,255,0.2); cursor:pointer;">
+      Learn more →
+    </div>
+  </div>
+
+  <h3>Role Badges</h3>
+  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:32px;">
+    <span style="font-size:11px; font-weight:500; padding:5px 14px; border-radius:20px; background:#E1F5EE; color:#085041;">Boat Owner</span>
+    <span style="font-size:11px; font-weight:500; padding:5px 14px; border-radius:20px; background:#E6F1FB; color:#0C447C;">Marina Operator</span>
+    <span style="font-size:11px; font-weight:500; padding:5px 14px; border-radius:20px; background:#F1EFE8; color:#2C2C2A;">General Public</span>
+    <span style="font-size:11px; font-weight:500; padding:5px 14px; border-radius:20px; background:#FAECE7; color:#712B13;">Coast Guard</span>
+    <span style="font-size:11px; font-weight:500; padding:5px 14px; border-radius:20px; background:#EEEDFE; color:#3C3489;">Admin</span>
+  </div>
+
+  <h3>Form Field Badges</h3>
+  <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:32px;">
+    <span style="font-size:9px; font-weight:700; padding:2px 8px; border-radius:8px; background:#E1F5EE; color:#085041;">REQUIRED</span>
+    <span style="font-size:9px; font-weight:700; padding:2px 8px; border-radius:8px; background:#F1EFE8; color:#888780;">OPTIONAL</span>
+    <span style="font-size:9px; font-weight:700; padding:2px 8px; border-radius:8px; background:#FAEEDA; color:#633806;">PRIVATE</span>
+    <span style="font-size:9px; font-weight:700; padding:2px 8px; border-radius:8px; background:#E6F1FB; color:#0C447C;">AUTO-FILLED</span>
+  </div>
+
+  <h3>Decorative Patterns</h3>
+  <div class="context-card" style="font-size:14px; color:var(--text2); line-height:1.8;">
+    <p><strong>Gold radial glow:</strong> Used as subtle background decoration on navy sections. <code>radial-gradient(circle, rgba(201,168,76,0.06-0.12) 0%, transparent 70%)</code> — positioned top-right or offset for asymmetry.</p>
+    <p><strong>Gold line accents:</strong> Thin gold lines (<code>rgba(201,168,76,0.35)</code>) used as dividers, eyebrow flanking dashes, and animated underlines on hover.</p>
+    <p><strong>Glass nav:</strong> Navigation uses <code>backdrop-filter: blur(12px)</code> with semi-transparent cream background <code>rgba(245,242,236,0.92)</code>.</p>
+    <p><strong>Card hover treatment:</strong> Cards on dark backgrounds use a gold line that scales from left on hover: <code>transform: scaleX(0) → scaleX(1)</code> with gold background.</p>
+    <p><strong>Border radius:</strong> Large cards use 12–16px radius. 
+Badges/pills use 20px. Stickers use 10–14px. Phone mockup uses 36px. No 
+sharp corners anywhere in the UI.</p>
+  </div>
+</section>
+
+<div class="divider-line"></div>
+
+
+<!-- ══════════════════════════════════════════════
+     8. DESIGN DO'S AND DON'TS
+     ══════════════════════════════════════════════ -->
+<section id="rules">
+  <h2>Design <em>Rules</em></h2>
+
+  <div class="context-card">
+    <h4><em>Do</em></h4>
+    <p>Use Cormorant Garamond italic for all vessel names. Use generous 
+whitespace — let the design breathe. Pair navy backgrounds with gold 
+accents. Use the cream palette for light sections (never pure white 
+backgrounds on full pages). Keep buttons uppercase with wide 
+letter-spacing. Use editorial photography language (if/when imagery is 
+used). Think Boat International, Robb Report, Condé Nast Traveller.</p>
+  </div>
+
+  <div class="context-card">
+    <h4>Don't</h4>
+    <p>Never use gradients (except the subtle gold radial glow). Never 
+use rounded sans-serif logos or "tech startup" aesthetics. Never use 
+emoji in formal materials. Never use Inter, Roboto, or system default 
+fonts for headings. Never put the wordmark in anything other than 
+Cormorant Garamond Italic. Never use the gold as a full background color
+ (except for QR sticker variant). Never use navy text on navy 
+backgrounds. Never crowd the layout — if it feels like a SaaS dashboard,
+ it's wrong.</p>
+  </div>
+
+  <div class="context-card">
+    <h4>Key <em>terminology</em></h4>
+    <p><strong>"Digital dry bag"</strong> — the official product 
+metaphor. Never use "digital glove box" (deprecated). A dry bag is what 
+sailors use to keep critical documents safe on a boat — it's the perfect
+ metaphor for what Moxie does digitally.</p>
+    <p><strong>"Vessel profile"</strong> — not "boat page" or "listing." Moxie profiles are persistent identities, not marketplace listings.</p>
+    <p><strong>"Moxie"</strong> — always capitalized. Never "MOXIE" in all-caps except in QR sticker labels where it's part of the uppercase design language.</p>
+  </div>
+</section>
+
+</div><!-- end .page -->
+
+
+</body></html>

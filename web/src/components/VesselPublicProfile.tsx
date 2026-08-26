@@ -1,0 +1,128 @@
+export type PublicProfileProps = {
+  mxe_id: string;
+  vessel_name: string;
+  vessel_type: string | null;
+  make: string;
+  model: string;
+  year: number;
+  length_ft: number | string | null;
+  draft_ft: number | string | null;
+  public_notes: string | null;
+  photo_url: string | null;
+  marina_name: string | null;
+  marina_city: string | null;
+};
+
+export function VesselPublicProfile(props: PublicProfileProps & { hideFooter?: boolean }) {
+  const {
+    mxe_id,
+    vessel_name,
+    vessel_type,
+    make,
+    model,
+    year,
+    length_ft,
+    draft_ft,
+    public_notes,
+    photo_url,
+    marina_name,
+    marina_city,
+    hideFooter,
+  } = props;
+
+  const marinaLine =
+    marina_name || marina_city
+      ? [marina_name, marina_city].filter(Boolean).join(" · ")
+      : null;
+
+  return (
+    <article className="mx-auto max-w-lg px-5 pb-16 pt-10 md:px-8">
+      <header className="mb-8 border-b border-[var(--divider)] pb-6">
+        <p className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--text3)]">
+          Registered vessel
+        </p>
+        <h1 className="mt-2 font-[family-name:var(--font-display)] text-4xl font-light italic text-[var(--navy)] md:text-[2.75rem]">
+          {vessel_name}
+        </h1>
+        <p className="mt-1 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
+          {make} {model} · {year}
+          {vessel_type
+            ? ` · ${vessel_type.charAt(0).toUpperCase()}${vessel_type.slice(1).toLowerCase()}`
+            : ""}
+        </p>
+        <p className="mt-4 inline-flex rounded-full bg-[var(--gray-bg)] px-3 py-1 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--gray-fg)]">
+          Public view · {mxe_id}
+        </p>
+      </header>
+
+      <div className="relative mb-8 overflow-hidden rounded-2xl bg-[var(--navy-deep)] shadow-[0_24px_48px_rgba(13,31,53,.12)]">
+        <div className="aspect-[16/10] w-full">
+          {photo_url?.startsWith("http") ? (
+            // eslint-disable-next-line @next/next/no-img-element -- dynamic Supabase / external URLs
+            <img src={photo_url} alt="" className="h-full w-full object-cover" />
+          ) : (
+            <div className="flex h-full min-h-[200px] flex-col items-center justify-center gap-2 bg-gradient-to-br from-[var(--navy-deep)] via-[var(--navy2)] to-[var(--navy)] px-8 text-center">
+              <span className="font-[family-name:var(--font-display)] text-2xl font-light italic text-[var(--gold)]">
+                {make}
+              </span>
+              <span className="font-[family-name:var(--font-dm)] text-xs uppercase tracking-[0.2em] text-[rgba(255,255,255,.45)]">
+                Photo pending upload
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <dl className="grid gap-4 rounded-xl border border-[var(--divider)] bg-[var(--white)] p-5 shadow-sm">
+        <div className="flex justify-between gap-4 border-b border-[var(--divider)] pb-3">
+          <dt className="font-[family-name:var(--font-dm)] text-xs uppercase tracking-[0.12em] text-[var(--text3)]">
+            Length
+          </dt>
+          <dd className="font-[family-name:var(--font-dm)] text-sm text-[var(--text)]">
+            {length_ft != null ? `${length_ft} ft` : "—"}
+          </dd>
+        </div>
+        <div className="flex justify-between gap-4 border-b border-[var(--divider)] pb-3">
+          <dt className="font-[family-name:var(--font-dm)] text-xs uppercase tracking-[0.12em] text-[var(--text3)]">
+            Draft
+          </dt>
+          <dd className="font-[family-name:var(--font-dm)] text-sm text-[var(--text)]">
+            {draft_ft != null ? `${draft_ft} ft` : "—"}
+          </dd>
+        </div>
+        {marinaLine ? (
+          <div className="flex justify-between gap-4 border-b border-[var(--divider)] pb-3">
+            <dt className="font-[family-name:var(--font-dm)] text-xs uppercase tracking-[0.12em] text-[var(--text3)]">
+              Marina
+            </dt>
+            <dd className="text-right font-[family-name:var(--font-dm)] text-sm text-[var(--text)]">
+              {marinaLine}
+            </dd>
+          </div>
+        ) : null}
+      </dl>
+
+      {public_notes ? (
+        <section className="mt-8 border-l-2 border-[var(--gold-line)] pl-4">
+          <h2 className="font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.14em] text-[var(--text3)]">
+            About this vessel
+          </h2>
+          <p className="mt-2 font-[family-name:var(--font-dm)] text-sm font-light leading-relaxed text-[var(--text2)]">
+            {public_notes}
+          </p>
+        </section>
+      ) : null}
+
+      {!hideFooter ? (
+        <footer className="mt-12 border-t border-[var(--divider)] pt-8 text-center">
+          <p className="font-[family-name:var(--font-display)] text-lg italic text-[var(--navy)]">
+            <span className="text-[var(--gold)]">M</span>oxie
+          </p>
+          <p className="mt-1 font-[family-name:var(--font-dm)] text-[11px] text-[var(--text3)]">
+            Marine vessel registry profile
+          </p>
+        </footer>
+      ) : null}
+    </article>
+  );
+}

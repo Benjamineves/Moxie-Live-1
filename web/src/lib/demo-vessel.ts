@@ -1,0 +1,62 @@
+import type { VesselRecord } from "@/types/vessel";
+
+/** Offline / no-URL fallback aligned with Guide2 seed data (MXE-00001). */
+export function getDemoVessel(mxeId: string): VesselRecord | null {
+  const id = mxeId.toUpperCase();
+  if (id === "MXE-00001") {
+    return {
+      id: "00000000-0000-0000-0000-000000001001",
+      owner_id: "00000000-0000-0000-0000-000000000001",
+      marina_id: "00000000-0000-0000-0000-000000000100",
+      mxe_id: "MXE-00001",
+      vessel_name: "Discovery One",
+      make: "Nimbus",
+      model: "T8",
+      year: 2023,
+      length_ft: 26.9,
+      draft_ft: 2.5,
+      vessel_type: "power",
+      photo_url: "vessels/mxe-00001/hero.jpg",
+      public_notes:
+        "2023 Nimbus T8 day cruiser. Single Mercury Verado 300HP outboard. Regularly maintained. House battery system upgraded 2024. Life jackets for 6 aboard.",
+      is_public: true,
+      slip_number: "38",
+      marina_phone: "(510) 555-0110",
+      is_liveaboard: false,
+      slip_notes:
+        "Standard utilities. Single-engine power vessel. Typically off-slip weekends.",
+      owner_name: "Ben Eves",
+      owner_phone: "312-465-0672",
+      owner_email: "ben@moxieyachting.com",
+      preferred_contact: "phone",
+      emg_name: null,
+      emg_phone: null,
+      emg_relationship: null,
+      ins_carrier: "Markel American",
+      ins_broker: "Novamar Insurance Group",
+      ins_policy: "MAR-2025-00412",
+      ins_expiry: "2025-12-31",
+      ins_liability: "$300,000",
+      hin: "NIM12341H223",
+      uscg_doc_number: "1234567",
+      official_number: "CA 1234 AB",
+      reg_state: "CA",
+      reg_number: "CF 1234567",
+      reg_expiry: "2025-12-31",
+      engine: "Mercury Verado 300HP",
+      fuel_type: "gasoline",
+      max_persons: 6,
+      lifejackets: 6,
+      fire_extinguisher: true,
+      flares: true,
+      sound_device: true,
+      ca_boater_card: true,
+      marinas: {
+        name: "Portobello Marina",
+        city: "Oakland",
+        phone: "(510) 555-0110",
+      },
+    };
+  }
+  return null;
+}

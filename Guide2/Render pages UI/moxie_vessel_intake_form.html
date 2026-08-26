@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Moxie · Register Your Vessel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{font-family:'DM Sans',system-ui,sans-serif;background:#f5f2ec;color:#0d1f35;-webkit-font-smoothing:antialiased;min-height:100vh}
+
+:root{
+  --navy:#0d1f35;--navy2:#132943;--navy3:#1a3a5c;--navy-deep:#071020;
+  --gold:#c9a84c;--gold-lt:#dfc06a;--gold-dim:rgba(201,168,76,.12);--gold-line:rgba(201,168,76,.3);
+  --cream:#f5f2ec;--cream2:#ede9e0;--white:#fff;
+  --text:#0d1f35;--text2:#3a5068;--text3:#6b8299;--divider:rgba(13,31,53,.1);
+  --aqua-bright:#17C3B2;--aqua-lagoon:#1FA394;
+  --green-bg:#E1F5EE;--green-fg:#085041;
+  --blue-bg:#E6F1FB;--blue-fg:#0C447C;
+  --amber-bg:#FAEEDA;--amber-fg:#633806;
+  --red-bg:#FAECE7;--red-fg:#712B13;
+  --gray-bg:#F1EFE8;--gray-fg:#888780;
+}
+
+/* ── TOP BAR ── */
+.topbar{
+  background:var(--navy-deep);
+  padding:14px 24px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:3px solid var(--gold);
+  position:sticky;top:0;z-index:100;
+}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.pixel-m{width:24px;height:24px;flex-shrink:0}
+.topbar-wordmark{font-family:'Cormorant Garamond',serif;font-size:18px;font-style:italic;color:var(--white)}
+.topbar-wordmark .m{color:var(--gold)}
+.topbar-title{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.4);font-weight:500}
+.topbar-step{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:500}
+
+/* ── LAYOUT ── */
+.layout{display:grid;grid-template-columns:1fr 380px;min-height:calc(100vh - 52px)}
+@media(max-width:1000px){.layout{grid-template-columns:1fr;}.preview-panel{display:none}}
+
+/* ── FORM SIDE ── */
+.form-side{padding:40px 40px 80px;max-width:680px}
+@media(max-width:768px){.form-side{padding:28px 20px 80px}}
+
+/* Progress steps */
+.progress-steps{display:flex;gap:0;margin-bottom:40px;border-bottom:1px solid var(--divider);padding-bottom:24px}
+.step{display:flex;align-items:center;gap:8px;flex:1;cursor:pointer}
+.step:not(:last-child)::after{content:'';flex:1;height:1px;background:var(--divider);margin:0 8px;margin-top:-2px}
+.step-num{
+  width:24px;height:24px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:700;flex-shrink:0;
+  transition:all .2s;
+}
+.step.done .step-num{background:var(--aqua-lagoon);color:var(--white)}
+.step.active .step-num{background:var(--navy);color:var(--gold);border:2px solid var(--gold)}
+.step.future .step-num{background:var(--divider);color:var(--text3)}
+.step-label{font-size:11px;font-weight:500;color:var(--text3);white-space:nowrap}
+.step.active .step-label{color:var(--navy);font-weight:600}
+.step.done .step-label{color:var(--text2)}
+
+/* Section header */
+.section-header{margin-bottom:28px}
+.section-eyebrow{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.section-eyebrow::before{content:'';width:20px;height:1px;background:var(--gold)}
+.section-h2{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;color:var(--navy);line-height:1.1}
+.section-h2 em{font-style:italic;color:var(--gold)}
+.section-sub{font-size:14px;color:var(--text2);line-height:1.7;margin-top:8px;font-weight:300}
+
+/* Form step panels */
+.form-step{display:none}
+.form-step.active{display:block}
+
+/* Privacy tier labels */
+.privacy-bar{
+  display:flex;align-items:center;gap:6px;
+  padding:8px 12px;border-radius:6px;margin-bottom:20px;
+  font-size:11px;font-weight:500;line-height:1.4;
+}
+.privacy-bar.public{background:var(--gray-bg);color:var(--gray-fg)}
+.privacy-bar.marina{background:var(--blue-bg);color:var(--blue-fg)}
+.privacy-bar.owner{background:var(--amber-bg);color:var(--amber-fg)}
+.privacy-bar svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.privacy-label-inline{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 8px;border-radius:8px;font-size:9px;font-weight:600;
+  letter-spacing:.08em;text-transform:uppercase;
+  vertical-align:middle;margin-left:4px;
+}
+.pli-public{background:var(--gray-bg);color:var(--gray-fg)}
+.pli-marina{background:var(--blue-bg);color:var(--blue-fg)}
+.pli-owner{background:var(--amber-bg);color:var(--amber-fg)}
+.pli-cg{background:var(--red-bg);color:var(--red-fg)}
+
+/* Form groups */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:8px}
+@media(max-width:500px){.form-grid{grid-template-columns:1fr}}
+.form-grid.three{grid-template-columns:1fr 1fr 1fr}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group.full{grid-column:1/-1}
+.form-label{font-size:12px;font-weight:500;color:var(--text2);display:flex;align-items:center;gap:4px}
+
+input[type=text],input[type=email],input[type=tel],input[type=date],input[type=number],select,textarea{
+  padding:11px 14px;border:1px solid var(--divider);border-radius:0;
+  background:var(--white);color:var(--navy);
+  font-family:'DM Sans',sans-serif;font-size:14px;
+  transition:border-color .2s,box-shadow .2s;width:100%;
+}
+input:focus,select:focus,textarea:focus{
+  outline:none;border-color:var(--gold);
+  box-shadow:0 0 0 3px var(--gold-dim);
+}
+input::placeholder,textarea::placeholder{color:var(--text3)}
+select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b8299' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
+textarea{resize:vertical;min-height:88px;line-height:1.6}
+.help-text{font-size:11px;color:var(--text3);line-height:1.5}
+
+/* Section divider */
+.field-section{margin:28px 0 16px}
+.field-section-label{
+  font-size:9px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--text3);font-weight:500;
+  display:flex;align-items:center;gap:8px;
+  padding-bottom:10px;border-bottom:1px solid var(--divider);
+}
+.field-section-label::after{content:'';flex:1;height:1px;}
+
+/* Document upload zone */
+.upload-zone{
+  border:1.5px dashed var(--divider);
+  padding:20px;text-align:center;cursor:pointer;
+  background:var(--cream);transition:all .2s;
+  position:relative;
+}
+.upload-zone:hover{border-color:var(--gold);background:var(--gold-dim)}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-zone-icon{width:32px;height:32px;border-radius:50%;background:var(--divider);display:flex;align-items:center;justify-content:center;margin:0 auto 10px}
+.upload-zone-icon svg{width:16px;height:16px;stroke:var(--text3);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.upload-zone-label{font-size:13px;font-weight:500;color:var(--text2);margin-bottom:4px}
+.upload-zone-sub{font-size:11px;color:var(--text3)}
+.upload-zone.has-file{border-color:var(--aqua-lagoon);border-style:solid;background:var(--green-bg)}
+.upload-zone.has-file .upload-zone-icon{background:rgba(8,80,65,.15)}
+.upload-zone.has-file .upload-zone-icon svg{stroke:var(--green-fg)}
+.upload-zone.has-file .upload-zone-label{color:var(--green-fg)}
+
+/* Toggle (visibility control) */
+.visibility-toggle{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:var(--cream);border:1px solid var(--divider);margin-top:8px}
+.vt-label{font-size:12px;color:var(--text2)}
+.vt-label strong{color:var(--navy)}
+.switch{position:relative;width:36px;height:20px;flex-shrink:0}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;background:#ccc;cursor:pointer;border-radius:20px;transition:.3s}
+.slider::before{content:'';position:absolute;height:14px;width:14px;left:3px;bottom:3px;background:white;border-radius:50%;transition:.3s}
+input:checked+.slider{background:var(--aqua-lagoon)}
+input:checked+.slider::before{transform:translateX(16px)}
+
+/* Step nav buttons */
+.step-nav{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-top:40px;padding-top:28px;border-top:1px solid var(--divider);
+}
+.btn-back{
+  display:inline-flex;align-items:center;gap:8px;
+  background:transparent;border:1px solid var(--divider);
+  padding:12px 24px;font-family:'DM Sans',sans-serif;
+  font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+  font-weight:500;color:var(--text2);cursor:pointer;transition:all .2s;
+}
+.btn-back:hover{border-color:var(--navy);color:var(--navy)}
+.btn-back svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-next{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--navy);color:var(--gold);
+  border:1px solid var(--navy);
+  padding:12px 28px;font-family:'DM Sans',sans-serif;
+  font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+  font-weight:600;cursor:pointer;transition:all .2s;
+}
+.btn-next:hover{background:var(--navy2);gap:12px}
+.btn-next svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-submit{
+  background:var(--aqua-bright);color:var(--navy);
+  border:none;padding:14px 32px;font-family:'DM Sans',sans-serif;
+  font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+  font-weight:700;cursor:pointer;transition:all .2s;
+  display:inline-flex;align-items:center;gap:8px;
+}
+.btn-submit:hover{background:var(--aqua-lagoon)}
+
+/* ── PREVIEW PANEL ── */
+.preview-panel{
+  background:var(--navy2);
+  border-left:1px solid rgba(255,255,255,.06);
+  position:sticky;top:52px;height:calc(100vh - 52px);
+  overflow-y:auto;
+  display:flex;flex-direction:column;
+}
+.preview-header{
+  padding:20px 20px 16px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.preview-title{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.4);font-weight:500}
+.preview-role-toggle{display:flex;gap:4px}
+.prole-btn{
+  padding:4px 10px;font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+  font-weight:500;cursor:pointer;border:1px solid rgba(255,255,255,.15);
+  background:transparent;color:rgba(255,255,255,.4);font-family:'DM Sans',sans-serif;
+  transition:all .15s;border-radius:3px;
+}
+.prole-btn.active{background:rgba(255,255,255,.1);color:var(--white);border-color:rgba(255,255,255,.3)}
+.preview-scroll{flex:1;padding:0 0 40px}
+
+/* Mini vessel card in preview */
+.mini-hero{
+  min-height:140px;
+  background:linear-gradient(160deg,var(--navy) 0%,#0f2a50 100%);
+  display:flex;flex-direction:column;justify-content:flex-end;
+  padding:20px;position:relative;overflow:hidden;
+}
+.mini-hero::before{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:var(--gold);opacity:.8}
+.mini-hero::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,transparent 20%,rgba(13,31,53,.7) 100%)}
+.mini-vessel-name{font-family:'Cormorant Garamond',serif;font-size:22px;font-style:italic;color:var(--white);position:relative;z-index:1;line-height:1}
+.mini-vessel-tag{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-top:3px;position:relative;z-index:1}
+.mini-body{padding:16px;background:var(--white)}
+.mini-specs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.mini-sk{font-size:7px;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:2px}
+.mini-sv{font-size:11px;font-weight:600;color:var(--navy)}
+.mini-sv.empty{color:var(--text3);font-style:italic;font-weight:400;font-size:10px}
+.mini-divider{height:1px;background:var(--divider);margin:10px 0}
+.mini-marina-row{display:flex;align-items:center;gap:8px}
+.mini-marina-dot{width:22px;height:22px;border-radius:50%;background:var(--gold-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.mini-marina-dot svg{width:10px;height:10px;stroke:var(--gold);fill:none;stroke-width:1.5;stroke-linecap:round}
+.mini-marina-name{font-size:11px;font-weight:600;color:var(--navy)}
+.mini-marina-detail{font-size:9px;color:var(--text3)}
+.mini-hidden-row{
+  display:flex;align-items:center;gap:6px;
+  padding:8px 10px;background:var(--amber-bg);border-radius:4px;margin:10px 0 0;
+  font-size:10px;color:var(--amber-fg);font-weight:500;
+}
+.mini-hidden-row svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;flex-shrink:0}
+.mini-powered{padding:12px;text-align:center;background:var(--cream)}
+.mini-powered-text{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3);font-weight:500}
+.mini-powered-brand{font-family:'Cormorant Garamond',serif;font-size:13px;font-style:italic;color:var(--navy)}
+.mini-powered-brand .m{color:var(--gold)}
+
+/* QR sticker preview in panel */
+.qr-preview-wrap{padding:16px;background:var(--navy);border-top:1px solid rgba(255,255,255,.06);text-align:center}
+.qr-preview-label{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.3);font-weight:500;margin-bottom:12px}
+.qr-sticker-mini{
+  display:inline-block;padding:14px 14px 12px;
+  background:var(--navy);border:1px solid rgba(201,168,76,.2);border-radius:10px;
+  box-shadow:0 8px 24px rgba(0,0,0,.4);text-align:center;
+}
+.qr-sm-wordmark{font-family:'Cormorant Garamond',serif;font-size:12px;font-style:italic;color:var(--white);margin-bottom:8px}
+.qr-sm-wordmark .m{color:var(--gold)}
+.qr-sm-grid{display:grid;grid-template-columns:repeat(7,7px);grid-template-rows:repeat(7,7px);gap:1.5px;margin:0 auto 8px}
+.qr-sm-grid .dk{background:var(--gold);border-radius:.5px}
+.qr-sm-grid .lt{background:rgba(255,255,255,.05);border-radius:.5px}
+.qr-sm-grid .sig{background:var(--aqua-bright);border-radius:.5px}
+.qr-sm-rule{width:100%;height:1px;background:var(--gold);opacity:.4;margin:6px 0 5px}
+.qr-sm-caption{font-size:7px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.4);font-weight:500;line-height:1.5}
+
+/* ── COMPLETION SCREEN ── */
+.completion{display:none;padding:48px 40px;text-align:center;max-width:540px;margin:0 auto}
+@media(max-width:768px){.completion{padding:32px 20px}}
+.completion.active{display:block}
+.completion-icon{
+  width:72px;height:72px;border-radius:50%;
+  background:var(--green-bg);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 24px;
+}
+.completion-icon svg{width:32px;height:32px;stroke:var(--green-fg);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.completion-h{font-family:'Cormorant Garamond',serif;font-size:36px;font-weight:300;color:var(--navy);margin-bottom:12px;line-height:1.1}
+.completion-h em{font-style:italic;color:var(--gold)}
+.completion-sub{font-size:14px;color:var(--text2);line-height:1.75;font-weight:300;margin-bottom:36px;max-width:440px;margin-left:auto;margin-right:auto}
+/* Big sticker reveal */
+.sticker-reveal{
+  display:inline-block;padding:28px 28px 22px;
+  background:var(--navy);border-radius:14px;
+  border:1px solid rgba(201,168,76,.25);
+  box-shadow:0 24px 64px rgba(13,31,53,.35),0 0 0 1px rgba(255,255,255,.05);
+  text-align:center;margin-bottom:32px;
+  animation:stickerReveal .6s .2s both;
+}
+@keyframes stickerReveal{from{opacity:0;transform:scale(.9) translateY(16px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.sr-wordmark{font-family:'Cormorant Garamond',serif;font-size:20px;font-style:italic;color:var(--white);margin-bottom:14px}
+.sr-wordmark .m{color:var(--gold)}
+.sr-grid{display:grid;grid-template-columns:repeat(9,10px);grid-template-rows:repeat(9,10px);gap:2px;margin:0 auto 12px}
+.sr-grid .gd{background:var(--gold);border-radius:1px}
+.sr-grid .lt{background:rgba(255,255,255,.04);border-radius:1px}
+.sr-grid .sig{background:var(--aqua-bright);border-radius:1px;animation:signalPulse 3s ease-in-out infinite}
+@keyframes signalPulse{0%,80%,100%{background:var(--aqua-bright);transform:scale(1)}40%{background:#13F1D1;transform:scale(1.5)}}
+.sr-rule{width:100%;height:1px;background:var(--gold);opacity:.45;margin:10px 0 8px}
+.sr-caption{font-size:8px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.45);font-weight:500;line-height:1.6}
+.sr-id{font-size:16px;letter-spacing:.08em;color:var(--aqua-bright);font-weight:600;margin-top:16px;font-family:'DM Sans',monospace}
+.completion-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.btn-view-profile{
+  display:inline-flex;align-items:center;gap:8px;
+  background:var(--navy);color:var(--gold);
+  border:1px solid var(--gold-line);padding:14px 28px;
+  font-family:'DM Sans',sans-serif;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;cursor:pointer;text-decoration:none;transition:all .2s;
+}
+.btn-view-profile:hover{background:var(--navy2)}
+.btn-add-vessel{
+  display:inline-flex;align-items:center;gap:8px;
+  background:transparent;color:var(--text2);
+  border:1px solid var(--divider);padding:14px 28px;
+  font-family:'DM Sans',sans-serif;font-size:12px;letter-spacing:.14em;text-transform:uppercase;font-weight:500;cursor:pointer;text-decoration:none;transition:all .2s;
+}
+.btn-add-vessel:hover{border-color:var(--navy);color:var(--navy)}
+</style>
+</head>
+<body>
+
+<!-- ── TOP BAR ── -->
+<div class="topbar">
+  <div class="topbar-left">
+    <svg class="pixel-m" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <rect x="0" y="0" width="22" height="9" rx="1" fill="#c9a84c" opacity=".55"/>
+      <rect x="0" y="0" width="9" height="22" rx="1" fill="#c9a84c" opacity=".55"/>
+      <rect x="78" y="0" width="22" height="9" rx="1" fill="#c9a84c" opacity=".55"/>
+      <rect x="91" y="0" width="9" height="22" rx="1" fill="#c9a84c" opacity=".55"/>
+      <rect x="0" y="91" width="22" height="9" rx="1" fill="#c9a84c" opacity=".55"/>
+      <rect x="0" y="78" width="9" height="22" rx="1" fill="#c9a84c" opacity=".55"/>
+      <rect x="15" y="25" width="10" height="10" fill="#c9a84c"/><rect x="15" y="35" width="10" height="10" fill="#c9a84c"/><rect x="15" y="45" width="10" height="10" fill="#c9a84c"/><rect x="15" y="55" width="10" height="10" fill="#c9a84c"/><rect x="15" y="65" width="10" height="10" fill="#c9a84c"/><rect x="15" y="75" width="10" height="10" fill="#c9a84c"/>
+      <rect x="25" y="35" width="10" height="10" fill="#c9a84c"/><rect x="35" y="45" width="10" height="10" fill="#c9a84c"/><rect x="45" y="35" width="10" height="10" fill="#c9a84c"/><rect x="55" y="45" width="10" height="10" fill="#c9a84c"/><rect x="65" y="35" width="10" height="10" fill="#c9a84c"/>
+      <rect x="75" y="25" width="10" height="10" fill="#c9a84c"/><rect x="75" y="35" width="10" height="10" fill="#c9a84c"/><rect x="75" y="45" width="10" height="10" fill="#c9a84c"/><rect x="75" y="55" width="10" height="10" fill="#c9a84c"/><rect x="75" y="65" width="10" height="10" fill="#c9a84c"/><rect x="75" y="75" width="10" height="10" fill="#c9a84c"/>
+      <rect x="85" y="85" width="8" height="8" fill="#17C3B2"/>
+    </svg>
+    <span class="topbar-wordmark"><span class="m">M</span>oxie</span>
+    <span style="color:rgba(255,255,255,.15);margin:0 8px">·</span>
+    <span class="topbar-title">Register your vessel</span>
+  </div>
+  <span class="topbar-step" id="step-indicator">Step 1 of 4</span>
+</div>
+
+<!-- ── MAIN LAYOUT ── -->
+<div class="layout">
+
+  <!-- ── FORM SIDE ── -->
+  <div class="form-side" id="form-side">
+
+    <!-- Progress steps -->
+    <div class="progress-steps" id="progress-steps">
+      <div class="step active" id="pstep-1"><div class="step-num">1</div><div class="step-label">Vessel</div></div>
+      <div class="step future" id="pstep-2"><div class="step-num">2</div><div class="step-label">Location</div></div>
+      <div class="step future" id="pstep-3"><div class="step-num">3</div><div class="step-label">Documents</div></div>
+      <div class="step future" id="pstep-4"><div class="step-num">4</div><div class="step-label">Owner info</div></div>
+    </div>
+
+    <!-- ═══════════════ STEP 1: VESSEL IDENTITY ═══════════════ -->
+    <div class="form-step active" id="step-1">
+      <div class="section-header">
+        <div class="section-eyebrow">Step 1 of 4</div>
+        <h2 class="section-h2">Tell us about<br><em>the vessel.</em></h2>
+        <p class="section-sub">This information appears on your public profile — what anyone sees when they scan your QR.</p>
+      </div>
+
+      <div class="privacy-bar public">
+        <svg viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+        Fields in this section are <strong>&nbsp;visible to the public&nbsp;</strong> — anyone who scans your QR.
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Vessel name <span class="pli-public">Public</span></label>
+          <input type="text" id="f_name" placeholder="e.g. Discovery One" oninput="updatePreview()" value="Discovery One">
+          <span class="help-text">The name on your transom. Shown prominently on your profile.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Type <span class="pli-public">Public</span></label>
+          <select id="f_type" onchange="updatePreview()">
+            <option value="">Select type</option>
+            <option value="Power" selected>Power</option>
+            <option value="Sail">Sail</option>
+            <option value="Sail — Sloop">Sail — Sloop</option>
+            <option value="Sail — Ketch">Sail — Ketch</option>
+            <option value="Catamaran">Catamaran</option>
+            <option value="PWC">PWC / Jet ski</option>
+            <option value="Dinghy">Dinghy / Tender</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Year <span class="pli-public">Public</span></label>
+          <input type="number" id="f_year" placeholder="e.g. 2023" min="1900" max="2030" oninput="updatePreview()" value="2023">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Make / Manufacturer <span class="pli-public">Public</span></label>
+          <input type="text" id="f_make" placeholder="e.g. Nimbus, Beneteau, Catalina" oninput="updatePreview()" value="Nimbus">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Model <span class="pli-public">Public</span></label>
+          <input type="text" id="f_model" placeholder="e.g. T8, Oceanis 30.1" oninput="updatePreview()" value="T8">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Length (feet) <span class="pli-public">Public</span></label>
+          <input type="text" id="f_length" placeholder="e.g. 26" oninput="updatePreview()" value="26">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Draft (feet) <span class="pli-public">Public</span></label>
+          <input type="text" id="f_draft" placeholder="e.g. 2.5" value="2.5">
+        </div>
+      </div>
+
+      <!-- Private fields start -->
+      <div class="field-section">
+        <div class="field-section-label">Technical details</div>
+      </div>
+
+      <div class="privacy-bar owner">
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        The following fields are <strong>&nbsp;private — owner only.&nbsp;</strong> Never shown publicly.
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Hull ID (HIN) <span class="pli-owner">Owner</span> <span class="pli-cg">Coast Guard</span></label>
+          <input type="text" id="f_hin" placeholder="e.g. NIM12341H223">
+          <span class="help-text">Found on the transom (right side). Required for USCG boarding inspections.</span>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Engine <span class="pli-owner">Owner</span></label>
+          <input type="text" id="f_engine" placeholder="e.g. Yamaha F150 Outboard" value="Yamaha F150 Outboard">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fuel type <span class="pli-owner">Owner</span></label>
+          <select id="f_fuel">
+            <option value="Gasoline" selected>Gasoline</option>
+            <option value="Diesel">Diesel</option>
+            <option value="Electric">Electric</option>
+            <option value="Hybrid">Hybrid</option>
+            <option value="N/A (Sail)">N/A (Sail only)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Max persons aboard <span class="pli-owner">Owner</span> <span class="pli-cg">Coast Guard</span></label>
+          <input type="number" id="f_persons" placeholder="e.g. 6" min="1" value="6">
+        </div>
+      </div>
+
+      <div class="field-section" style="margin-bottom:16px">
+        <div class="field-section-label">Public description</div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">About this vessel <span class="pli-public">Public</span></label>
+        <textarea id="f_notes" placeholder="Optional — a brief description visible to anyone who scans your QR. Keep it short and factual.">2023 Nimbus T8 day cruiser. Single Yamaha F150 outboard. Based at Portobello Marina, Oakland CA.</textarea>
+      </div>
+
+      <div class="step-nav">
+        <div></div>
+        <button class="btn-next" onclick="goStep(2)">
+          Next: Location
+          <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </div>
+    </div><!-- /step-1 -->
+
+
+    <!-- ═══════════════ STEP 2: LOCATION ═══════════════ -->
+    <div class="form-step" id="step-2">
+      <div class="section-header">
+        <div class="section-eyebrow">Step 2 of 4</div>
+        <h2 class="section-h2">Where is<br><em>she docked?</em></h2>
+        <p class="section-sub">Your home marina appears on your public profile. Slip number is shared with marina operators only.</p>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group full">
+          <label class="form-label">Marina name <span class="pli-public">Public</span></label>
+          <input type="text" id="f_marina" placeholder="e.g. Portobello Marina" oninput="updatePreview()" value="Portobello Marina">
+        </div>
+        <div class="form-group">
+          <label class="form-label">City, State <span class="pli-public">Public</span></label>
+          <input type="text" id="f_marina_city" placeholder="e.g. Oakland, CA" oninput="updatePreview()" value="Oakland, CA">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Slip number <span class="pli-marina">Marina only</span></label>
+          <input type="text" id="f_slip" placeholder="e.g. 38, B-12" value="38">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Marina phone <span class="pli-marina">Marina only</span></label>
+          <input type="tel" id="f_marina_phone" placeholder="(510) 555-0110">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Liveaboard? <span class="pli-marina">Marina only</span></label>
+          <select id="f_liveaboard">
+            <option value="No" selected>No</option>
+            <option value="Yes">Yes</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field-section"><div class="field-section-label">Mooring notes</div></div>
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Slip / mooring notes <span class="pli-marina">Marina only</span></label>
+        <textarea id="f_slip_notes" placeholder="Optional — anything marina staff should know. Typical schedule, special equipment, shore power needs, etc.">Standard utilities. Single-engine power vessel. Typically off-slip weekends.</textarea>
+      </div>
+
+      <div class="step-nav">
+        <button class="btn-back" onclick="goStep(1)">
+          <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Back
+        </button>
+        <button class="btn-next" onclick="goStep(3)">
+          Next: Documents
+          <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </div>
+    </div><!-- /step-2 -->
+
+
+    <!-- ═══════════════ STEP 3: DOCUMENTS ═══════════════ -->
+    <div class="form-step" id="step-3">
+      <div class="section-header">
+        <div class="section-eyebrow">Step 3 of 4</div>
+        <h2 class="section-h2">Load the<br><em>dry bag.</em></h2>
+        <p class="section-sub">Store your critical documents here — they're encrypted and private. Only you and verified marina operators can access them when needed.</p>
+      </div>
+
+      <!-- Registration -->
+      <div class="field-section"><div class="field-section-label">Registration &amp; Documentation</div></div>
+
+      <div class="form-grid" style="margin-bottom:16px">
+        <div class="form-group">
+          <label class="form-label">USCG Doc / State Reg # <span class="pli-owner">Owner</span> <span class="pli-cg">Coast Guard</span></label>
+          <input type="text" id="f_reg_num" placeholder="e.g. CF 1234567" value="CF 1234567">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Registration expiry <span class="pli-marina">Marina</span> <span class="pli-cg">Coast Guard</span></label>
+          <input type="date" id="f_reg_exp" value="2025-12-31">
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:20px">
+        <label class="form-label">Upload registration document <span class="pli-marina">Marina + Owner</span></label>
+        <div class="upload-zone" id="uz-reg" onclick="simulateUpload('uz-reg','USCG_Documentation_2025.pdf')">
+          <input type="file" accept=".pdf,.jpg,.png">
+          <div class="upload-zone-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg></div>
+          <div class="upload-zone-label">USCG Documentation or State Registration</div>
+          <div class="upload-zone-sub">PDF, JPG or PNG · Max 10MB</div>
+        </div>
+      </div>
+
+      <!-- Insurance -->
+      <div class="field-section"><div class="field-section-label">Insurance</div></div>
+
+      <div class="form-grid" style="margin-bottom:16px">
+        <div class="form-group">
+          <label class="form-label">Insurance carrier <span class="pli-marina">Marina</span> <span class="pli-cg">Coast Guard</span></label>
+          <input type="text" id="f_ins_co" placeholder="e.g. Markel, BoatUS" value="Markel American">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Broker / agent <span class="pli-owner">Owner</span></label>
+          <input type="text" id="f_ins_broker" placeholder="e.g. Novamar Insurance Group" value="Novamar Insurance Group">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Policy number <span class="pli-cg">Coast Guard</span></label>
+          <input type="text" id="f_ins_pol" placeholder="e.g. MAR-2025-00412" value="MAR-2025-00412">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Coverage expiry <span class="pli-marina">Marina</span></label>
+          <input type="date" id="f_ins_exp" value="2025-12-31">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Liability amount <span class="pli-cg">Coast Guard</span></label>
+          <input type="text" id="f_ins_cov" placeholder="e.g. $300,000" value="$300,000">
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:24px">
+        <label class="form-label">Upload insurance card <span class="pli-marina">Marina + Owner</span></label>
+        <div class="upload-zone" id="uz-ins" onclick="simulateUpload('uz-ins','Markel_Insurance_Card_2025.pdf')">
+          <input type="file" accept=".pdf,.jpg,.png">
+          <div class="upload-zone-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/></svg></div>
+          <div class="upload-zone-label">Insurance card or declarations page</div>
+          <div class="upload-zone-sub">PDF, JPG or PNG · Max 10MB</div>
+        </div>
+      </div>
+
+      <!-- Boater card -->
+      <div class="field-section"><div class="field-section-label">Operator credentials</div></div>
+
+      <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">CA Boater Card <span class="pli-cg">Coast Guard</span></label>
+        <div class="upload-zone" id="uz-boater" onclick="simulateUpload('uz-boater','CA_Boater_Card.jpg')">
+          <input type="file" accept=".pdf,.jpg,.png">
+          <div class="upload-zone-icon"><svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg></div>
+          <div class="upload-zone-label">CA Boater Card (required from Jan 1, 2025)</div>
+          <div class="upload-zone-sub">PDF, JPG or PNG · Max 10MB</div>
+        </div>
+      </div>
+
+      <div class="step-nav">
+        <button class="btn-back" onclick="goStep(2)">
+          <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Back
+        </button>
+        <button class="btn-next" onclick="goStep(4)">
+          Next: Owner info
+          <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+        </button>
+      </div>
+    </div><!-- /step-3 -->
+
+
+    <!-- ═══════════════ STEP 4: OWNER / EMERGENCY ═══════════════ -->
+    <div class="form-step" id="step-4">
+      <div class="section-header">
+        <div class="section-eyebrow">Step 4 of 4</div>
+        <h2 class="section-h2">Almost there.<br><em>Who do we call?</em></h2>
+        <p class="section-sub">Owner and emergency contact information is strictly private — shared only with marina operators who scan your QR, never with the public.</p>
+      </div>
+
+      <div class="privacy-bar owner">
+        <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        All fields in this section are <strong>&nbsp;strictly private.&nbsp;</strong> Never shown to the public.
+      </div>
+
+      <div class="field-section"><div class="field-section-label">Owner information</div></div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Full name <span class="pli-marina">Marina</span></label>
+          <input type="text" id="f_owner" placeholder="Your full name" value="Ben Eves">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Phone <span class="pli-marina">Marina</span></label>
+          <input type="tel" id="f_phone" placeholder="Primary phone" value="312-465-0672">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Email <span class="pli-marina">Marina</span></label>
+          <input type="email" id="f_email" placeholder="your@email.com" value="ben@moxieyachting.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Preferred contact method <span class="pli-marina">Marina</span></label>
+          <select>
+            <option>Phone call</option>
+            <option>Text / SMS</option>
+            <option>Email</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="field-section"><div class="field-section-label">Emergency contact</div></div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Emergency contact name <span class="pli-marina">Marina</span></label>
+          <input type="text" id="f_emg_name" placeholder="Full name">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Relationship <span class="pli-marina">Marina</span></label>
+          <input type="text" id="f_emg_rel" placeholder="e.g. Spouse, Partner, Parent">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Emergency phone <span class="pli-marina">Marina</span></label>
+          <input type="tel" id="f_emg_phone" placeholder="Emergency phone number">
+        </div>
+      </div>
+
+      <div class="field-section"><div class="field-section-label">Safety equipment</div></div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Life jackets aboard <span class="pli-cg">Coast Guard</span></label>
+          <input type="number" placeholder="e.g. 6" min="0" value="6">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fire extinguisher <span class="pli-cg">Coast Guard</span></label>
+          <select>
+            <option>Yes — on board, current</option>
+            <option>Yes — needs replacement</option>
+            <option>No</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Flares <span class="pli-cg">Coast Guard</span></label>
+          <select>
+            <option>Yes — on board, current</option>
+            <option>Yes — expired</option>
+            <option>No</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Sound device (horn) <span class="pli-cg">Coast Guard</span></label>
+          <select>
+            <option>Yes</option>
+            <option>No</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="step-nav">
+        <button class="btn-back" onclick="goStep(3)">
+          <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          Back
+        </button>
+        <button class="btn-submit" onclick="showCompletion()">
+          <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round"><polyline points="20 6 9 17 4 12"/></svg>
+          Register vessel
+        </button>
+      </div>
+    </div><!-- /step-4 -->
+
+
+    <!-- ═══════════════ COMPLETION ═══════════════ -->
+    <div class="completion" id="completion">
+      <div class="completion-icon">
+        <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      </div>
+      <h2 class="completion-h">Your vessel<br>is <em>registered.</em></h2>
+      <p class="completion-sub">Discovery One now has a permanent digital identity. Your QR sticker is ready — once it arrives, place it on the stern, dock box, or companionway.</p>
+
+      <!-- Sticker reveal -->
+      <div class="sticker-reveal">
+        <div class="sr-wordmark"><span class="m">M</span>oxie</div>
+        <div class="sr-grid">
+          <div class="gd"></div><div class="gd"></div><div class="gd"></div><div class="lt"></div><div class="gd"></div><div class="lt"></div><div class="gd"></div><div class="gd"></div><div class="gd"></div>
+          <div class="gd"></div><div class="lt"></div><div class="gd"></div><div class="gd"></div><div class="lt"></div><div class="gd"></div><div class="gd"></div><div class="lt"></div><div class="gd"></div>
+          <div class="gd"></div><div class="gd"></div><div class="gd"></div><div class="lt"></div><div class="gd"></div><div class="gd"></div><div class="gd"></div><div class="gd"></div><div class="gd"></div>
+          <div class="lt"></div><div class="lt"></div><div class="lt"></div><div class="gd"></div><div class="lt"></div><div class="gd"></div><div class="lt"></div><div class="lt"></div><div class="lt"></div>
+          <div class="gd"></div><div class="lt"></div><div class="gd"></div><div class="gd"></div><div class="gd"></div><div class="lt"></div><div class="gd"></div><div class="lt"></div><div class="gd"></div>
+          <div class="lt"></div><div class="lt"></div><div class="lt"></div><div class="gd"></div><div class="lt"></div><div class="gd"></div><div class="lt"></div><div class="lt"></div><div class="lt"></div>
+          <div class="gd"></div><div class="gd"></div><div class="gd"></div><div class="lt"></div><div class="gd"></div><div class="lt"></div><div class="gd"></div><div class="gd"></div><div class="gd"></div>
+          <div class="gd"></div><div class="lt"></div><div class="gd"></div><div class="gd"></div><div class="lt"></div><div class="gd"></div><div class="gd"></div><div class="lt"></div><div class="gd"></div>
+          <div class="gd"></div><div class="gd"></div><div class="gd"></div><div class="lt"></div><div class="gd"></div><div class="lt"></div><div class="gd"></div><div class="gd"></div><div class="sig"></div>
+        </div>
+        <div class="sr-rule"></div>
+        <div class="sr-caption">Registered vessel<br>Scan · MXE-00001</div>
+      </div>
+
+      <div class="sr-id">MXE-00001</div>
+      <div style="font-size:12px;color:var(--text3);margin:8px 0 28px;letter-spacing:.06em">Discovery One · 2023 Nimbus T8</div>
+
+      <div class="completion-actions">
+        <a href="moxie_vessel_profile_all_roles.html" class="btn-view-profile">View my profile →</a>
+        <a href="#" class="btn-add-vessel" onclick="resetForm()">+ Register another vessel</a>
+      </div>
+    </div><!-- /completion -->
+
+  </div><!-- /form-side -->
+
+  <!-- ── PREVIEW PANEL (desktop) ── -->
+  <div class="preview-panel">
+    <div class="preview-header">
+      <span class="preview-title">Live preview</span>
+      <div class="preview-role-toggle">
+        <button class="prole-btn active" onclick="setPRole(this,'public')">Public</button>
+        <button class="prole-btn" onclick="setPRole(this,'marina')">Marina</button>
+      </div>
+    </div>
+    <div class="preview-scroll">
+      <!-- Mini vessel card -->
+      <div class="mini-hero">
+        <div class="mini-vessel-name" id="pv-name">Discovery One</div>
+        <div class="mini-vessel-tag" id="pv-tag">2023 Nimbus T8 · Power</div>
+      </div>
+      <div class="mini-body">
+        <div class="mini-specs">
+          <div><div class="mini-sk">Make</div><div class="mini-sv" id="pv-make">Nimbus</div></div>
+          <div><div class="mini-sk">Year</div><div class="mini-sv" id="pv-year">2023</div></div>
+          <div><div class="mini-sk">Length</div><div class="mini-sv" id="pv-length">26'</div></div>
+          <div><div class="mini-sk">Type</div><div class="mini-sv" id="pv-type">Power</div></div>
+          <div><div class="mini-sk">Draft</div><div class="mini-sv">2.5'</div></div>
+          <div><div class="mini-sk">HIN</div><div class="mini-sv" style="font-size:10px;color:var(--text3);font-style:italic;font-weight:400">Private</div></div>
+        </div>
+        <div class="mini-divider"></div>
+        <div class="mini-marina-row">
+          <div class="mini-marina-dot"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+          <div><div class="mini-marina-name" id="pv-marina">Portobello Marina</div><div class="mini-marina-detail" id="pv-city">Oakland, CA</div></div>
+        </div>
+
+        <!-- Marina-only extras (hidden in public mode) -->
+        <div class="mini-hidden-row" id="pv-marina-extra" style="display:none">
+          <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12"/></svg>
+          Slip 38 · Ben Eves · 312-465-0672
+        </div>
+      </div>
+
+      <!-- Powered by (public only) -->
+      <div class="mini-powered" id="pv-powered">
+        <div class="mini-powered-text">Powered by</div>
+        <div class="mini-powered-brand"><span class="m">M</span>oxie</div>
+      </div>
+    </div>
+
+    <!-- QR preview -->
+    <div class="qr-preview-wrap">
+      <div class="qr-preview-label">Your QR sticker preview</div>
+      <div class="qr-sticker-mini">
+        <div class="qr-sm-wordmark"><span class="m">M</span>oxie</div>
+        <div class="qr-sm-grid">
+          <div class="dk"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="dk"></div>
+          <div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div>
+          <div class="dk"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="dk"></div>
+          <div class="lt"></div><div class="lt"></div><div class="lt"></div><div class="dk"></div><div class="lt"></div><div class="lt"></div><div class="lt"></div>
+          <div class="dk"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="dk"></div>
+          <div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div>
+          <div class="dk"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="sig"></div>
+        </div>
+        <div class="qr-sm-rule"></div>
+        <div class="qr-sm-caption">Registered vessel<br>Scan · MXE-00001</div>
+      </div>
+    </div>
+  </div><!-- /preview-panel -->
+
+</div><!-- /layout -->
+
+<script>
+let currentStep = 1;
+let previewRole = 'public';
+
+function goStep(n) {
+  document.getElementById('step-'+currentStep).classList.remove('active');
+  document.getElementById('step-'+n).classList.add('active');
+  // Update progress steps
+  for(let i=1;i<=4;i++){
+    const s=document.getElementById('pstep-'+i);
+    s.className='step '+(i<n?'done':i===n?'active':'future');
+  }
+  document.getElementById('step-indicator').textContent='Step '+n+' of 4';
+  currentStep=n;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function showCompletion() {
+  // Hide the form steps and progress
+  document.getElementById('progress-steps').style.display='none';
+  document.getElementById('step-4').classList.remove('active');
+  document.getElementById('step-indicator').textContent='Vessel registered';
+  document.getElementById('completion').classList.add('active');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function resetForm() {
+  document.getElementById('completion').classList.remove('active');
+  document.getElementById('progress-steps').style.display='flex';
+  goStep(1);
+}
+
+// Preview role toggle
+function setPRole(btn, role) {
+  previewRole = role;
+  document.querySelectorAll('.prole-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const extra = document.getElementById('pv-marina-extra');
+  const powered = document.getElementById('pv-powered');
+  if(role === 'marina') {
+    extra.style.display='flex';
+    powered.style.display='none';
+  } else {
+    extra.style.display='none';
+    powered.style.display='block';
+  }
+}
+
+// Live preview update
+function updatePreview() {
+  const get = id => document.getElementById(id)?.value || '';
+  const set = (id, val, fallback) => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.textContent = val || fallback || '—';
+    el.classList.toggle('empty', !val);
+  };
+  set('pv-name', get('f_name'), 'Vessel Name');
+  set('pv-make', get('f_make'), '—');
+  set('pv-year', get('f_year'), '—');
+  set('pv-length', get('f_length') ? get('f_length')+"'" : '', '—');
+  set('pv-type', get('f_type'), '—');
+  set('pv-marina', get('f_marina'), '—');
+  set('pv-city', get('f_marina_city'), '');
+  const tag = [get('f_year'), get('f_make'), get('f_model'), get('f_type') ? '· '+get('f_type') : ''].filter(Boolean).join(' ');
+  set('pv-tag', tag, 'Make · Model · Type');
+}
+
+// Simulate file upload (visual feedback only)
+function simulateUpload(zoneId, fileName) {
+  const zone = document.getElementById(zoneId);
+  if(!zone) return;
+  setTimeout(()=>{
+    zone.classList.add('has-file');
+    zone.querySelector('.upload-zone-label').textContent = '✓ ' + fileName;
+    zone.querySelector('.upload-zone-sub').textContent = 'File ready · click to replace';
+  }, 300);
+}
+
+// Init
+updatePreview();
+</script>
+</body>
+</html>

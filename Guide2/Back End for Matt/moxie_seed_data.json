@@ -1,0 +1,339 @@
+{
+  "_meta": {
+    "description": "Moxie Platform — Seed Data v1",
+    "purpose": "Complete dataset for bootstrapping the Moxie development database. Contains all entities needed to render every prototype screen with real data. Run the companion SQL migration first, then insert this data.",
+    "source": "Extracted from all design prototypes, technical handoff v1, tech brief, brand guide, and founder records as of April 2026.",
+    "notes_for_agents": [
+      "UUIDs below are deterministic placeholders — generate real UUIDs in production but keep these stable in dev/staging so hardcoded references in tests work.",
+      "All dates use ISO 8601. Expiry dates are set to Dec 31, 2025 in prototypes — update to current year + 1 when seeding a live environment.",
+      "Fields marked [PLACEHOLDER] use demo values from the HTML prototypes. Ben will replace these with real values before any external demo.",
+      "Photo URLs reference Supabase Storage paths — upload actual images to these paths after bucket creation.",
+      "The two vessels below (Discovery One + Polaris) are the ONLY vessels that should exist in the database at launch. Do not generate fake data."
+    ]
+  },
+
+  "users": [
+    {
+      "id": "00000000-0000-0000-0000-000000000001",
+      "email": "ben@moxieyachting.com",
+      "phone": "312-465-0672",
+      "full_name": "Ben Eves",
+      "role": "admin",
+      "marina_id": null,
+      "emergency_name": null,
+      "emergency_phone": null,
+      "emergency_relationship": null,
+      "preferred_contact": "phone",
+      "_notes": "Founder account. Has admin + owner privileges. Owns both vessels. CA Yacht Salesperson Lic. S-1-4046-0001. CA Real Estate Broker DRE #01738246. CA Boater Card: Current, Permanent."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000010",
+      "email": "demo-marina@moxieyachting.com",
+      "phone": null,
+      "full_name": "Emery Cove Demo Operator",
+      "role": "marina_operator",
+      "marina_id": "00000000-0000-0000-0000-000000000101",
+      "emergency_name": null,
+      "emergency_phone": null,
+      "emergency_relationship": null,
+      "preferred_contact": null,
+      "_notes": "Placeholder marina operator for Emery Cove pilot demo. Ben will create real operator accounts when the pilot begins. This account lets the dev team test the marina role render."
+    }
+  ],
+
+  "marinas": [
+    {
+      "id": "00000000-0000-0000-0000-000000000100",
+      "name": "Portobello Marina",
+      "city": "Oakland",
+      "state": "CA",
+      "region": "SF Bay — East Bay",
+      "phone": "(510) 555-0110",
+      "_notes": "Home base. Ben owns fee-simple slips 37 and 38 here. Slip 37 rented out (~$500/month). Slip 38 is Discovery One's home dock. This is proof-of-concept only — NOT the flagship pilot marina."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000101",
+      "name": "Emery Cove Marina",
+      "city": "Emeryville",
+      "state": "CA",
+      "region": "SF Bay — East Bay",
+      "phone": null,
+      "_notes": "FLAGSHIP PILOT MARINA. 300+ slips, high-end boats, $10M recent renovation, Rubicon Yachts on-site. Ben knows the harbor master personally. First external rollout target."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000000102",
+      "name": "Clipper Yacht Harbor",
+      "city": "Sausalito",
+      "state": "CA",
+      "region": "SF Bay — Marin",
+      "phone": null,
+      "_notes": "Modern Sailing's base. Polaris (Beneteau) is berthed here as part of the charter program. Affluent Sausalito market — 100+ charter days/year exposure."
+    }
+  ],
+
+  "vessels": [
+    {
+      "id": "00000000-0000-0000-0000-000000001001",
+      "owner_id": "00000000-0000-0000-0000-000000000001",
+      "marina_id": "00000000-0000-0000-0000-000000000100",
+      "mxe_id": "MXE-00001",
+      "vessel_name": "Discovery One",
+      "make": "Nimbus",
+      "model": "T8",
+      "year": 2023,
+      "length_ft": 26.9,
+      "draft_ft": 2.5,
+      "vessel_type": "power",
+      "hin": "NIM12341H223",
+      "engine": "Mercury Verado 300HP",
+      "fuel_type": "gasoline",
+      "max_persons": 6,
+      "slip_number": "38",
+      "is_liveaboard": false,
+      "slip_notes": "Standard utilities. Single-engine power vessel. Typically off-slip weekends.",
+      "photo_url": "vessels/mxe-00001/hero.jpg",
+      "is_public": true,
+      "public_notes": "2023 Nimbus T8 day cruiser. Single Mercury Verado 300HP outboard. Regularly maintained. House battery system upgraded 2024. Life jackets for 6 aboard.",
+
+      "owner_name": "Ben Eves",
+      "owner_phone": "312-465-0672",
+      "owner_email": "ben@moxieyachting.com",
+      "preferred_contact": "phone",
+
+      "emg_name": null,
+      "emg_phone": null,
+      "emg_relationship": null,
+      "_emg_notes": "[PLACEHOLDER] Ben needs to fill in real emergency contact. Prototypes leave this blank.",
+
+      "uscg_doc_number": "1234567",
+      "official_number": "CA 1234 AB",
+      "reg_state": "CA",
+      "reg_number": "CF 1234567",
+      "reg_expiry": "2025-12-31",
+
+      "ins_carrier": "Markel American",
+      "ins_broker": "Novamar Insurance Group",
+      "ins_policy": "MAR-2025-00412",
+      "ins_expiry": "2025-12-31",
+      "ins_liability": "$300,000",
+
+      "lifejackets": 6,
+      "fire_extinguisher": true,
+      "flares": true,
+      "sound_device": true,
+      "ca_boater_card": true,
+
+      "_acquisition_notes": "Nimbus financed via Bank OZK 12/30/2024, joint loan with wife Katherine Putz. Insurance: Markel American via Novamar Insurance Group. This is the primary content/revenue workhorse vessel and demo vessel for all marina pitches.",
+      "_notes": "FIRST VESSEL ON PLATFORM. Must be pixel-perfect before any other profile is created. This profile is the product demo that sells the platform to marina operators."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000001002",
+      "owner_id": "00000000-0000-0000-0000-000000000001",
+      "marina_id": "00000000-0000-0000-0000-000000000102",
+      "mxe_id": "MXE-00002",
+      "vessel_name": "Polaris",
+      "make": "Beneteau",
+      "model": "Oceanis 30.1",
+      "year": 2021,
+      "length_ft": 30.0,
+      "draft_ft": null,
+      "vessel_type": "sail",
+      "hin": "BEN00000B121",
+      "engine": null,
+      "fuel_type": null,
+      "max_persons": null,
+      "slip_number": null,
+      "is_liveaboard": false,
+      "slip_notes": null,
+      "photo_url": "vessels/mxe-00002/hero.jpg",
+      "is_public": true,
+      "public_notes": "2021 Beneteau Oceanis 30.1 sloop. In Modern Sailing charter program at Clipper Yacht Harbor, Sausalito. Available for ASA instruction and private charter. Regularly maintained by Modern Sailing fleet team.",
+
+      "owner_name": "Ben Eves",
+      "owner_phone": "312-465-0672",
+      "owner_email": "ben@moxieyachting.com",
+      "preferred_contact": "phone",
+
+      "emg_name": null,
+      "emg_phone": null,
+      "emg_relationship": null,
+
+      "uscg_doc_number": null,
+      "official_number": null,
+      "reg_state": "CA",
+      "reg_number": null,
+      "reg_expiry": null,
+
+      "ins_carrier": "Markel American",
+      "ins_broker": "Novamar Insurance Group",
+      "ins_policy": null,
+      "ins_expiry": "2025-12-31",
+      "ins_liability": null,
+
+      "lifejackets": null,
+      "fire_extinguisher": null,
+      "flares": null,
+      "sound_device": null,
+      "ca_boater_card": true,
+
+      "_charter_notes": "In Modern Sailing charter program since late 2025. ~$19,500/year passive revenue. One of their best-performing vessels. Moved from Berkeley to Sausalito/Clipper Yacht Harbor. Deal: free move, -$6K balance extension, 55% commission for 2026, ASA yacht club program inclusion.",
+      "_notes": "Second vessel. Less complete data than Discovery One — many fields TBD. Getting Moxie QR + name decal on hull (first live deployment, timed with Sausalito move). 100+ charter days/year in affluent market = high QR scan exposure."
+    }
+  ],
+
+  "vessel_documents": [
+    {
+      "id": "00000000-0000-0000-0000-000000002001",
+      "vessel_id": "00000000-0000-0000-0000-000000001001",
+      "doc_type": "registration",
+      "doc_label": "USCG Documentation",
+      "reg_number": "CF 1234567",
+      "reg_state": "CA",
+      "reg_expiry": "2025-12-31",
+      "file_url": "documents/mxe-00001/USCG_Documentation_2025.pdf",
+      "file_name": "USCG_Documentation_2025.pdf",
+      "status": "current",
+      "_notes": "[PLACEHOLDER] Demo file — Ben uploads real USCG doc after platform goes live."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000002002",
+      "vessel_id": "00000000-0000-0000-0000-000000001001",
+      "doc_type": "insurance",
+      "doc_label": "Marine Insurance",
+      "ins_carrier": "Markel American",
+      "ins_policy": "MAR-2025-00412",
+      "ins_expiry": "2025-12-31",
+      "file_url": "documents/mxe-00001/Markel_Insurance_Card_2025.pdf",
+      "file_name": "Markel_Insurance_Card_2025.pdf",
+      "status": "current",
+      "_notes": "[PLACEHOLDER] Demo file."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000002003",
+      "vessel_id": "00000000-0000-0000-0000-000000001001",
+      "doc_type": "boater_card",
+      "doc_label": "CA Boater Card",
+      "file_url": "documents/mxe-00001/CA_Boater_Card.jpg",
+      "file_name": "CA_Boater_Card.jpg",
+      "status": "current",
+      "_notes": "Permanent card — no expiry. Required from Jan 1, 2025 in California."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000002010",
+      "vessel_id": "00000000-0000-0000-0000-000000001002",
+      "doc_type": "registration",
+      "doc_label": "USCG Documentation",
+      "reg_number": null,
+      "reg_state": "CA",
+      "reg_expiry": null,
+      "file_url": "documents/mxe-00002/USCG_Documentation_Polaris_2025.pdf",
+      "file_name": "USCG_Documentation_Polaris_2025.pdf",
+      "status": "current",
+      "_notes": "[PLACEHOLDER]"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000002011",
+      "vessel_id": "00000000-0000-0000-0000-000000001002",
+      "doc_type": "insurance",
+      "doc_label": "Marine Insurance",
+      "ins_carrier": "Markel American",
+      "ins_policy": null,
+      "ins_expiry": "2025-12-31",
+      "file_url": "documents/mxe-00002/Novamar_Markel_Policy_2025.pdf",
+      "file_name": "Novamar_Markel_Policy_2025.pdf",
+      "status": "current",
+      "_notes": "[PLACEHOLDER]"
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000002012",
+      "vessel_id": "00000000-0000-0000-0000-000000001002",
+      "doc_type": "charter_agreement",
+      "doc_label": "Charter Program Agreement",
+      "file_url": "documents/mxe-00002/ModernSailing_Charter_Agreement_2026.pdf",
+      "file_name": "ModernSailing_Charter_Agreement_2026.pdf",
+      "status": "current",
+      "_notes": "Modern Sailing charter agreement for Polaris."
+    }
+  ],
+
+  "qr_tokens": [
+    {
+      "id": "00000000-0000-0000-0000-000000003001",
+      "vessel_id": "00000000-0000-0000-0000-000000001001",
+      "mxe_id": "MXE-00001",
+      "token": "mxe-00001-discovery-one",
+      "scan_url_short": "moxie.sh/MXE-00001",
+      "scan_url_long": "moxieyachting.com/boat/mxe-00001-discovery-one",
+      "_notes": "Primary QR. Short URL preferred for sticker (fewer chars = denser QR = better scan). Token format TBD — sequential MXE-XXXXX vs random 6-char. See open questions in technical handoff."
+    },
+    {
+      "id": "00000000-0000-0000-0000-000000003002",
+      "vessel_id": "00000000-0000-0000-0000-000000001002",
+      "mxe_id": "MXE-00002",
+      "token": "mxe-00002-polaris",
+      "scan_url_short": "moxie.sh/MXE-00002",
+      "scan_url_long": "moxieyachting.com/boat/mxe-00002-polaris",
+      "_notes": "Polaris QR. This will be the FIRST live deployment — QR + name decal on hull, timed with Sausalito move."
+    }
+  ],
+
+  "storage_buckets": {
+    "_notes": "Supabase Storage bucket structure. Create these buckets before running seed. All paths in file_url fields above are relative to the bucket root.",
+    "vessels": {
+      "description": "Vessel hero photos and gallery images",
+      "access": "public-read for hero photos",
+      "structure": [
+        "vessels/mxe-00001/hero.jpg",
+        "vessels/mxe-00001/gallery/",
+        "vessels/mxe-00002/hero.jpg",
+        "vessels/mxe-00002/gallery/"
+      ]
+    },
+    "documents": {
+      "description": "Private document uploads — registration PDFs, insurance cards, boater cards",
+      "access": "private — signed URLs only, 15-minute expiry",
+      "structure": [
+        "documents/mxe-00001/",
+        "documents/mxe-00002/"
+      ]
+    }
+  },
+
+  "qr_code_spec": {
+    "_notes": "QR generation parameters — use these when implementing P1-B (QR code generation + sticker PDF).",
+    "error_correction": "Level H (survives 30% damage — critical for marine environment)",
+    "dark_cell_color": "#071020",
+    "light_cell_color": "transparent (sticker background shows through)",
+    "sticker_colorways": {
+      "navy_gold": { "bg": "#0d1f35", "cells": "#c9a84c", "text": "#c9a84c", "use": "Primary — hull stickers" },
+      "white_navy": { "bg": "#ffffff", "cells": "#0d1f35", "text": "#0d1f35", "use": "Print / light surfaces" },
+      "gold_navy": { "bg": "#c9a84c", "cells": "#0d1f35", "text": "#0d1f35", "use": "Premium / limited edition" }
+    },
+    "sticker_format": {
+      "size": "3 inches × 3 inches",
+      "resolution": "600 dpi minimum",
+      "material": "weatherproof vinyl with rounded corners (10–14px radius)",
+      "text_below_qr": "MOXIE in uppercase DM Sans or Cormorant italic"
+    },
+    "encoded_url_format": "moxie.sh/{MXE_ID}?scan=1"
+  },
+
+  "design_tokens": {
+    "_notes": "Subset of brand tokens most relevant to backend-generated content (QR PDFs, emails, OG images). Full token set is in the brand guide and technical handoff CSS variables.",
+    "colors": {
+      "navy": "#0d1f35",
+      "navy2": "#132943",
+      "navy_deep": "#071020",
+      "gold": "#c9a84c",
+      "gold_lt": "#dfc06a",
+      "gold_dim": "rgba(201,168,76,0.15)",
+      "cream": "#f5f2ec",
+      "aqua_bright": "#17C3B2",
+      "aqua_lagoon": "#1FA394"
+    },
+    "fonts": {
+      "heading": "Cormorant Garamond (serif, italic for display)",
+      "body": "DM Sans (sans-serif, 300/400/500 weights)"
+    }
+  }
+}
