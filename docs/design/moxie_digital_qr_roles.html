@@ -1,0 +1,381 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans, sans-serif); color: var(--color-text-primary); background: transparent; padding: 0 0 28px 0; }
+
+.hero-qr {
+  display: flex; align-items: center; justify-content: center;
+  gap: 0; margin-bottom: 20px; flex-wrap: wrap;
+}
+.qr-center {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  width: 96px; height: 96px; border-radius: 12px;
+  background: #071020; border: 1px solid rgba(201,168,76,0.5);
+  flex-shrink: 0; z-index: 2; position: relative;
+}
+.qr-grid {
+  display: grid; grid-template-columns: repeat(7,8px); grid-template-rows: repeat(7,8px);
+  gap: 1px; margin-bottom: 6px;
+}
+.qr-cell { border-radius: 1px; }
+.qr-dark { background: #c9a84c; }
+.qr-light { background: transparent; }
+.qr-label { font-size: 8px; letter-spacing: 0.2em; color: #c9a84c; text-transform: uppercase; }
+
+.spoke {
+  display: flex; align-items: center;
+  flex-direction: column; gap: 0;
+}
+.spoke-line {
+  width: 40px; height: 1px;
+  background: linear-gradient(90deg, rgba(201,168,76,0.2), rgba(201,168,76,0.6));
+}
+.spoke-line.reverse {
+  background: linear-gradient(90deg, rgba(201,168,76,0.6), rgba(201,168,76,0.2));
+}
+
+/* Role tabs */
+.roles { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
+.role-tab {
+  display: flex; align-items: center; gap: 7px;
+  padding: 8px 14px; border-radius: 20px; cursor: pointer;
+  border: 0.5px solid var(--color-border-tertiary);
+  background: var(--color-background-secondary);
+  font-size: 12px; font-weight: 500;
+  color: var(--color-text-secondary);
+  transition: all 0.15s; user-select: none;
+}
+.role-tab .dot { width: 8px; height: 8px; border-radius: 50%; }
+.role-tab:hover { background: var(--color-background-tertiary); }
+.role-tab.active { border-color: transparent; }
+
+.role-tab.r-owner.active    { background: #E1F5EE; color: #085041; border-color: #9FE1CB; }
+.role-tab.r-marina.active   { background: #E6F1FB; color: #0C447C; border-color: #B5D4F4; }
+.role-tab.r-public.active   { background: #F1EFE8; color: #2C2C2A; border-color: #D3D1C7; }
+.role-tab.r-coast.active    { background: #FAECE7; color: #712B13; border-color: #F5C4B3; }
+.role-tab.r-admin.active    { background: #EEEDFE; color: #3C3489; border-color: #CECBF6; }
+
+.dot-owner  { background: #1D9E75; }
+.dot-marina { background: #378ADD; }
+.dot-public { background: #888780; }
+.dot-coast  { background: #D85A30; }
+.dot-admin  { background: #7F77DD; }
+
+/* Role panel */
+.role-panel { display: none; }
+.role-panel.active { display: block; }
+
+.rp-header {
+  padding: 16px 18px; border-radius: 10px 10px 0 0;
+  border: 0.5px solid var(--color-border-tertiary);
+  border-bottom: none;
+}
+.rp-header .rp-eyebrow { font-size: 10px; font-weight: 500; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 4px; }
+.rp-header .rp-title { font-size: 18px; font-weight: 500; margin-bottom: 6px; }
+.rp-header .rp-why { font-size: 13px; color: var(--color-text-secondary); line-height: 1.6; }
+
+.rp-header.c-owner  { background: #E1F5EE; }
+.rp-header.c-marina { background: #E6F1FB; }
+.rp-header.c-public { background: #F1EFE8; }
+.rp-header.c-coast  { background: #FAECE7; }
+.rp-header.c-admin  { background: #EEEDFE; }
+
+.rp-header.c-owner  .rp-eyebrow { color: #085041; }
+.rp-header.c-marina .rp-eyebrow { color: #0C447C; }
+.rp-header.c-public .rp-eyebrow { color: #444441; }
+.rp-header.c-coast  .rp-eyebrow { color: #712B13; }
+.rp-header.c-admin  .rp-eyebrow { color: #3C3489; }
+
+.rp-items {
+  border: 0.5px solid var(--color-border-tertiary);
+  border-top: none; border-radius: 0 0 10px 10px;
+  overflow: hidden;
+}
+.rp-item {
+  display: grid; grid-template-columns: 220px 1fr;
+  border-bottom: 0.5px solid var(--color-border-tertiary);
+}
+.rp-item:last-child { border-bottom: none; }
+@media (max-width: 560px) { .rp-item { grid-template-columns: 1fr; } }
+
+.rp-item-field {
+  padding: 12px 16px; border-right: 0.5px solid var(--color-border-tertiary);
+  background: var(--color-background-secondary);
+}
+.rp-item-field .field-name { font-size: 13px; font-weight: 500; margin-bottom: 2px; }
+.rp-item-field .field-access {
+  font-size: 10px; font-weight: 500; padding: 2px 7px;
+  border-radius: 10px; display: inline-block;
+}
+.access-see  { background: #E1F5EE; color: #085041; }
+.access-edit { background: #EEEDFE; color: #3C3489; }
+.access-all  { background: #E6F1FB; color: #0C447C; }
+.access-emg  { background: #FAECE7; color: #712B13; }
+.access-no   { background: #F1EFE8; color: #888780; }
+
+.rp-item-why {
+  padding: 12px 16px; font-size: 12px; color: var(--color-text-secondary);
+  line-height: 1.6; background: var(--color-background-primary);
+}
+.rp-item-why strong { color: var(--color-text-primary); font-weight: 500; }
+
+.scan-moment {
+  margin-top: 14px; padding: 14px 16px;
+  border: 0.5px solid var(--color-border-tertiary);
+  border-radius: 10px; background: var(--color-background-secondary);
+  font-size: 13px; line-height: 1.7;
+}
+.scan-moment .sm-label {
+  font-size: 10px; font-weight: 500; letter-spacing: 0.08em;
+  text-transform: uppercase; color: var(--color-text-tertiary); margin-bottom: 6px;
+}
+</style>
+</head>
+<body>
+
+<!-- QR graphic -->
+<div style="text-align:center; margin-bottom: 6px;">
+  <div style="font-size: 11px; color: var(--color-text-tertiary); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px;">One QR code — four different people — four different experiences</div>
+  <div style="display:inline-flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:center;">
+    <div style="font-size:11px; padding:5px 12px; border-radius:20px; background:#E1F5EE; color:#085041; font-weight:500;">Boat Owner</div>
+    <div style="font-size:18px; color:var(--color-text-tertiary);">→</div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:4px; background:#071020; border:1px solid rgba(201,168,76,0.5); border-radius:10px; padding:12px 14px;">
+      <div style="display:grid;grid-template-columns:repeat(6,7px);grid-template-rows:repeat(6,7px);gap:1.5px;">
+        <div style="background:#c9a84c;border-radius:1px;"></div><div style="background:#c9a84c;border-radius:1px;"></div><div style="background:#c9a84c;border-radius:1px;"></div><div style="background:transparent;"></div><div style="background:#c9a84c;border-radius:1px;"></div><div style="background:transparent;"></div>
+        <div style="background:#c9a84c;border-radius:1px;"></div><div style="background:transparent;"></div><div style="background:#c9a84c;border-radius:1px;"></div><div style="background:#c9a84c;border-radius:1px;"></div><div style="background:transparent;"></div><div style="background:#c9a84c;border-radius:1px;"></div>
+        <div style="background:#c9a84c;border-radius:1px;"></div><div style="background:transparent;"></div><div style="background:transparent;"></div><div style="background:#c9a84c;border-radius:1px;"></div><div style="background:#c9a84c;border-radius:1px;"></div><div style="background:transparent;"></div>
+        <div style="background:transparent;"></div><div style="background:#c9a84c;border-radius:1px;"></div><div style="background:#c9a84c;border-radius:1px;"></div><div style="background:transparent;"></div><div style="background:#c9a84c;border-radius:1px;"></div><div style="background:#c9a84c;border-radius:1px;"></div>
+        <div style="background:#c9a84c;border-radius:1px;"></div><div style="background:transparent;"></div><div style="background:#c9a84c;border-radius:1px;"></div><div style="background:transparent;"></div><div style="background:transparent;"></div><div style="background:#c9a84c;border-radius:1px;"></div>
+        <div style="background:#c9a84c;border-radius:1px;"></div><div style="background:#c9a84c;border-radius:1px;"></div><div style="background:transparent;"></div><div style="background:#c9a84c;border-radius:1px;"></div><div style="background:#c9a84c;border-radius:1px;"></div><div style="background:transparent;"></div>
+      </div>
+      <div style="font-size:8px; letter-spacing:0.2em; color:#c9a84c; text-transform:uppercase; margin-top:2px;">Moxie</div>
+    </div>
+    <div style="font-size:18px; color:var(--color-text-tertiary);">→</div>
+    <div style="display:flex; flex-direction:column; gap:5px;">
+      <div style="font-size:11px; padding:5px 12px; border-radius:20px; background:#E6F1FB; color:#0C447C; font-weight:500;">Marina Operator</div>
+      <div style="font-size:11px; padding:5px 12px; border-radius:20px; background:#F1EFE8; color:#444441; font-weight:500;">General Public</div>
+      <div style="font-size:11px; padding:5px 12px; border-radius:20px; background:#FAECE7; color:#712B13; font-weight:500;">Coast Guard</div>
+      <div style="font-size:11px; padding:5px 12px; border-radius:20px; background:#EEEDFE; color:#3C3489; font-weight:500;">Admin (You)</div>
+    </div>
+  </div>
+</div>
+
+<div style="font-size:12px; text-align:center; color:var(--color-text-tertiary); margin-bottom:18px;">Same URL · Same scan · Different login = different view</div>
+
+<!-- Role tabs -->
+<div class="roles">
+  <div class="role-tab r-owner active" onclick="switchRole('owner', this)"><span class="dot dot-owner"></span>Boat owner</div>
+  <div class="role-tab r-marina" onclick="switchRole('marina', this)"><span class="dot dot-marina"></span>Marina operator</div>
+  <div class="role-tab r-public" onclick="switchRole('public', this)"><span class="dot dot-public"></span>General public</div>
+  <div class="role-tab r-coast" onclick="switchRole('coast', this)"><span class="dot dot-coast"></span>Coast Guard</div>
+  <div class="role-tab r-admin" onclick="switchRole('admin', this)"><span class="dot dot-admin"></span>Admin (you)</div>
+</div>
+
+<!-- OWNER -->
+<div class="role-panel active" id="rp-owner">
+  <div class="rp-header c-owner">
+    <div class="rp-eyebrow">Role · Boat owner</div>
+    <div class="rp-title">It's your boat's digital glove box — and you control it</div>
+    <div class="rp-why">The owner has the richest experience. They can view everything, edit their own profile, upload documents, and see a QR preview. This is the core value proposition that gets them to sign up in the first place.</div>
+  </div>
+  <div class="rp-items">
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Vessel name, make, model, year</div><span class="field-access access-edit">Can edit</span></div>
+      <div class="rp-item-why"><strong>Their boat's identity card.</strong> Quick to fill out, immediately useful. Seeing it look clean and organized on a profile page is the "wow" moment that makes them want to share it.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Registration number + expiry</div><span class="field-access access-edit">Can edit</span></div>
+      <div class="rp-item-why"><strong>Never dig through a bag again.</strong> Coast Guard pulls them over — they pull up the QR on their phone. Done. This single use case is worth the 5-minute signup.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Insurance carrier + policy + expiry</div><span class="field-access access-edit">Can edit</span></div>
+      <div class="rp-item-why"><strong>Incident response made instant.</strong> If they're in a collision or need to file a claim, all the details are on their phone, not in a wet folder at home.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Emergency contact</div><span class="field-access access-edit">Can edit</span></div>
+      <div class="rp-item-why"><strong>Safety feature they'll appreciate.</strong> If something happens to them on the water, whoever scans the QR can reach someone who knows them. This has genuine life-safety value.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Document uploads (reg cert, insurance card)</div><span class="field-access access-edit">Can upload</span></div>
+      <div class="rp-item-why"><strong>The actual paperwork, digitized.</strong> A photo of the registration certificate stored here means they truly never need the paper version on board again.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">QR code download</div><span class="field-access access-see">Can download</span></div>
+      <div class="rp-item-why"><strong>They get their sticker file.</strong> Owner can download their QR as a PNG to print themselves, or wait for you to deliver a sticker. Seeing their own QR code is a satisfying, tangible moment.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Home marina + slip number</div><span class="field-access access-edit">Can edit</span></div>
+      <div class="rp-item-why"><strong>Connects them to their marina.</strong> This is how you eventually tie profiles to specific marinas for the operator dashboard — and how you know which marina to approach next.</div>
+    </div>
+  </div>
+  <div class="scan-moment">
+    <div class="sm-label">The owner's scan experience</div>
+    Someone scans your QR at the dock and asks about the boat. The owner proudly shows them the profile — beautiful photo, clean specs, all documents in order. It feels premium. That's the product experience that spreads word of mouth.
+  </div>
+</div>
+
+<!-- MARINA -->
+<div class="role-panel" id="rp-marina">
+  <div class="rp-header c-marina">
+    <div class="rp-eyebrow">Role · Marina operator</div>
+    <div class="rp-title">Instant vessel lookup — no more chasing paper records</div>
+    <div class="rp-why">Marina staff deal with two recurring headaches: reaching boat owners in emergencies, and managing slip occupancy. Moxie solves both. This is the pitch that gets Safe Harbor to say yes.</div>
+  </div>
+  <div class="rp-items">
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Owner name + phone number</div><span class="field-access access-all">Full access</span></div>
+      <div class="rp-item-why"><strong>The 2am problem, solved.</strong> Boat dragging anchor, bilge alarm going off, someone hit their vessel — staff scans the QR and calls the owner in 10 seconds. No paper slip rental agreements to dig through.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Emergency contact</div><span class="field-access access-all">Full access</span></div>
+      <div class="rp-item-why"><strong>Backup when the owner doesn't answer.</strong> Critical for liability reasons — marina can document that they attempted contact. This alone has real legal and operational value to a marina manager.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Insurance carrier + expiry</div><span class="field-access access-all">Full access</span></div>
+      <div class="rp-item-why"><strong>Slip rental compliance.</strong> Most marinas require proof of insurance to rent a slip. Today they track this manually in spreadsheets. Moxie lets them see at a glance which boats have current insurance — and flag ones that are expired.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Registration number + expiry</div><span class="field-access access-all">Full access</span></div>
+      <div class="rp-item-why"><strong>Documentation on demand.</strong> If harbor patrol or Coast Guard asks the marina to verify a vessel, staff can pull this up instantly without contacting the owner.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Vessel make, model, length</div><span class="field-access access-see">View only</span></div>
+      <div class="rp-item-why"><strong>Slip size matching.</strong> Knowing the exact length helps with slip assignment logistics. A 40ft boat in a 35ft slip is a problem — this makes it visible before it becomes a problem.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Slip number (assigned by marina)</div><span class="field-access access-edit">Can assign</span></div>
+      <div class="rp-item-why"><strong>Inventory management.</strong> In Phase 2, the marina operator dashboard shows all slips, which are occupied, and which boats are in them. Today it's a spreadsheet. Tomorrow it's a live map.</div>
+    </div>
+  </div>
+  <div class="scan-moment">
+    <div class="sm-label">The marina's scan experience</div>
+    Dock hand walks past a boat with no one aboard. Something looks off — they scan the QR on the stern. Owner name and phone number appear immediately. They call. Problem handled in under a minute. That's the story you tell Safe Harbor.
+  </div>
+</div>
+
+<!-- PUBLIC -->
+<div class="role-panel" id="rp-public">
+  <div class="rp-header c-public">
+    <div class="rp-eyebrow">Role · General public</div>
+    <div class="rp-title">A boat's public face — curiosity answered instantly</div>
+    <div class="rp-why">Anyone with a phone who scans the QR gets a clean, public-facing profile with no login required. No personal owner info is exposed. This is the experience that generates word of mouth.</div>
+  </div>
+  <div class="rp-items">
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Vessel name, make, model, year</div><span class="field-access access-see">Public</span></div>
+      <div class="rp-item-why"><strong>"What kind of boat is that?"</strong> The most common question on any dock. Scanning the QR answers it instantly. Boating enthusiasts love this — it spreads the product organically.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Vessel type + length</div><span class="field-access access-see">Public</span></div>
+      <div class="rp-item-why"><strong>Context for the curious.</strong> A 26ft Nimbus T8 powerboat means something to a boater. This is the kind of detail that makes the profile feel rich and real, not a blank placeholder.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Vessel photo</div><span class="field-access access-see">Public</span></div>
+      <div class="rp-item-why"><strong>The visual hook.</strong> A great photo of a beautiful boat is shareable. This is what makes someone pull out their phone and show a friend — free marketing for Moxie every time it happens.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Home marina</div><span class="field-access access-see">Public</span></div>
+      <div class="rp-item-why"><strong>Locates the boat without exposing the owner.</strong> Useful context, no privacy risk. Someone trying to find a boat they saw can narrow it down. Harmless and adds richness.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Owner name + contact</div><span class="field-access access-no">Hidden</span></div>
+      <div class="rp-item-why"><strong>Privacy protected by default.</strong> The public never sees personal owner info. This is a critical trust feature — owners only sign up if they know strangers can't get their phone number from a dock scan.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">"For sale" flag (Phase 2)</div><span class="field-access access-see">Public — future</span></div>
+      <div class="rp-item-why"><strong>The marketplace seed.</strong> When you flip this on later, any public scan of a boat marked for sale becomes a listing view. The QR sticker on the boat IS the for-sale sign. No Craigslist needed.</div>
+    </div>
+  </div>
+  <div class="scan-moment">
+    <div class="sm-label">The public's scan experience</div>
+    Someone walks past a beautiful boat at the Santa Cruz wharf, curious what it is. They scan the QR. A clean profile loads in seconds — photo, vessel name, Nimbus T8, 2023. They show their friend. That's two new people who just learned Moxie exists.
+  </div>
+</div>
+
+<!-- COAST GUARD -->
+<div class="role-panel" id="rp-coast">
+  <div class="rp-header c-coast">
+    <div class="rp-eyebrow">Role · U.S. Coast Guard / Harbor patrol</div>
+    <div class="rp-title">Boarding inspection in seconds, not minutes</div>
+    <div class="rp-why">Law enforcement needs to verify registration, insurance, and owner identity quickly during a boarding. Today that means paper documents, often wet, often expired, sometimes missing. The Moxie QR replaces all of that.</div>
+  </div>
+  <div class="rp-items">
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Registration number + expiry</div><span class="field-access access-emg">Auth required</span></div>
+      <div class="rp-item-why"><strong>The #1 thing they check.</strong> State registration is required by law on all recreational vessels. A Moxie QR that shows current registration on scan replaces the paper card entirely — and can't be lost or water-damaged.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Insurance verification</div><span class="field-access access-emg">Auth required</span></div>
+      <div class="rp-item-why"><strong>Increasingly required.</strong> While federal law doesn't mandate insurance, California marinas and many waterways are moving toward requiring it. Having it instantly verifiable adds legitimacy.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Owner name + emergency contact</div><span class="field-access access-emg">Auth required</span></div>
+      <div class="rp-item-why"><strong>Critical in a rescue scenario.</strong> If a vessel is found adrift or abandoned, identifying and contacting the owner fast can save lives. Scanning the stern QR gives responders everything they need immediately.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Hull ID (HIN)</div><span class="field-access access-emg">Auth required</span></div>
+      <div class="rp-item-why"><strong>Theft and fraud prevention.</strong> Cross-referencing the HIN against the profile confirms the vessel is who it says it is. Stolen vessels often have altered documentation — a verified digital record is harder to fake.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Access method</div><span class="field-access access-emg">Special code</span></div>
+      <div class="rp-item-why"><strong>Phase 2 feature: emergency access code.</strong> A unique one-time or time-limited code printed on the sticker (separate from the QR) lets authorized personnel access private fields without a full account login. Simple and practical.</div>
+    </div>
+  </div>
+  <div class="scan-moment">
+    <div class="sm-label">The Coast Guard's scan experience</div>
+    Boarding officer scans the QR on the stern. Registration number, expiry date, and insurance details load immediately. No wet paper, no "I left it at home." Boarding takes 90 seconds instead of 10 minutes. This is a pitch you can literally make to the USCIS Auxiliary — they would love to endorse this.
+  </div>
+</div>
+
+<!-- ADMIN -->
+<div class="role-panel" id="rp-admin">
+  <div class="rp-header c-admin">
+    <div class="rp-eyebrow">Role · Admin (you — Ben)</div>
+    <div class="rp-title">The control tower — every vessel, every marina, every QR</div>
+    <div class="rp-why">Your admin view is the backend of the whole operation. You can see everything, create profiles, generate QR batches, assign marinas, and eventually see the data patterns that tell you where to go next.</div>
+  </div>
+  <div class="rp-items">
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">All vessel profiles</div><span class="field-access access-all">Full access</span></div>
+      <div class="rp-item-why"><strong>Your master list.</strong> Every boat on the platform is visible to you. This is the contact database you're building — every owner, every vessel, every marina. The asset that makes the brokerage business possible later.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Create vessel + generate QR</div><span class="field-access access-edit">Can create</span></div>
+      <div class="rp-item-why"><strong>Onboarding flow.</strong> You visit a marina, collect basic boat info (or a marina gives you their slip list), you create the profiles and generate QR codes. Owner gets a sticker and a claim link to fill in their own details.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Bulk QR export (ZIP of PNGs)</div><span class="field-access access-edit">Can export</span></div>
+      <div class="rp-item-why"><strong>The sticker print workflow.</strong> You export 75 QR codes for a marina as a ZIP, upload to Sticker Mule, receive a sheet of stickers, deliver to the marina. This is the entire physical distribution pipeline.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Marina management</div><span class="field-access access-edit">Can manage</span></div>
+      <div class="rp-item-why"><strong>Geographic expansion tracker.</strong> Add a new marina, assign it a region, see how many profiles are active there. When a marina hits 80% profile adoption, that's your signal to approach the next marina nearby.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Profile completion status</div><span class="field-access access-see">View</span></div>
+      <div class="rp-item-why"><strong>Know who to follow up with.</strong> A sticker was delivered but the owner never claimed their profile. You or the marina can send a reminder. Completion rate is your key growth metric in Phase 1.</div>
+    </div>
+    <div class="rp-item">
+      <div class="rp-item-field"><div class="field-name">Owner contact info (all)</div><span class="field-access access-all">Full access</span></div>
+      <div class="rp-item-why"><strong>The list you're building.</strong> Every owner who creates a profile has opted into your platform. When the marketplace goes live, you have a warm audience to notify. When you're ready to pitch brokerage, you know exactly who to call.</div>
+    </div>
+  </div>
+  <div class="scan-moment">
+    <div class="sm-label">Your admin experience</div>
+    You leave a marina meeting with a list of 40 boats. You log into the admin dashboard, create 40 vessel stubs, export 40 QR codes, send to Sticker Mule. A week later you're back at the dock delivering stickers. Two weeks after that, 30 of those owners have claimed their profiles. You now have 30 warm contacts who know your name.
+  </div>
+</div>
+
+<script>
+function switchRole(id, tab) {
+  document.querySelectorAll('.role-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.role-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('rp-' + id).classList.add('active');
+  tab.classList.add('active');
+}
+</script>
+</body>
+</html>

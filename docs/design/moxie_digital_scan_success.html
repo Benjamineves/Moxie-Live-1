@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Moxie · Scanning…</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;1,300;1,400&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{
+  font-family:'DM Sans',system-ui,sans-serif;
+  background:var(--navy-deep);
+  display:flex;align-items:center;justify-content:center;
+  -webkit-font-smoothing:antialiased;
+  position:relative;
+}
+
+:root{
+  --navy-deep:#071020;
+  --navy:#0d1f35;
+  --navy2:#132943;
+  --gold:#c9a84c;
+  --gold-lt:#dfc06a;
+  --white:#fff;
+  --aqua-bright:#17C3B2;
+  --aqua-vapor:#13F1D1;
+  --aqua-abyss:#0B6E6A;
+  --text3:#6b8299;
+}
+
+/* ── BACKGROUND PULSE RINGS ── */
+.bg-rings{
+  position:absolute;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  pointer-events:none;
+}
+.ring{
+  position:absolute;
+  border-radius:50%;
+  border:1px solid var(--aqua-bright);
+  opacity:0;
+  animation:ringExpand 2.4s ease-out forwards;
+}
+.ring:nth-child(1){width:120px;height:120px;animation-delay:.1s}
+.ring:nth-child(2){width:240px;height:240px;animation-delay:.3s}
+.ring:nth-child(3){width:400px;height:400px;animation-delay:.5s}
+.ring:nth-child(4){width:600px;height:600px;animation-delay:.7s;border-color:rgba(23,195,178,.3)}
+.ring:nth-child(5){width:900px;height:900px;animation-delay:.9s;border-color:rgba(23,195,178,.1)}
+
+@keyframes ringExpand{
+  0%  {transform:scale(0);opacity:.8}
+  60% {opacity:.4}
+  100%{transform:scale(1);opacity:0}
+}
+
+/* ── RADIAL AQUA GLOW ── */
+.bg-glow{
+  position:absolute;inset:0;
+  background:radial-gradient(circle at 50% 50%, rgba(23,195,178,.18) 0%, rgba(19,241,209,.06) 30%, transparent 70%);
+  animation:glowPulse 1.8s ease-out forwards;
+}
+@keyframes glowPulse{
+  0%  {opacity:0;transform:scale(.6)}
+  30% {opacity:1}
+  100%{opacity:0;transform:scale(1.4)}
+}
+
+/* ── GOLD CORNER ACCENT LINES ── */
+.corner{position:absolute;pointer-events:none}
+.corner svg{display:block}
+.corner-tl{top:24px;left:24px;animation:cornerFade .6s .1s both}
+.corner-tr{top:24px;right:24px;animation:cornerFade .6s .1s both}
+.corner-bl{bottom:24px;left:24px;animation:cornerFade .6s .1s both}
+.corner-br{bottom:24px;right:24px;animation:cornerFade .6s .1s both}
+@keyframes cornerFade{
+  from{opacity:0;transform:scale(.7)}
+  to  {opacity:1;transform:scale(1)}
+}
+
+/* ── MAIN CONTENT ── */
+.scan-content{
+  position:relative;z-index:10;
+  display:flex;flex-direction:column;align-items:center;
+  text-align:center;
+  gap:0;
+}
+
+/* ── PIXEL M MARK ── */
+.mark-wrap{
+  position:relative;
+  margin-bottom:28px;
+  animation:markReveal .5s .05s both;
+}
+@keyframes markReveal{
+  from{opacity:0;transform:scale(.6)}
+  to  {opacity:1;transform:scale(1)}
+}
+.pixel-m-lg{width:64px;height:64px}
+
+/* Signal pixel burst on the mark */
+.mark-signal{
+  position:absolute;bottom:-2px;right:-2px;
+  width:14px;height:14px;border-radius:50%;
+  background:var(--aqua-bright);
+  animation:signalBurst 1s .4s both;
+  box-shadow:0 0 0 0 rgba(23,195,178,.6);
+}
+@keyframes signalBurst{
+  0%  {background:var(--aqua-bright);transform:scale(0);box-shadow:0 0 0 0 rgba(23,195,178,.6)}
+  30% {background:var(--aqua-vapor);transform:scale(1.4);box-shadow:0 0 0 10px rgba(23,195,178,.2)}
+  60% {background:var(--aqua-bright);transform:scale(1);box-shadow:0 0 0 20px rgba(23,195,178,0)}
+  100%{background:var(--aqua-bright);transform:scale(1);box-shadow:0 0 0 0 rgba(23,195,178,0)}
+}
+
+/* ── VERIFIED CHECKMARK ── */
+.check-wrap{
+  width:48px;height:48px;border-radius:50%;
+  background:rgba(23,195,178,.12);
+  border:1.5px solid rgba(23,195,178,.3);
+  display:flex;align-items:center;justify-content:center;
+  margin-bottom:24px;
+  animation:checkReveal .4s .5s both;
+}
+@keyframes checkReveal{
+  from{opacity:0;transform:scale(.5)}
+  to  {opacity:1;transform:scale(1)}
+}
+.check-wrap svg{
+  width:22px;height:22px;
+  stroke:var(--aqua-bright);fill:none;stroke-width:2.5;
+  stroke-linecap:round;stroke-linejoin:round;
+  stroke-dasharray:30;stroke-dashoffset:30;
+  animation:drawCheck .4s .6s forwards ease-out;
+}
+@keyframes drawCheck{
+  to{stroke-dashoffset:0}
+}
+
+/* ── SCAN CONFIRMED TEXT ── */
+.scan-status{
+  font-size:10px;letter-spacing:.24em;text-transform:uppercase;
+  color:var(--aqua-bright);font-weight:500;
+  margin-bottom:10px;
+  animation:textFadeUp .4s .7s both;
+}
+@keyframes textFadeUp{
+  from{opacity:0;transform:translateY(8px)}
+  to  {opacity:1;transform:translateY(0)}
+}
+
+/* ── VESSEL NAME ── */
+.vessel-name{
+  font-family:'Cormorant Garamond',serif;
+  font-size:clamp(28px,8vw,40px);
+  font-weight:300;font-style:italic;
+  color:var(--white);line-height:1;
+  margin-bottom:8px;
+  animation:textFadeUp .4s .8s both;
+}
+
+/* ── VESSEL META ── */
+.vessel-meta{
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:rgba(255,255,255,.4);font-weight:400;
+  animation:textFadeUp .4s .85s both;
+  margin-bottom:32px;
+}
+
+/* ── SCAN ID ── */
+.scan-id{
+  font-size:10px;letter-spacing:.18em;text-transform:uppercase;
+  color:rgba(255,255,255,.25);font-weight:500;
+  animation:textFadeUp .3s .9s both;
+  margin-bottom:36px;
+  display:flex;align-items:center;gap:8px;
+}
+.scan-id-dot{
+  width:5px;height:5px;border-radius:50%;
+  background:var(--aqua-bright);
+  animation:idDotPulse 1.5s 1s ease-in-out infinite;
+}
+@keyframes idDotPulse{
+  0%,100%{opacity:1;transform:scale(1)}
+  50%{opacity:.5;transform:scale(.6)}
+}
+
+/* ── LOADING BAR ── */
+.loading-bar-wrap{
+  width:160px;
+  animation:textFadeUp .3s .95s both;
+}
+.loading-bar-track{
+  height:2px;background:rgba(255,255,255,.08);
+  border-radius:1px;overflow:hidden;
+}
+.loading-bar-fill{
+  height:100%;
+  background:linear-gradient(90deg, var(--aqua-abyss), var(--aqua-bright), var(--aqua-vapor));
+  background-size:200% 100%;
+  border-radius:1px;
+  animation:loadFill 1.2s .9s ease-out forwards, loadShimmer 1s 1s infinite linear;
+  width:0%;
+}
+@keyframes loadFill{
+  to{width:100%}
+}
+@keyframes loadShimmer{
+  0%{background-position:0% 0%}
+  100%{background-position:200% 0%}
+}
+.loading-label{
+  font-size:9px;letter-spacing:.16em;text-transform:uppercase;
+  color:rgba(255,255,255,.25);font-weight:500;
+  margin-top:8px;text-align:center;
+  animation:loadLabelFade 1s 1.6s forwards;
+}
+@keyframes loadLabelFade{
+  from{opacity:1}
+  to  {opacity:0}
+}
+
+/* ── WORDMARK FOOTER ── */
+.scan-footer{
+  position:absolute;bottom:32px;
+  display:flex;align-items:center;gap:8px;
+  animation:textFadeUp .4s 1.1s both;
+}
+.footer-wordmark{
+  font-family:'Cormorant Garamond',serif;
+  font-size:14px;font-style:italic;color:rgba(255,255,255,.3);
+}
+.footer-wordmark .m{color:var(--gold)}
+.footer-aqua{
+  width:6px;height:6px;background:var(--aqua-bright);
+  display:inline-block;margin-left:4px;opacity:.5;
+}
+
+/* ── DEMO CONTROLS ── */
+.demo-controls{
+  position:fixed;bottom:80px;right:20px;z-index:999;
+  display:flex;flex-direction:column;gap:8px;
+}
+.demo-btn{
+  padding:8px 16px;background:rgba(255,255,255,.1);
+  border:1px solid rgba(255,255,255,.15);border-radius:6px;
+  font-family:'DM Sans',sans-serif;font-size:10px;letter-spacing:.12em;
+  text-transform:uppercase;color:rgba(255,255,255,.6);cursor:pointer;
+  transition:all .15s;font-weight:500;
+}
+.demo-btn:hover{background:rgba(255,255,255,.18);color:white}
+</style>
+</head>
+<body>
+
+<!-- Background rings -->
+<div class="bg-rings">
+  <div class="ring"></div>
+  <div class="ring"></div>
+  <div class="ring"></div>
+  <div class="ring"></div>
+  <div class="ring"></div>
+</div>
+<div class="bg-glow"></div>
+
+<!-- Corner brackets (echoing the Pixel M corner bracket motif) -->
+<div class="corner corner-tl">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path d="M1 10 L1 1 L10 1" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity=".4"/>
+  </svg>
+</div>
+<div class="corner corner-tr">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path d="M23 10 L23 1 L14 1" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity=".4"/>
+  </svg>
+</div>
+<div class="corner corner-bl">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path d="M1 14 L1 23 L10 23" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity=".4"/>
+  </svg>
+</div>
+<div class="corner corner-br">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+    <path d="M23 14 L23 23 L14 23" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity=".4"/>
+  </svg>
+</div>
+
+<!-- Main content -->
+<div class="scan-content">
+
+  <!-- Pixel M mark with signal pixel burst -->
+  <div class="mark-wrap">
+    <svg class="pixel-m-lg" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <!-- Corner brackets at 55% opacity -->
+      <rect x="0" y="0" width="22" height="9" rx="1" fill="#c9a84c" opacity=".55"/>
+      <rect x="0" y="0" width="9" height="22" rx="1" fill="#c9a84c" opacity=".55"/>
+      <rect x="78" y="0" width="22" height="9" rx="1" fill="#c9a84c" opacity=".55"/>
+      <rect x="91" y="0" width="9" height="22" rx="1" fill="#c9a84c" opacity=".55"/>
+      <rect x="0" y="91" width="22" height="9" rx="1" fill="#c9a84c" opacity=".55"/>
+      <rect x="0" y="78" width="9" height="22" rx="1" fill="#c9a84c" opacity=".55"/>
+      <rect x="78" y="91" width="22" height="9" rx="1" fill="#c9a84c" opacity=".55"/>
+      <rect x="91" y="78" width="9" height="22" rx="1" fill="#c9a84c" opacity=".55"/>
+      <!-- M body -->
+      <rect x="15" y="25" width="10" height="10" fill="#c9a84c"/>
+      <rect x="15" y="35" width="10" height="10" fill="#c9a84c"/>
+      <rect x="15" y="45" width="10" height="10" fill="#c9a84c"/>
+      <rect x="15" y="55" width="10" height="10" fill="#c9a84c"/>
+      <rect x="15" y="65" width="10" height="10" fill="#c9a84c"/>
+      <rect x="15" y="75" width="10" height="10" fill="#c9a84c"/>
+      <rect x="25" y="35" width="10" height="10" fill="#c9a84c"/>
+      <rect x="35" y="45" width="10" height="10" fill="#c9a84c"/>
+      <rect x="45" y="35" width="10" height="10" fill="#c9a84c"/>
+      <rect x="55" y="45" width="10" height="10" fill="#c9a84c"/>
+      <rect x="65" y="35" width="10" height="10" fill="#c9a84c"/>
+      <rect x="75" y="25" width="10" height="10" fill="#c9a84c"/>
+      <rect x="75" y="35" width="10" height="10" fill="#c9a84c"/>
+      <rect x="75" y="45" width="10" height="10" fill="#c9a84c"/>
+      <rect x="75" y="55" width="10" height="10" fill="#c9a84c"/>
+      <rect x="75" y="65" width="10" height="10" fill="#c9a84c"/>
+      <rect x="75" y="75" width="10" height="10" fill="#c9a84c"/>
+      <!-- Signal pixel — Bright Aqua, full opacity on scan success -->
+      <rect x="85" y="85" width="10" height="10" fill="#17C3B2" id="signal-pixel"/>
+    </svg>
+    <div class="mark-signal"></div>
+  </div>
+
+  <!-- Check -->
+  <div class="check-wrap">
+    <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+  </div>
+
+  <!-- Text -->
+  <div class="scan-status">Scan confirmed</div>
+  <div class="vessel-name" id="anim-vessel-name">Discovery One</div>
+  <div class="vessel-meta" id="anim-vessel-meta">2023 Nimbus T8 &nbsp;·&nbsp; Power</div>
+  <div class="scan-id"><div class="scan-id-dot"></div><span id="anim-scan-id">MXE-00001</span></div>
+
+  <!-- Loading bar -->
+  <div class="loading-bar-wrap">
+    <div class="loading-bar-track">
+      <div class="loading-bar-fill" id="load-bar"></div>
+    </div>
+    <div class="loading-label" id="load-label">Loading profile…</div>
+  </div>
+
+</div>
+
+<!-- Wordmark footer -->
+<div class="scan-footer">
+  <span class="footer-wordmark"><span class="m">M</span>oxie</span>
+  <span class="footer-aqua"></span>
+</div>
+
+<!-- Demo controls -->
+<div class="demo-controls">
+  <button class="demo-btn" onclick="replayAnim()">↺ Replay animation</button>
+  <button class="demo-btn" onclick="switchVessel('nimbus')">Nimbus T8</button>
+  <button class="demo-btn" onclick="switchVessel('beneteau')">Beneteau 30.1</button>
+</div>
+
+<script>
+// Auto-redirect after animation completes (2.4s)
+// In production: window.location.href = '/vessel/MXE-00001?role=public'
+let redirectTimer = setTimeout(() => {
+  // Uncomment in production:
+  // window.location.href = 'moxie_digital_profile_all_roles.html';
+  document.getElementById('load-label').style.opacity = '1';
+  document.getElementById('load-label').textContent = 'Demo mode — use controls to replay';
+}, 2400);
+
+// Vessel data for demo switcher
+const vessels = {
+  nimbus:   { name: 'Discovery One', meta: '2023 Nimbus T8 · Power',           id: 'MXE-00001' },
+  beneteau: { name: 'Polaris',        meta: '2021 Beneteau Oceanis 30.1 · Sail', id: 'MXE-00002' }
+};
+
+function switchVessel(v) {
+  const d = vessels[v];
+  document.getElementById('anim-vessel-name').textContent = d.name;
+  document.getElementById('anim-vessel-meta').textContent = d.meta;
+  document.getElementById('anim-scan-id').textContent = d.id;
+  replayAnim();
+}
+
+function replayAnim() {
+  clearTimeout(redirectTimer);
+  // Re-trigger all animations by cloning body content
+  document.querySelectorAll('.ring').forEach((el,i) => {
+    el.style.animation = 'none';
+    el.offsetHeight; // reflow
+    el.style.animation = '';
+  });
+  ['.bg-glow','.mark-wrap','.check-wrap','.scan-status','.vessel-name',
+   '.vessel-meta','.scan-id','.loading-bar-wrap','.scan-footer',
+   '.corner-tl','.corner-tr','.corner-bl','.corner-br'].forEach(sel => {
+    const el = document.querySelector(sel);
+    if(!el) return;
+    el.style.animation = 'none';
+    el.offsetHeight;
+    el.style.animation = '';
+  });
+  // Reset loading bar
+  const bar = document.getElementById('load-bar');
+  bar.style.animation = 'none';
+  bar.offsetHeight;
+  bar.style.animation = '';
+  document.getElementById('load-label').style.opacity = '1';
+  document.getElementById('load-label').textContent = 'Loading profile…';
+
+  // Reset checkmark path
+  const check = document.querySelector('.check-wrap svg');
+  check.style.animation = 'none';
+  check.offsetHeight;
+  check.style.animation = '';
+
+  // Reset mark signal
+  const sig = document.querySelector('.mark-signal');
+  sig.style.animation = 'none';
+  sig.offsetHeight;
+  sig.style.animation = '';
+
+  redirectTimer = setTimeout(() => {
+    document.getElementById('load-label').textContent = 'Demo mode — use controls to replay';
+  }, 2400);
+}
+</script>
+</body>
+</html>

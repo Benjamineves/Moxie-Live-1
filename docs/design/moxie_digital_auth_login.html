@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Moxie · Sign In</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:'DM Sans',system-ui,sans-serif;background:#0d1f35;color:#0d1f35;
+  -webkit-font-smoothing:antialiased;min-height:100vh;
+  display:flex;align-items:center;justify-content:center;padding:24px;
+  position:relative;overflow:hidden;
+}
+
+:root{
+  --navy:#0d1f35;--navy2:#132943;--navy3:#1a3a5c;--navy-deep:#071020;
+  --gold:#c9a84c;--gold-lt:#dfc06a;--gold-dim:rgba(201,168,76,.12);--gold-line:rgba(201,168,76,.3);
+  --cream:#f5f2ec;--white:#fff;
+  --text:#0d1f35;--text2:#3a5068;--text3:#6b8299;--divider:rgba(13,31,53,.1);
+  --aqua-bright:#17C3B2;--aqua-lagoon:#1FA394;
+  --green-bg:#E1F5EE;--green-fg:#085041;
+}
+
+/* Ambient gold glow, matching the brand guide's radial-glow decorative pattern */
+body::before{
+  content:'';position:absolute;top:-10%;right:-10%;width:60%;height:60%;
+  background:radial-gradient(circle, rgba(201,168,76,.12) 0%, transparent 70%);
+  pointer-events:none;
+}
+body::after{
+  content:'';position:absolute;bottom:-15%;left:-10%;width:50%;height:50%;
+  background:radial-gradient(circle, rgba(23,195,178,.08) 0%, transparent 70%);
+  pointer-events:none;
+}
+
+.auth-card{
+  position:relative;z-index:1;
+  width:100%;max-width:400px;
+  background:var(--cream);
+  border-radius:16px;
+  padding:44px 36px 36px;
+  box-shadow:0 24px 64px rgba(0,0,0,.35);
+}
+
+.auth-wordmark{
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  margin-bottom:32px;
+}
+.pixel-m{width:26px;height:26px;flex-shrink:0}
+.auth-wordmark-text{font-family:'Cormorant Garamond',serif;font-size:22px;font-style:italic;color:var(--navy)}
+.auth-wordmark-text .m{color:var(--gold)}
+
+.auth-heading{text-align:center;margin-bottom:28px}
+.auth-eyebrow{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:10px}
+.auth-h1{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:300;color:var(--navy);line-height:1.2}
+.auth-h1 em{font-style:italic;color:var(--gold)}
+.auth-sub{font-size:13px;color:var(--text2);line-height:1.6;margin-top:10px;font-weight:300}
+
+.auth-form{display:flex;flex-direction:column;gap:14px}
+.auth-label{font-size:11px;font-weight:500;color:var(--text2);margin-bottom:6px;display:block}
+input[type=email]{
+  width:100%;padding:14px 16px;border:1px solid var(--divider);border-radius:8px;
+  background:var(--white);color:var(--navy);
+  font-family:'DM Sans',sans-serif;font-size:15px;
+  transition:border-color .2s,box-shadow .2s;
+}
+input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-dim)}
+input::placeholder{color:var(--text3)}
+
+.btn-auth{
+  width:100%;display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  background:var(--aqua-bright);color:var(--navy);border:none;
+  padding:15px 24px;border-radius:8px;
+  font-family:'DM Sans',sans-serif;font-size:12px;letter-spacing:.12em;text-transform:uppercase;
+  font-weight:700;cursor:pointer;transition:all .2s;margin-top:4px;
+}
+.btn-auth:hover{background:var(--aqua-lagoon)}
+
+.auth-divider{
+  display:flex;align-items:center;gap:12px;margin:24px 0;
+  font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);
+}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--divider)}
+
+.auth-footnote{
+  text-align:center;font-size:12px;color:var(--text3);line-height:1.6;
+}
+.auth-footnote a{color:var(--gold);text-decoration:none;font-weight:500}
+.auth-footnote a:hover{text-decoration:underline}
+
+/* ── CHECK EMAIL STATE ── */
+.check-email-state{display:none;text-align:center}
+.check-email-icon{
+  width:56px;height:56px;border-radius:50%;
+  background:var(--green-bg);
+  display:flex;align-items:center;justify-content:center;
+  margin:0 auto 20px;
+}
+.check-email-icon svg{width:24px;height:24px;stroke:var(--green-fg);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.check-email-h1{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:300;color:var(--navy);margin-bottom:10px}
+.check-email-h1 em{font-style:italic;color:var(--gold)}
+.check-email-sub{font-size:13px;color:var(--text2);line-height:1.65;font-weight:300;margin-bottom:24px}
+.check-email-addr{font-weight:600;color:var(--navy)}
+.btn-resend{
+  background:transparent;border:1px solid var(--gold-line);color:var(--navy);
+  padding:12px 20px;border-radius:8px;font-family:'DM Sans',sans-serif;
+  font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:pointer;
+  width:100%;
+}
+.btn-resend:hover{background:var(--gold-dim)}
+.resend-note{font-size:11px;color:var(--text3);margin-top:14px}
+
+/* ── WORDMARK FOOTER ── */
+.auth-page-footer{
+  position:relative;z-index:1;
+  text-align:center;margin-top:24px;
+}
+.auth-page-footer a{
+  font-size:11px;color:rgba(255,255,255,.5);text-decoration:none;letter-spacing:.05em;
+}
+.auth-page-footer a:hover{color:rgba(255,255,255,.8)}
+</style>
+</head>
+<body>
+
+<div>
+  <div class="auth-card">
+
+    <div class="auth-wordmark">
+      <svg class="pixel-m" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect x="0" y="0" width="22" height="9" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="0" y="0" width="9" height="22" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="78" y="0" width="22" height="9" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="91" y="0" width="9" height="22" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="0" y="91" width="22" height="9" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="0" y="78" width="9" height="22" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="78" y="91" width="22" height="9" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="91" y="78" width="9" height="22" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="15" y="25" width="10" height="10" fill="#c9a84c"/><rect x="15" y="35" width="10" height="10" fill="#c9a84c"/><rect x="15" y="45" width="10" height="10" fill="#c9a84c"/><rect x="15" y="55" width="10" height="10" fill="#c9a84c"/><rect x="15" y="65" width="10" height="10" fill="#c9a84c"/><rect x="15" y="75" width="10" height="10" fill="#c9a84c"/>
+        <rect x="25" y="35" width="10" height="10" fill="#c9a84c"/><rect x="35" y="45" width="10" height="10" fill="#c9a84c"/><rect x="45" y="35" width="10" height="10" fill="#c9a84c"/><rect x="55" y="45" width="10" height="10" fill="#c9a84c"/><rect x="65" y="35" width="10" height="10" fill="#c9a84c"/>
+        <rect x="75" y="25" width="10" height="10" fill="#c9a84c"/><rect x="75" y="35" width="10" height="10" fill="#c9a84c"/><rect x="75" y="45" width="10" height="10" fill="#c9a84c"/><rect x="75" y="55" width="10" height="10" fill="#c9a84c"/><rect x="75" y="65" width="10" height="10" fill="#c9a84c"/><rect x="75" y="75" width="10" height="10" fill="#c9a84c"/>
+        <rect x="85" y="85" width="10" height="10" fill="#17C3B2"/>
+      </svg>
+      <span class="auth-wordmark-text"><span class="m">M</span>oxie</span>
+    </div>
+
+    <!-- ═══ STATE 1: EMAIL ENTRY ═══ -->
+    <div id="email-entry-state">
+      <div class="auth-heading">
+        <div class="auth-eyebrow">Owner Sign In</div>
+        <div class="auth-h1">Welcome back<br>to <em>your fleet.</em></div>
+        <div class="auth-sub">Enter your email and we'll send a secure link — no password to remember.</div>
+      </div>
+
+      <div class="auth-form">
+        <div>
+          <label class="auth-label">Email address</label>
+          <input type="email" id="auth-email" placeholder="you@email.com" autocomplete="email">
+        </div>
+        <button class="btn-auth" onclick="sendMagicLink()">Send Sign-In Link →</button>
+      </div>
+
+      <div class="auth-divider">New to Moxie</div>
+
+      <div class="auth-footnote">
+        Don't have a vessel registered yet?<br>
+        <a href="moxie_digital_intake_form.html">Register your boat →</a>
+      </div>
+    </div>
+
+    <!-- ═══ STATE 2: CHECK YOUR EMAIL ═══ -->
+    <div id="check-email-state" class="check-email-state">
+      <div class="check-email-icon">
+        <svg viewBox="0 0 24 24"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22 6 12 13 2 6"/></svg>
+      </div>
+      <div class="check-email-h1">Check your <em>inbox.</em></div>
+      <div class="check-email-sub">
+        We sent a sign-in link to<br>
+        <span class="check-email-addr" id="sent-to-email">you@email.com</span><br>
+        Tap it on this device to sign in — the link expires in 15 minutes.
+      </div>
+      <button class="btn-resend" onclick="resendLink()">Resend Link</button>
+      <div class="resend-note" id="resend-note">Didn't get it? Check spam, or resend in <span id="resend-timer">30s</span></div>
+    </div>
+
+  </div>
+
+  <div class="auth-page-footer">
+    <a href="moxie_digital_homepage.html">← Back to moxieyachting.com</a>
+  </div>
+</div>
+
+<script>
+// ── Magic link flow ──
+// Production: POST { email } to /api/auth/magic-link, which triggers the
+// transactional email provider (see Technical Spec v2 §9-A5) to send a
+// single-use, 15-minute-expiry link. This page never sees or handles a
+// password anywhere — there isn't one.
+function sendMagicLink() {
+  const email = document.getElementById('auth-email').value.trim();
+  if (!email || !email.includes('@')) {
+    document.getElementById('auth-email').style.borderColor = '#712B13';
+    return;
+  }
+  document.getElementById('sent-to-email').textContent = email;
+  document.getElementById('email-entry-state').style.display = 'none';
+  document.getElementById('check-email-state').style.display = 'block';
+  startResendTimer();
+}
+
+function resendLink() {
+  // Production: re-POST to /api/auth/magic-link for the same email.
+  alert('Demo only — wire to POST /api/auth/magic-link');
+  startResendTimer();
+}
+
+let resendInterval;
+function startResendTimer() {
+  const resendBtn = document.querySelector('.btn-resend');
+  const timerEl = document.getElementById('resend-timer');
+  let seconds = 30;
+  resendBtn.style.opacity = '.4';
+  resendBtn.style.pointerEvents = 'none';
+  clearInterval(resendInterval);
+  resendInterval = setInterval(() => {
+    seconds--;
+    timerEl.textContent = seconds + 's';
+    if (seconds <= 0) {
+      clearInterval(resendInterval);
+      resendBtn.style.opacity = '1';
+      resendBtn.style.pointerEvents = 'auto';
+      document.getElementById('resend-note').textContent = "Didn't get it? Check spam, or tap Resend Link above.";
+    }
+  }, 1000);
+}
+
+// Allow Enter key to submit from the email field
+document.getElementById('auth-email').addEventListener('keydown', e => {
+  if (e.key === 'Enter') sendMagicLink();
+});
+</script>
+</body>
+</html>

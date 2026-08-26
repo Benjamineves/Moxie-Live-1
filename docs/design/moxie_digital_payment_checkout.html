@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Moxie · Activate Your Vessel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{font-family:'DM Sans',system-ui,sans-serif;background:#f5f2ec;color:#0d1f35;-webkit-font-smoothing:antialiased;min-height:100vh}
+
+:root{
+  --navy:#0d1f35;--navy2:#132943;--navy3:#1a3a5c;--navy-deep:#071020;
+  --gold:#c9a84c;--gold-lt:#dfc06a;--gold-dim:rgba(201,168,76,.12);--gold-line:rgba(201,168,76,.3);
+  --cream:#f5f2ec;--cream2:#ede9e0;--white:#fff;
+  --text:#0d1f35;--text2:#3a5068;--text3:#6b8299;--divider:rgba(13,31,53,.1);
+  --aqua-bright:#17C3B2;--aqua-lagoon:#1FA394;
+  --green-bg:#E1F5EE;--green-fg:#085041;
+  --blue-bg:#E6F1FB;--blue-fg:#0C447C;
+  --amber-bg:#FAEEDA;--amber-fg:#633806;
+  --red-bg:#FAECE7;--red-fg:#712B13;
+  --gray-bg:#F1EFE8;--gray-fg:#888780;
+}
+
+/* ── TOP BAR (identical to intake form) ── */
+.topbar{
+  background:var(--navy-deep);
+  padding:14px 24px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:3px solid var(--gold);
+  position:sticky;top:0;z-index:100;
+}
+.topbar-left{display:flex;align-items:center;gap:12px}
+.pixel-m{width:24px;height:24px;flex-shrink:0}
+.topbar-wordmark{font-family:'Cormorant Garamond',serif;font-size:18px;font-style:italic;color:var(--white)}
+.topbar-wordmark .m{color:var(--gold)}
+.topbar-title{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.4);font-weight:500}
+.topbar-step{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:500}
+
+/* ── LAYOUT (identical grid to intake form) ── */
+.layout{display:grid;grid-template-columns:1fr 380px;min-height:calc(100vh - 52px)}
+@media(max-width:1000px){.layout{grid-template-columns:1fr;}.preview-panel{display:none}}
+
+/* ── FORM SIDE ── */
+.form-side{padding:40px 40px 80px;max-width:680px}
+@media(max-width:768px){.form-side{padding:28px 20px 80px}}
+
+.section-header{margin-bottom:28px}
+.section-eyebrow{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:500;margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.section-eyebrow::before{content:'';width:20px;height:1px;background:var(--gold)}
+.section-h2{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;color:var(--navy);line-height:1.1}
+.section-h2 em{font-style:italic;color:var(--gold)}
+.section-sub{font-size:14px;color:var(--text2);line-height:1.7;margin-top:8px;font-weight:300}
+
+/* ── PRICING TIERS ── */
+.tier-group{display:flex;flex-direction:column;gap:14px;margin-bottom:32px}
+.tier-card{
+  border:1.5px solid var(--divider);background:var(--white);
+  padding:20px 20px 22px;cursor:pointer;position:relative;
+  transition:all .2s;
+}
+.tier-card:hover{border-color:var(--gold-line)}
+.tier-card.selected{border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-dim)}
+.tier-card.recommended{border-color:var(--gold-line)}
+.tier-badge{
+  position:absolute;top:-10px;left:20px;
+  background:var(--navy);color:var(--gold);
+  font-size:9px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;
+  padding:4px 10px;border-radius:12px;
+}
+.tier-top{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:12px}
+.tier-name-row{display:flex;align-items:center;gap:10px}
+.tier-radio{
+  width:18px;height:18px;border-radius:50%;border:1.5px solid var(--divider);
+  flex-shrink:0;display:flex;align-items:center;justify-content:center;
+}
+.tier-card.selected .tier-radio{border-color:var(--gold)}
+.tier-radio-dot{width:9px;height:9px;border-radius:50%;background:var(--gold);display:none}
+.tier-card.selected .tier-radio-dot{display:block}
+.tier-name{font-family:'Cormorant Garamond',serif;font-size:20px;font-style:italic;color:var(--navy)}
+.tier-price{text-align:right}
+.tier-price-num{font-size:20px;font-weight:600;color:var(--navy)}
+.tier-price-cadence{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+.tier-features{list-style:none;padding-left:28px;display:flex;flex-direction:column;gap:6px}
+.tier-features li{font-size:13px;color:var(--text2);line-height:1.5;position:relative}
+.tier-features li::before{content:'—';position:absolute;left:-16px;color:var(--text3)}
+.tier-note{font-size:11px;color:var(--text3);padding-left:28px;margin-top:10px;line-height:1.5;font-style:italic}
+
+/* ── PAYMENT FORM ── */
+.field-section-label{
+  font-size:9px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--text3);font-weight:500;
+  display:flex;align-items:center;gap:8px;
+  padding-bottom:10px;border-bottom:1px solid var(--divider);
+  margin:28px 0 16px;
+}
+.field-section-label::after{content:'';flex:1;height:1px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:8px}
+@media(max-width:500px){.form-grid{grid-template-columns:1fr}}
+.form-group{display:flex;flex-direction:column;gap:6px}
+.form-group.full{grid-column:1/-1}
+.form-label{font-size:12px;font-weight:500;color:var(--text2);display:flex;align-items:center;gap:4px}
+input[type=text],input[type=email]{
+  padding:11px 14px;border:1px solid var(--divider);border-radius:0;
+  background:var(--white);color:var(--navy);
+  font-family:'DM Sans',sans-serif;font-size:14px;
+  transition:border-color .2s,box-shadow .2s;width:100%;
+}
+input:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3px var(--gold-dim)}
+input::placeholder{color:var(--text3)}
+
+/* Stripe Element mount point — styled container, actual fields injected by Stripe.js */
+.stripe-mount{
+  border:1px solid var(--divider);background:var(--white);
+  padding:14px;min-height:44px;
+  display:flex;align-items:center;
+  font-size:13px;color:var(--text3);font-style:italic;
+}
+.payment-security-note{
+  display:flex;align-items:center;gap:8px;
+  font-size:11px;color:var(--text3);margin-top:14px;line-height:1.5;
+}
+.payment-security-note svg{width:13px;height:13px;stroke:var(--text3);fill:none;stroke-width:2;flex-shrink:0}
+
+/* ── CTA ── */
+.pay-actions{margin-top:36px;padding-top:28px;border-top:1px solid var(--divider)}
+.btn-pay{
+  width:100%;
+  display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  background:var(--aqua-bright);color:var(--navy);
+  border:none;padding:16px 32px;font-family:'DM Sans',sans-serif;
+  font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+  font-weight:700;cursor:pointer;transition:all .2s;
+}
+.btn-pay:hover{background:var(--aqua-lagoon)}
+.pay-total-line{
+  display:flex;align-items:center;justify-content:space-between;
+  font-size:13px;color:var(--text2);margin-bottom:14px;
+}
+.pay-total-line strong{color:var(--navy);font-size:16px}
+.btn-back-link{
+  display:block;text-align:center;margin-top:16px;
+  font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--text3);text-decoration:none;
+}
+.btn-back-link:hover{color:var(--navy)}
+
+/* ── PREVIEW PANEL (identical structure to intake form) ── */
+.preview-panel{
+  background:var(--navy2);
+  border-left:1px solid rgba(255,255,255,.06);
+  position:sticky;top:52px;height:calc(100vh - 52px);
+  overflow-y:auto;
+  display:flex;flex-direction:column;
+}
+.preview-header{
+  padding:20px 20px 16px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.preview-title{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.4);font-weight:500}
+
+/* Mini vessel card — identical pattern to intake form */
+.mini-hero{
+  min-height:120px;
+  background:linear-gradient(160deg,var(--navy) 0%,#0f2a50 100%);
+  display:flex;flex-direction:column;justify-content:flex-end;
+  padding:20px;position:relative;overflow:hidden;
+}
+.mini-hero::before{content:'';position:absolute;top:-30px;right:-30px;width:120px;height:120px;border-radius:50%;background:var(--gold);opacity:.8}
+.mini-hero::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,transparent 20%,rgba(13,31,53,.7) 100%)}
+.mini-vessel-name{font-family:'Cormorant Garamond',serif;font-size:22px;font-style:italic;color:var(--white);position:relative;z-index:1;line-height:1}
+.mini-vessel-tag{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-top:3px;position:relative;z-index:1}
+.mini-body{padding:16px 20px;background:rgba(255,255,255,.03)}
+.mini-mxe-row{display:flex;align-items:center;justify-content:space-between;font-size:11px}
+.mini-mxe-label{color:rgba(255,255,255,.4);text-transform:uppercase;letter-spacing:.1em;font-size:9px}
+.mini-mxe-val{color:rgba(255,255,255,.7);font-family:'DM Sans',monospace;letter-spacing:.05em}
+
+/* Locked sticker preview — reuses .sticker-reveal styling from completion screen, dimmed + lock overlay */
+.locked-sticker-wrap{padding:24px 20px 28px;text-align:center;border-top:1px solid rgba(255,255,255,.06)}
+.locked-caption{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.3);font-weight:500;margin-bottom:16px}
+.sticker-locked{
+  display:inline-block;padding:22px 22px 18px;
+  background:var(--navy);border-radius:14px;
+  border:1px solid rgba(201,168,76,.15);
+  text-align:center;position:relative;
+  filter:grayscale(.6);opacity:.5;
+}
+.sr-wordmark-sm{font-family:'Cormorant Garamond',serif;font-size:15px;font-style:italic;color:var(--white);margin-bottom:10px}
+.sr-wordmark-sm .m{color:var(--gold)}
+.sr-grid-sm{display:grid;grid-template-columns:repeat(9,7px);grid-template-rows:repeat(9,7px);gap:1.5px;margin:0 auto 10px}
+.sr-grid-sm .gd{background:var(--gold);border-radius:1px}
+.sr-grid-sm .lt{background:rgba(255,255,255,.04);border-radius:1px}
+.sr-grid-sm .sig{background:var(--aqua-bright);border-radius:1px}
+.lock-overlay{
+  position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+}
+.lock-icon{
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(7,16,32,.85);border:1px solid rgba(201,168,76,.3);
+  display:flex;align-items:center;justify-content:center;
+}
+.lock-icon svg{width:16px;height:16px;stroke:var(--gold);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.unlock-note{font-size:11px;color:rgba(255,255,255,.4);margin-top:16px;line-height:1.6;padding:0 8px}
+.unlock-note strong{color:rgba(255,255,255,.7);font-weight:500}
+</style>
+</head>
+<body>
+
+<!-- ── TOP BAR ── -->
+<div class="topbar">
+  <div class="topbar-left">
+    <svg class="pixel-m" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect x="0" y="0" width="22" height="9" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="0" y="0" width="9" height="22" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="78" y="0" width="22" height="9" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="91" y="0" width="9" height="22" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="0" y="91" width="22" height="9" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="0" y="78" width="9" height="22" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="78" y="91" width="22" height="9" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="91" y="78" width="9" height="22" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="15" y="25" width="10" height="10" fill="#c9a84c"/><rect x="15" y="35" width="10" height="10" fill="#c9a84c"/><rect x="15" y="45" width="10" height="10" fill="#c9a84c"/><rect x="15" y="55" width="10" height="10" fill="#c9a84c"/><rect x="15" y="65" width="10" height="10" fill="#c9a84c"/><rect x="15" y="75" width="10" height="10" fill="#c9a84c"/>
+        <rect x="25" y="35" width="10" height="10" fill="#c9a84c"/><rect x="35" y="45" width="10" height="10" fill="#c9a84c"/><rect x="45" y="35" width="10" height="10" fill="#c9a84c"/><rect x="55" y="45" width="10" height="10" fill="#c9a84c"/><rect x="65" y="35" width="10" height="10" fill="#c9a84c"/>
+        <rect x="75" y="25" width="10" height="10" fill="#c9a84c"/><rect x="75" y="35" width="10" height="10" fill="#c9a84c"/><rect x="75" y="45" width="10" height="10" fill="#c9a84c"/><rect x="75" y="55" width="10" height="10" fill="#c9a84c"/><rect x="75" y="65" width="10" height="10" fill="#c9a84c"/><rect x="75" y="75" width="10" height="10" fill="#c9a84c"/>
+        <rect x="85" y="85" width="8" height="8" fill="#17C3B2"/>
+      </svg>
+    <span class="topbar-wordmark"><span class="m">M</span>oxie</span>
+    <span style="color:rgba(255,255,255,.15);margin:0 8px">·</span>
+    <span class="topbar-title">Register Your Vessel</span>
+  </div>
+  <div class="topbar-step">Final Step · Activate</div>
+</div>
+
+<div class="layout">
+  <!-- ── FORM SIDE ── -->
+  <div class="form-side">
+
+    <div class="section-header">
+      <div class="section-eyebrow">Almost done</div>
+      <div class="section-h2">One boat, <em>one identity.</em><br>Let's make it official.</div>
+      <div class="section-sub">Your sticker prints and ships the moment this clears. Discovery One's profile goes live at the same time — anyone who scans it from then on sees a real, active vessel identity.</div>
+    </div>
+
+    <!-- ── PRICING TIERS ── -->
+    <div class="tier-group">
+
+      <div class="tier-card" data-tier="basic" onclick="selectTier('basic')">
+        <div class="tier-top">
+          <div class="tier-name-row">
+            <div class="tier-radio"><div class="tier-radio-dot"></div></div>
+            <div class="tier-name">Basic</div>
+          </div>
+          <div class="tier-price">
+            <div class="tier-price-num">$[XX]</div>
+            <div class="tier-price-cadence">one-time</div>
+          </div>
+        </div>
+        <ul class="tier-features">
+          <li>Weatherproof QR sticker, printed &amp; shipped</li>
+          <li>Live public + owner profile</li>
+          <li>CA Boater Card included — always, on every plan</li>
+          <li>+1 additional document, 1 photo</li>
+          <li>In-app status reminders — no email alerts</li>
+        </ul>
+      </div>
+
+      <div class="tier-card recommended selected" data-tier="full" onclick="selectTier('full')">
+        <div class="tier-badge">Recommended</div>
+        <div class="tier-top">
+          <div class="tier-name-row">
+            <div class="tier-radio"><div class="tier-radio-dot"></div></div>
+            <div class="tier-name">Full Access</div>
+          </div>
+          <div class="tier-price">
+            <div class="tier-price-num">$[X]/mo</div>
+            <div class="tier-price-cadence">billed annually</div>
+          </div>
+        </div>
+        <ul class="tier-features">
+          <li>Everything in Basic, plus:</li>
+          <li>Unlimited documents &amp; photos</li>
+          <li>Email reminders before insurance/registration lapse</li>
+          <li>Priority sticker production</li>
+        </ul>
+        <div class="tier-note">Includes the sticker at no extra charge — most owners find this the better deal over Basic's one-time fee.</div>
+      </div>
+
+    </div>
+
+    <!-- ── PAYMENT DETAILS ── -->
+    <div class="field-section-label">Payment details</div>
+    <div class="form-grid">
+      <div class="form-group full">
+        <label class="form-label">Name on card</label>
+        <input type="text" placeholder="As it appears on your card">
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Card &amp; billing address</label>
+        <!-- Stripe Payment Element mounts here — collects card details + billing
+             name/address in one step. Do not build custom card-number fields;
+             this container is the mount target for Stripe.js. -->
+        <div class="stripe-mount" id="stripe-payment-element">
+          Stripe payment fields render here
+        </div>
+      </div>
+      <div class="form-group full">
+        <label class="form-label">Email <span style="color:var(--text3);font-weight:400">(for receipt &amp; account login)</span></label>
+        <input type="email" placeholder="you@email.com">
+      </div>
+    </div>
+    <div class="payment-security-note">
+      <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      Payment processed securely by Stripe. Moxie never sees or stores your card details.
+    </div>
+
+    <!-- ── CTA ── -->
+    <div class="pay-actions">
+      <div class="pay-total-line">
+        <span>Total due today</span>
+        <strong id="total-display">$[X] — Full Access (first month)</strong>
+      </div>
+      <button class="btn-pay" onclick="submitPayment()">Activate Discovery One →</button>
+      <a href="moxie_digital_intake_form.html" class="btn-back-link">← Back to vessel details</a>
+    </div>
+
+  </div>
+
+  <!-- ── PREVIEW PANEL ── -->
+  <div class="preview-panel">
+    <div class="preview-header">
+      <div class="preview-title">Your Vessel</div>
+    </div>
+
+    <div class="mini-hero">
+      <div class="mini-vessel-name">Discovery One</div>
+      <div class="mini-vessel-tag">2023 Nimbus T8 · Power</div>
+    </div>
+    <div class="mini-body">
+      <div class="mini-mxe-row">
+        <span class="mini-mxe-label">Assigned ID</span>
+        <span class="mini-mxe-val">MXE-00001</span>
+      </div>
+    </div>
+
+    <div class="locked-sticker-wrap">
+      <div class="locked-caption">Your sticker — locked</div>
+      <div class="sticker-locked">
+        <div class="sr-wordmark-sm"><span class="m">M</span>oxie</div>
+        <div class="sr-grid-sm">
+          <div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div>
+          <div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div>
+          <div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div>
+          <div class="lt"></div><div class="dk"></div><div class="lt"></div><div class="lt"></div><div class="dk"></div><div class="lt"></div><div class="lt"></div><div class="dk"></div><div class="lt"></div>
+          <div class="dk"></div><div class="dk"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="dk"></div><div class="dk"></div>
+          <div class="lt"></div><div class="dk"></div><div class="lt"></div><div class="lt"></div><div class="dk"></div><div class="lt"></div><div class="lt"></div><div class="dk"></div><div class="lt"></div>
+          <div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div>
+          <div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div>
+          <div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="lt"></div><div class="sig"></div>
+        </div>
+        <div class="lock-overlay">
+          <div class="lock-icon">
+            <svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+        </div>
+      </div>
+      <div class="unlock-note"><strong>Unlocks the moment payment clears</strong> — QR goes live, sticker enters production.</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Tier selection ──
+function selectTier(tier) {
+  document.querySelectorAll('.tier-card').forEach(c => c.classList.remove('selected'));
+  document.querySelector(`.tier-card[data-tier="${tier}"]`).classList.add('selected');
+  const totals = {
+    basic: '$[XX] — Basic (one-time)',
+    full:  '$[X] — Full Access (first month)'
+  };
+  document.getElementById('total-display').textContent = totals[tier];
+}
+
+// ── Payment submission ──
+// In production: this calls Stripe.confirmPayment() (or confirms a
+// PaymentIntent/SetupIntent created server-side for the selected tier),
+// then on success POSTs to the backend to flip vessels.qr_status to
+// 'active' (see Technical Spec v2 §5), then redirects to the completion
+// screen already built in moxie_digital_intake_form.html.
+function submitPayment() {
+  alert('Demo only — wire to Stripe.confirmPayment() + POST /api/vessels/:mxeId/activate per Technical Spec v2 §5');
+}
+</script>
+</body>
+</html>

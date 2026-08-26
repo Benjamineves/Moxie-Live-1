@@ -1,0 +1,963 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Moxie · Discovery One</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{font-family:'DM Sans',system-ui,sans-serif;background:#f5f2ec;color:#0d1f35;-webkit-font-smoothing:antialiased;min-height:100vh}
+
+:root{
+  --navy:#0d1f35;--navy2:#132943;--navy3:#1a3a5c;--navy-deep:#071020;
+  --gold:#c9a84c;--gold-lt:#dfc06a;--gold-dim:rgba(201,168,76,.15);--gold-line:rgba(201,168,76,.35);
+  --cream:#f5f2ec;--cream2:#ede9e0;--white:#fff;
+  --text:#0d1f35;--text2:#3a5068;--text3:#6b8299;--divider:rgba(13,31,53,.1);
+  --aqua-bright:#17C3B2;--aqua-vapor:#13F1D1;--aqua-lagoon:#1FA394;
+  --green-bg:#E1F5EE;--green-fg:#085041;
+  --blue-bg:#E6F1FB;--blue-fg:#0C447C;
+  --amber-bg:#FAEEDA;--amber-fg:#633806;
+  --red-bg:#FAECE7;--red-fg:#712B13;
+  --gray-bg:#F1EFE8;--gray-fg:#888780;
+}
+
+/* ── OWNER CHROME (top bar visible only in owner-auth view) ── */
+.owner-bar{
+  background:var(--navy-deep);
+  padding:10px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  position:sticky;top:0;z-index:200;
+  border-bottom:1px solid rgba(201,168,76,.15);
+}
+.owner-bar-left{display:flex;align-items:center;gap:12px}
+.pixel-m-sm{width:22px;height:22px;flex-shrink:0}
+.owner-wordmark{font-family:'Cormorant Garamond',serif;font-size:16px;font-style:italic;color:var(--white)}
+.owner-wordmark .m{color:var(--gold)}
+.owner-role-badge{
+  font-size:8px;letter-spacing:.16em;text-transform:uppercase;font-weight:500;
+  padding:3px 10px;border-radius:12px;
+  background:rgba(201,168,76,.15);color:var(--gold);
+  border:1px solid rgba(201,168,76,.25);
+}
+.owner-bar-right{display:flex;align-items:center;gap:14px}
+.owner-bar-link{
+  font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:rgba(255,255,255,.45);text-decoration:none;font-weight:500;
+  transition:color .2s;
+}
+.owner-bar-link:hover{color:var(--gold)}
+.owner-bar-link.active{color:var(--gold)}
+
+/* ── MY FLEET SWITCHER ── */
+.fleet-switcher{
+  background:var(--navy2);
+  padding:0 20px;
+  display:flex;align-items:center;gap:0;
+  border-bottom:1px solid rgba(255,255,255,.06);
+  overflow-x:auto;
+  scrollbar-width:none;
+}
+.fleet-switcher::-webkit-scrollbar{display:none}
+.fleet-vessel-tab{
+  display:flex;align-items:center;gap:8px;
+  padding:12px 16px;
+  cursor:pointer;
+  border-bottom:2px solid transparent;
+  transition:all .2s;
+  white-space:nowrap;
+  text-decoration:none;
+}
+.fleet-vessel-tab.active{border-bottom-color:var(--gold)}
+.fleet-vessel-tab:hover:not(.active){background:rgba(255,255,255,.04)}
+.fleet-vessel-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--text3);flex-shrink:0;
+}
+.fleet-vessel-tab.active .fleet-vessel-dot{background:var(--aqua-bright)}
+.fleet-vessel-name{
+  font-family:'Cormorant Garamond',serif;
+  font-size:14px;font-style:italic;
+  color:rgba(255,255,255,.5);
+  transition:color .2s;
+}
+.fleet-vessel-tab.active .fleet-vessel-name{color:var(--white)}
+.fleet-vessel-meta{
+  font-size:9px;letter-spacing:.1em;text-transform:uppercase;
+  color:rgba(255,255,255,.3);
+  transition:color .2s;
+}
+.fleet-vessel-tab.active .fleet-vessel-meta{color:rgba(255,255,255,.5)}
+.fleet-add{
+  display:flex;align-items:center;gap:6px;
+  padding:12px 16px;
+  cursor:pointer;
+  opacity:.4;
+  transition:opacity .2s;
+  margin-left:auto;
+}
+.fleet-add:hover{opacity:.7}
+.fleet-add-icon{
+  width:16px;height:16px;border-radius:50%;
+  border:1px solid rgba(255,255,255,.4);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;color:rgba(255,255,255,.6);line-height:1;
+}
+.fleet-add-label{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4)}
+
+/* ── VESSEL HERO ── */
+.vessel-hero{
+  position:relative;
+  min-height:280px;
+  background:linear-gradient(160deg,var(--navy) 0%,var(--navy2) 50%,var(--navy3) 100%);
+  overflow:hidden;
+  display:flex;flex-direction:column;justify-content:flex-end;
+  padding:32px 24px 28px;
+}
+/* Decorative gold circle — matches brand guide vessel profile reference */
+.vessel-hero::before{
+  content:'';
+  position:absolute;top:-40px;right:-40px;
+  width:220px;height:220px;border-radius:50%;
+  background:var(--gold);opacity:.85;
+}
+.vessel-hero::after{
+  content:'';
+  position:absolute;inset:0;
+  background:linear-gradient(to bottom,transparent 30%,rgba(13,31,53,.6) 100%);
+}
+.vessel-hero-content{position:relative;z-index:2}
+.vessel-scan-id{
+  font-size:9px;letter-spacing:.18em;text-transform:uppercase;
+  color:rgba(255,255,255,.4);margin-bottom:8px;font-weight:500;
+  display:flex;align-items:center;gap:8px;
+}
+.vessel-scan-id::before{
+  content:'';width:16px;height:1px;background:rgba(255,255,255,.3);
+}
+/* Signal pixel animation */
+.signal-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:var(--aqua-bright);
+  display:inline-block;margin-left:4px;
+  animation:signalPulse 3s ease-in-out infinite;
+}
+@keyframes signalPulse{
+  0%,80%,100%{background:var(--aqua-bright);transform:scale(1);opacity:1}
+  40%{background:var(--aqua-vapor);transform:scale(1.5);opacity:.9}
+}
+.vessel-name{
+  font-family:'Cormorant Garamond',serif;
+  font-size:clamp(32px,7vw,48px);
+  font-weight:300;font-style:italic;
+  color:var(--white);line-height:1;margin-bottom:6px;
+}
+.vessel-tagline{
+  font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  color:rgba(255,255,255,.55);font-weight:400;
+}
+/* Owner-only edit button */
+.vessel-edit-btn{
+  position:absolute;top:24px;right:24px;z-index:10;
+  display:flex;align-items:center;gap:6px;
+  background:rgba(13,31,53,.6);border:1px solid rgba(201,168,76,.25);
+  padding:8px 14px;border-radius:20px;cursor:pointer;
+  font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  color:rgba(255,255,255,.7);font-weight:500;
+  backdrop-filter:blur(8px);transition:all .2s;
+  text-decoration:none;
+}
+.vessel-edit-btn:hover{background:rgba(201,168,76,.15);color:var(--gold);border-color:var(--gold-line)}
+.vessel-edit-btn svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── PROFILE BODY ── */
+.profile-body{
+  max-width:600px;margin:0 auto;
+  padding:0 0 80px;
+  background:var(--white);
+  min-height:100vh;
+}
+
+/* Quick spec strip */
+.spec-strip{
+  display:grid;grid-template-columns:repeat(3,1fr);
+  border-bottom:1px solid var(--divider);
+}
+.spec-cell{
+  padding:18px 20px;
+  border-right:1px solid var(--divider);
+}
+.spec-cell:last-child{border-right:none}
+.spec-k{
+  font-size:8px;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--text3);margin-bottom:4px;font-weight:500;
+}
+.spec-v{font-size:15px;font-weight:600;color:var(--navy)}
+.spec-v.masked{letter-spacing:.08em;color:var(--text2)}
+
+/* ── SECTION BLOCKS ── */
+.profile-section{padding:22px 20px;border-bottom:1px solid var(--divider)}
+.profile-section:last-child{border-bottom:none}
+.section-label{
+  font-size:9px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--text3);font-weight:500;margin-bottom:14px;
+  display:flex;align-items:center;gap:8px;
+}
+.section-label::after{
+  content:'';flex:1;height:1px;background:var(--divider);
+}
+
+/* Marina row */
+.marina-row{display:flex;align-items:center;gap:14px}
+.marina-icon{
+  width:40px;height:40px;border-radius:50%;
+  background:var(--gold-dim);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+.marina-icon svg{width:18px;height:18px;stroke:var(--gold);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.marina-name{font-size:15px;font-weight:600;color:var(--navy);margin-bottom:2px}
+.marina-detail{font-size:12px;color:var(--text3)}
+
+/* Document status strip */
+.doc-strip{display:flex;flex-direction:column;gap:10px}
+.doc-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 14px;border-radius:8px;
+  background:var(--cream);
+  cursor:pointer;transition:background .2s;
+}
+.doc-row:hover{background:var(--cream2)}
+.doc-row-left{display:flex;align-items:center;gap:10px}
+.doc-status-dot{
+  width:8px;height:8px;border-radius:50%;flex-shrink:0;
+}
+.doc-status-dot.ok{background:var(--aqua-lagoon)}
+.doc-status-dot.warn{background:#E8A838}
+.doc-status-dot.missing{background:rgba(13,31,53,.2)}
+.doc-name{font-size:13px;font-weight:500;color:var(--navy)}
+.doc-expiry{font-size:11px;color:var(--text3)}
+.doc-row-right{
+  font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text3);font-weight:500;
+}
+.doc-row-right.view{color:var(--aqua-lagoon)}
+
+/* Emergency contact */
+.ec-row{display:flex;align-items:center;gap:14px}
+.ec-avatar{
+  width:40px;height:40px;border-radius:50%;
+  background:var(--navy);
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+  font-family:'Cormorant Garamond',serif;
+  font-size:16px;font-style:italic;color:var(--gold);
+}
+.ec-name{font-size:14px;font-weight:500;color:var(--navy);margin-bottom:2px}
+.ec-role{font-size:11px;color:var(--text3)}
+.ec-phone{
+  margin-left:auto;
+  display:flex;align-items:center;gap:6px;
+  background:var(--green-bg);color:var(--green-fg);
+  padding:8px 14px;border-radius:20px;
+  font-size:12px;font-weight:500;text-decoration:none;
+  transition:background .2s;
+}
+.ec-phone:hover{background:#c8edde}
+.ec-phone svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Documents deep-dive (expandable) */
+.docs-expand-btn{
+  display:flex;align-items:center;justify-content:space-between;
+  width:100%;padding:16px 20px;
+  background:var(--cream);border:none;cursor:pointer;
+  font-family:'DM Sans',sans-serif;
+  transition:background .2s;
+}
+.docs-expand-btn:hover{background:var(--cream2)}
+.docs-expand-label{
+  display:flex;align-items:center;gap:10px;
+  font-size:13px;font-weight:500;color:var(--navy);
+}
+.docs-expand-label svg{width:16px;height:16px;stroke:var(--gold);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.docs-count{
+  font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--text3);font-weight:500;
+  display:flex;align-items:center;gap:6px;
+}
+.docs-count-num{
+  background:var(--navy);color:var(--gold);
+  width:20px;height:20px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:10px;font-weight:600;
+}
+.docs-drawer{display:none;padding:0 20px 16px;background:var(--cream)}
+.docs-drawer.open{display:block}
+.doc-category{margin-bottom:14px}
+.doc-cat-label{
+  font-size:9px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--text3);font-weight:500;margin-bottom:8px;
+}
+.doc-file-row{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;background:var(--white);border-radius:6px;
+  margin-bottom:4px;cursor:pointer;transition:background .2s;
+}
+.doc-file-row:hover{background:#fdfbf7}
+.doc-file-icon{
+  width:28px;height:28px;border-radius:4px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;font-size:10px;font-weight:700;
+}
+.doc-file-icon.pdf{background:var(--red-bg);color:var(--red-fg)}
+.doc-file-icon.img{background:var(--blue-bg);color:var(--blue-fg)}
+.doc-file-name{font-size:12px;font-weight:500;color:var(--navy);flex:1}
+.doc-file-size{font-size:10px;color:var(--text3)}
+
+/* Additional notes */
+.notes-text{
+  font-size:14px;color:var(--text2);line-height:1.75;font-weight:300;
+}
+
+/* Aqua scan verification strip */
+.scan-verified{
+  display:flex;align-items:center;gap:12px;
+  padding:14px 20px;
+  background:linear-gradient(135deg,rgba(23,195,178,.08) 0%,rgba(23,195,178,.04) 100%);
+  border-top:1px solid rgba(23,195,178,.2);
+  border-bottom:1px solid rgba(23,195,178,.2);
+}
+.scan-verified-icon{
+  width:32px;height:32px;border-radius:50%;
+  background:rgba(23,195,178,.15);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.scan-verified-icon svg{width:16px;height:16px;stroke:var(--aqua-lagoon);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.scan-verified-text{font-size:12px;color:var(--text2);line-height:1.4}
+.scan-verified-text strong{color:var(--navy);font-weight:600}
+.scan-verified-id{margin-left:auto;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--text3)}
+
+/* Bottom nav (owner-only) */
+.owner-bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;z-index:100;
+  background:rgba(13,31,53,.97);
+  backdrop-filter:blur(12px);
+  -webkit-backdrop-filter:blur(12px);
+  border-top:1px solid rgba(201,168,76,.15);
+  display:flex;
+  max-width:600px;margin:0 auto;
+}
+.bottom-nav-item{
+  flex:1;display:flex;flex-direction:column;align-items:center;
+  padding:10px 8px 12px;cursor:pointer;
+  text-decoration:none;transition:opacity .2s;
+}
+.bottom-nav-item.active .bnav-label{color:var(--gold)}
+.bottom-nav-item.active .bnav-icon svg{stroke:var(--gold)}
+.bottom-nav-item:not(.active){opacity:.45}
+.bottom-nav-item:not(.active):hover{opacity:.7}
+.bnav-icon{margin-bottom:4px}
+.bnav-icon svg{width:20px;height:20px;stroke:var(--white);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;display:block}
+.bnav-label{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--white);font-weight:500}
+
+/* Vessel switcher panel (hidden by default) */
+.fleet-panel-overlay{
+  display:none;position:fixed;inset:0;z-index:300;
+  background:rgba(7,16,32,.85);backdrop-filter:blur(4px);
+}
+.fleet-panel-overlay.open{display:block}
+.fleet-panel{
+  position:absolute;bottom:0;left:0;right:0;
+  background:var(--navy2);
+  border-radius:20px 20px 0 0;
+  padding:0 0 32px;
+  max-width:600px;margin:0 auto;
+}
+.fleet-panel-handle{
+  width:36px;height:4px;border-radius:2px;
+  background:rgba(255,255,255,.2);
+  margin:12px auto 20px;
+}
+.fleet-panel-title{
+  font-size:10px;letter-spacing:.18em;text-transform:uppercase;
+  color:var(--text3);font-weight:500;
+  padding:0 20px;margin-bottom:14px;
+}
+.fleet-panel-vessel{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 20px;cursor:pointer;
+  transition:background .2s;text-decoration:none;
+}
+.fleet-panel-vessel:hover{background:rgba(255,255,255,.04)}
+.fleet-panel-vessel.active{background:rgba(201,168,76,.08)}
+.fpv-color{
+  width:40px;height:40px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.fpv-name{font-family:'Cormorant Garamond',serif;font-size:18px;font-style:italic;color:var(--white);margin-bottom:2px}
+.fpv-meta{font-size:11px;color:rgba(255,255,255,.4)}
+.fpv-check{margin-left:auto;width:20px;height:20px;border-radius:50%;background:var(--aqua-bright);display:none;align-items:center;justify-content:center}
+.fleet-panel-vessel.active .fpv-check{display:flex}
+.fpv-check svg{width:10px;height:10px;stroke:var(--navy);fill:none;stroke-width:2.5}
+.fleet-panel-add{
+  display:flex;align-items:center;gap:14px;
+  padding:14px 20px;cursor:pointer;
+  border-top:1px solid rgba(255,255,255,.06);margin-top:8px;
+  transition:background .2s;
+}
+.fleet-panel-add:hover{background:rgba(255,255,255,.04)}
+.fpv-add-icon{
+  width:40px;height:40px;border-radius:8px;
+  border:1.5px dashed rgba(255,255,255,.2);
+  display:flex;align-items:center;justify-content:center;
+}
+.fpv-add-icon svg{width:16px;height:16px;stroke:rgba(255,255,255,.4);fill:none;stroke-width:2;stroke-linecap:round}
+.fleet-panel-add span{font-size:14px;color:rgba(255,255,255,.5)}
+</style>
+</head>
+<body>
+
+<!-- ── OWNER BAR ── -->
+<div class="owner-bar">
+  <div class="owner-bar-left">
+    <!-- Pixel M nav size -->
+    <svg class="pixel-m-sm" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+        <rect x="0" y="0" width="22" height="9" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="0" y="0" width="9" height="22" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="78" y="0" width="22" height="9" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="91" y="0" width="9" height="22" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="0" y="91" width="22" height="9" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="0" y="78" width="9" height="22" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="78" y="91" width="22" height="9" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="91" y="78" width="9" height="22" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="15" y="25" width="10" height="10" fill="#c9a84c"/><rect x="15" y="35" width="10" height="10" fill="#c9a84c"/><rect x="15" y="45" width="10" height="10" fill="#c9a84c"/><rect x="15" y="55" width="10" height="10" fill="#c9a84c"/><rect x="15" y="65" width="10" height="10" fill="#c9a84c"/><rect x="15" y="75" width="10" height="10" fill="#c9a84c"/>
+        <rect x="25" y="35" width="10" height="10" fill="#c9a84c"/><rect x="35" y="45" width="10" height="10" fill="#c9a84c"/><rect x="45" y="35" width="10" height="10" fill="#c9a84c"/><rect x="55" y="45" width="10" height="10" fill="#c9a84c"/><rect x="65" y="35" width="10" height="10" fill="#c9a84c"/>
+        <rect x="75" y="25" width="10" height="10" fill="#c9a84c"/><rect x="75" y="35" width="10" height="10" fill="#c9a84c"/><rect x="75" y="45" width="10" height="10" fill="#c9a84c"/><rect x="75" y="55" width="10" height="10" fill="#c9a84c"/><rect x="75" y="65" width="10" height="10" fill="#c9a84c"/><rect x="75" y="75" width="10" height="10" fill="#c9a84c"/>
+        <rect x="85" y="85" width="8" height="8" fill="#17C3B2"/>
+      </svg>
+    <span class="owner-wordmark"><span class="m">M</span>oxie</span>
+    <span class="owner-role-badge">Boat Owner</span>
+  </div>
+  <div class="owner-bar-right">
+    <a href="#" class="owner-bar-link active">My Fleet</a>
+    <a href="#" class="owner-bar-link">Settings</a>
+  </div>
+</div>
+
+<!-- ── MY FLEET SWITCHER ── -->
+<div class="fleet-switcher">
+  <!-- Vessel 1: Nimbus (active) -->
+  <div class="fleet-vessel-tab active" id="tab-nimbus" onclick="switchVessel('nimbus')">
+    <div class="fleet-vessel-dot"></div>
+    <div>
+      <div class="fleet-vessel-name">Discovery One</div>
+      <div class="fleet-vessel-meta">2023 Nimbus T8</div>
+    </div>
+  </div>
+  <!-- Vessel 2: Beneteau -->
+  <div class="fleet-vessel-tab" id="tab-beneteau" onclick="switchVessel('beneteau')">
+    <div class="fleet-vessel-dot"></div>
+    <div>
+      <div class="fleet-vessel-name">Polaris</div>
+      <div class="fleet-vessel-meta">2021 Beneteau 30.1</div>
+    </div>
+  </div>
+  <!-- Add vessel -->
+  <div class="fleet-add" onclick="openFleetPanel()">
+    <div class="fleet-add-icon">+</div>
+    <span class="fleet-add-label">Add</span>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════ -->
+<!-- VESSEL: DISCOVERY ONE (Nimbus T8)      -->
+<!-- ══════════════════════════════════════ -->
+<div id="vessel-nimbus" class="vessel-wrapper">
+
+  <!-- Hero -->
+  <div class="vessel-hero" style="min-height:260px">
+    <a href="#" class="vessel-edit-btn">
+      <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Edit Profile
+    </a>
+    <div class="vessel-hero-content">
+      <div class="vessel-scan-id">MXE-00001<span class="signal-dot"></span></div>
+      <div class="vessel-name">Discovery One</div>
+      <div class="vessel-tagline">2023 Nimbus T8 &nbsp;·&nbsp; Power &nbsp;·&nbsp; Portobello Marina</div>
+    </div>
+  </div>
+
+  <div class="profile-body">
+
+    <!-- Quick specs -->
+    <div class="spec-strip">
+      <div class="spec-cell"><div class="spec-k">Make</div><div class="spec-v">Nimbus</div></div>
+      <div class="spec-cell"><div class="spec-k">Year</div><div class="spec-v">2023</div></div>
+      <div class="spec-cell"><div class="spec-k">Length</div><div class="spec-v">26'</div></div>
+      <div class="spec-cell"><div class="spec-k">Type</div><div class="spec-v">Power</div></div>
+      <div class="spec-cell"><div class="spec-k">Model</div><div class="spec-v">T8</div></div>
+      <div class="spec-cell"><div class="spec-k">HIN</div><div class="spec-v masked">NIM·····234</div></div>
+    </div>
+
+    <!-- Scan verified strip -->
+    <div class="scan-verified">
+      <div class="scan-verified-icon">
+        <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      </div>
+      <div class="scan-verified-text">
+        <strong>Registered Vessel</strong><br>
+        Profile verified by Moxie · Last updated June 2025
+      </div>
+      <div class="scan-verified-id">MXE-00001</div>
+    </div>
+
+    <!-- Home marina -->
+    <div class="profile-section">
+      <div class="section-label">Home Marina</div>
+      <div class="marina-row">
+        <div class="marina-icon">
+          <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </div>
+        <div>
+          <div class="marina-name">Portobello Marina</div>
+          <div class="marina-detail">Oakland, CA &nbsp;·&nbsp; Slip 38 &nbsp;·&nbsp; (510) 555-0110</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add a photo nudge — render only when vessels.photo_url is null.
+         Demo vessel has a photo, so this is commented out here; see the
+         Polaris section below for the visible-state markup. -->
+
+    <!-- Document status -->
+    <div class="profile-section">
+      <div class="section-label">Documents on File</div>
+      <div class="doc-strip">
+        <div class="doc-row" onclick="openDocs()">
+          <div class="doc-row-left">
+            <div class="doc-status-dot ok"></div>
+            <div>
+              <div class="doc-name">USCG Documentation</div>
+              <div class="doc-expiry">Renewed annually · Current</div>
+            </div>
+          </div>
+          <div class="doc-row-right view">View</div>
+        </div>
+        <div class="doc-row" onclick="openDocs()">
+          <div class="doc-row-left">
+            <div class="doc-status-dot ok"></div>
+            <div>
+              <div class="doc-name">Marine Insurance</div>
+              <div class="doc-expiry">Markel American · Expires Dec 2025</div>
+            </div>
+          </div>
+          <div class="doc-row-right view">View</div>
+        </div>
+        <div class="doc-row" onclick="openDocs()">
+          <div class="doc-row-left">
+            <div class="doc-status-dot ok"></div>
+            <div>
+              <div class="doc-name">CA Boater Card</div>
+              <div class="doc-expiry">Permanent · Ben Eves</div>
+            </div>
+          </div>
+          <div class="doc-row-right view">View</div>
+        </div>
+        <div class="doc-row">
+          <div class="doc-row-left">
+            <div class="doc-status-dot warn"></div>
+            <div>
+              <div class="doc-name">Engine Service Record</div>
+              <div class="doc-expiry">No file uploaded</div>
+            </div>
+          </div>
+          <div class="doc-row-right">Add</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Emergency contact -->
+    <div class="profile-section">
+      <div class="section-label">Emergency Contact</div>
+      <div class="ec-row">
+        <div class="ec-avatar">BE</div>
+        <div>
+          <div class="ec-name">Ben Eves</div>
+          <div class="ec-role">Owner · Primary contact</div>
+        </div>
+        <a href="tel:+13124650672" class="ec-phone">
+          <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8a16 16 0 0 0 8.09 8.09l.95-.95a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          Call
+        </a>
+      </div>
+    </div>
+
+    <!-- Documents deep-dive -->
+    <button class="docs-expand-btn" onclick="toggleDocs()" id="docs-btn">
+      <div class="docs-expand-label">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Documents &amp; Files
+      </div>
+      <div class="docs-count"><div class="docs-count-num">4</div> files stored</div>
+    </button>
+    <div class="docs-drawer" id="docs-drawer">
+      <div style="height:12px"></div>
+      <div class="doc-category">
+        <div class="doc-cat-label">Registration &amp; Ownership</div>
+        <div class="doc-file-row">
+          <div class="doc-file-icon pdf">PDF</div>
+          <div class="doc-file-name">USCG_Documentation_2025.pdf</div>
+          <div class="doc-file-size">142 KB</div>
+        </div>
+        <div class="doc-file-row">
+          <div class="doc-file-icon pdf">PDF</div>
+          <div class="doc-file-name">CA_Registration_2025.pdf</div>
+          <div class="doc-file-size">89 KB</div>
+        </div>
+      </div>
+      <div class="doc-category">
+        <div class="doc-cat-label">Insurance</div>
+        <div class="doc-file-row">
+          <div class="doc-file-icon pdf">PDF</div>
+          <div class="doc-file-name">Markel_Insurance_Card_2025.pdf</div>
+          <div class="doc-file-size">203 KB</div>
+        </div>
+      </div>
+      <div class="doc-category">
+        <div class="doc-cat-label">Operator Cards</div>
+        <div class="doc-file-row">
+          <div class="doc-file-icon img">IMG</div>
+          <div class="doc-file-name">CA_Boater_Card_BenEves.jpg</div>
+          <div class="doc-file-size">78 KB</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;padding:10px 12px;background:var(--white);border-radius:6px;border:1.5px dashed var(--divider);cursor:pointer;text-align:center">
+        <span style="font-size:12px;color:var(--text3);font-weight:500">+ Upload a file</span>
+      </div>
+    </div>
+
+    <!-- Notes / description -->
+    <div class="profile-section">
+      <div class="section-label">Notes</div>
+      <p class="notes-text">2023 Nimbus T8 day cruiser, single Yamaha F150 outboard. Regularly maintained. House battery system upgraded 2024. Life jackets for 6 aboard.</p>
+    </div>
+
+  </div><!-- /profile-body -->
+</div><!-- /vessel-nimbus -->
+
+
+<!-- ══════════════════════════════════════ -->
+<!-- VESSEL: POLARIS (Beneteau 30.1)        -->
+<!-- ══════════════════════════════════════ -->
+<div id="vessel-beneteau" class="vessel-wrapper" style="display:none">
+
+  <div class="vessel-hero" style="background:linear-gradient(160deg,#0d1f35 0%,#132943 40%,#0a2235 100%);min-height:260px">
+    <a href="#" class="vessel-edit-btn">
+      <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+      Edit Profile
+    </a>
+    <div class="vessel-hero-content">
+      <div class="vessel-scan-id">MXE-00002<span class="signal-dot"></span></div>
+      <div class="vessel-name">Polaris</div>
+      <div class="vessel-tagline">2021 Beneteau Oceanis 30.1 &nbsp;·&nbsp; Sail &nbsp;·&nbsp; Clipper Yacht Harbor</div>
+    </div>
+  </div>
+
+  <div class="profile-body">
+    <div class="spec-strip">
+      <div class="spec-cell"><div class="spec-k">Make</div><div class="spec-v">Beneteau</div></div>
+      <div class="spec-cell"><div class="spec-k">Year</div><div class="spec-v">2021</div></div>
+      <div class="spec-cell"><div class="spec-k">Length</div><div class="spec-v">30'</div></div>
+      <div class="spec-cell"><div class="spec-k">Type</div><div class="spec-v">Sail</div></div>
+      <div class="spec-cell"><div class="spec-k">Model</div><div class="spec-v">Oceanis 30.1</div></div>
+      <div class="spec-cell"><div class="spec-k">HIN</div><div class="spec-v masked">BEN·····121</div></div>
+    </div>
+
+    <div class="scan-verified">
+      <div class="scan-verified-icon">
+        <svg viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      </div>
+      <div class="scan-verified-text">
+        <strong>Registered Vessel</strong><br>
+        Profile verified by Moxie · Last updated June 2025
+      </div>
+      <div class="scan-verified-id">MXE-00002</div>
+    </div>
+
+    <div class="profile-section">
+      <div class="section-label">Home Marina</div>
+      <div class="marina-row">
+        <div class="marina-icon">
+          <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+        </div>
+        <div>
+          <div class="marina-name">Clipper Yacht Harbor</div>
+          <div class="marina-detail">Sausalito, CA &nbsp;·&nbsp; Modern Sailing Charter Fleet</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Add a photo nudge — render only when vessels.photo_url is null.
+         Shown here as the visible-state example (Polaris has no photo_url
+         in the seed data). Disappears permanently once a photo exists. -->
+    <div class="profile-section" id="photo-nudge" style="background:var(--gold-dim)">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div class="marina-icon">
+          <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        </div>
+        <div style="flex:1">
+          <div class="marina-name">Add a photo of Polaris</div>
+          <div class="marina-detail">Takes 30 seconds — replaces the default background on your public profile</div>
+        </div>
+        <button style="background:var(--navy);color:var(--gold);border:none;padding:10px 16px;font-family:'DM Sans',sans-serif;font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:pointer;flex-shrink:0" onclick="openPhotoUpload()">Add</button>
+      </div>
+    </div>
+
+    <div class="profile-section">
+      <div class="section-label">Documents on File</div>
+      <div class="doc-strip">
+        <div class="doc-row" onclick="openDocs()">
+          <div class="doc-row-left">
+            <div class="doc-status-dot ok"></div>
+            <div>
+              <div class="doc-name">USCG Documentation</div>
+              <div class="doc-expiry">Current · Renewed 2025</div>
+            </div>
+          </div>
+          <div class="doc-row-right view">View</div>
+        </div>
+        <div class="doc-row" onclick="openDocs()">
+          <div class="doc-row-left">
+            <div class="doc-status-dot ok"></div>
+            <div>
+              <div class="doc-name">Marine Insurance</div>
+              <div class="doc-expiry">Markel American via Novamar · Expires Dec 2025</div>
+            </div>
+          </div>
+          <div class="doc-row-right view">View</div>
+        </div>
+        <div class="doc-row" onclick="openDocs()">
+          <div class="doc-row-left">
+            <div class="doc-status-dot ok"></div>
+            <div>
+              <div class="doc-name">Charter Program Agreement</div>
+              <div class="doc-expiry">Modern Sailing · 55% commission 2026</div>
+            </div>
+          </div>
+          <div class="doc-row-right view">View</div>
+        </div>
+        <div class="doc-row">
+          <div class="doc-row-left">
+            <div class="doc-status-dot warn"></div>
+            <div>
+              <div class="doc-name">ASA Yacht Club Cert.</div>
+              <div class="doc-expiry">No file uploaded</div>
+            </div>
+          </div>
+          <div class="doc-row-right">Add</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="profile-section">
+      <div class="section-label">Emergency Contact</div>
+      <div class="ec-row">
+        <div class="ec-avatar">BE</div>
+        <div>
+          <div class="ec-name">Ben Eves</div>
+          <div class="ec-role">Owner · Primary contact</div>
+        </div>
+        <a href="tel:+13124650672" class="ec-phone">
+          <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8a16 16 0 0 0 8.09 8.09l.95-.95a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+          Call
+        </a>
+      </div>
+    </div>
+
+    <button class="docs-expand-btn" onclick="toggleDocs()" id="docs-btn-2">
+      <div class="docs-expand-label">
+        <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Documents &amp; Files
+      </div>
+      <div class="docs-count"><div class="docs-count-num">3</div> files stored</div>
+    </button>
+    <div class="docs-drawer" id="docs-drawer-2">
+      <div style="height:12px"></div>
+      <div class="doc-category">
+        <div class="doc-cat-label">Registration &amp; Ownership</div>
+        <div class="doc-file-row">
+          <div class="doc-file-icon pdf">PDF</div>
+          <div class="doc-file-name">USCG_Documentation_Polaris_2025.pdf</div>
+          <div class="doc-file-size">118 KB</div>
+        </div>
+      </div>
+      <div class="doc-category">
+        <div class="doc-cat-label">Insurance</div>
+        <div class="doc-file-row">
+          <div class="doc-file-icon pdf">PDF</div>
+          <div class="doc-file-name">Novamar_Markel_Policy_2025.pdf</div>
+          <div class="doc-file-size">287 KB</div>
+        </div>
+      </div>
+      <div class="doc-category">
+        <div class="doc-cat-label">Charter Program</div>
+        <div class="doc-file-row">
+          <div class="doc-file-icon pdf">PDF</div>
+          <div class="doc-file-name">ModernSailing_Charter_Agreement_2026.pdf</div>
+          <div class="doc-file-size">412 KB</div>
+        </div>
+      </div>
+      <div style="margin-top:12px;padding:10px 12px;background:var(--white);border-radius:6px;border:1.5px dashed var(--divider);cursor:pointer;text-align:center">
+        <span style="font-size:12px;color:var(--text3);font-weight:500">+ Upload a file</span>
+      </div>
+    </div>
+
+    <div class="profile-section">
+      <div class="section-label">Notes</div>
+      <p class="notes-text">2021 Beneteau Oceanis 30.1 sloop. In Modern Sailing charter program at Clipper Yacht Harbor, Sausalito. Available for ASA instruction and private charter. Regularly maintained by Modern Sailing fleet team.</p>
+    </div>
+  </div>
+</div><!-- /vessel-beneteau -->
+
+
+<!-- ── OWNER BOTTOM NAV ── -->
+<nav class="owner-bottom-nav">
+  <a href="#" class="bottom-nav-item active">
+    <div class="bnav-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+    <div class="bnav-label">Profile</div>
+  </a>
+  <a href="#" class="bottom-nav-item" onclick="event.preventDefault();openFleetPanel()">
+    <div class="bnav-icon"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div>
+    <div class="bnav-label">My Fleet</div>
+  </a>
+  <a href="#" class="bottom-nav-item">
+    <div class="bnav-icon"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg></div>
+    <div class="bnav-label">Docs</div>
+  </a>
+  <a href="#" class="bottom-nav-item" onclick="event.preventDefault();openAccountPanel()">
+    <div class="bnav-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg></div>
+    <div class="bnav-label">Account</div>
+  </a>
+</nav>
+
+
+<!-- ── FLEET PANEL (bottom sheet) ── -->
+<div class="fleet-panel-overlay" id="fleet-overlay" onclick="closeFleetPanel()">
+  <div class="fleet-panel" onclick="event.stopPropagation()">
+    <div class="fleet-panel-handle"></div>
+    <div class="fleet-panel-title">My Fleet</div>
+
+    <div class="fleet-panel-vessel active" onclick="switchVessel('nimbus');closeFleetPanel()" id="fp-nimbus">
+      <div class="fpv-color" style="background:rgba(201,168,76,.12)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#c9a84c" stroke-width="1.5" stroke-linecap="round"><path d="M3 17l2-6h14l2 6H3z"/><path d="M8 17V9"/><path d="M16 17V9"/><path d="M12 17V7"/><path d="M5 7h14"/></svg>
+      </div>
+      <div>
+        <div class="fpv-name">Discovery One</div>
+        <div class="fpv-meta">2023 Nimbus T8 · Power · MXE-00001</div>
+      </div>
+      <div class="fpv-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+    </div>
+
+    <div class="fleet-panel-vessel" onclick="switchVessel('beneteau');closeFleetPanel()" id="fp-beneteau">
+      <div class="fpv-color" style="background:rgba(23,195,178,.1)">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#17C3B2" stroke-width="1.5" stroke-linecap="round"><path d="M3 17l9-14 9 14H3z"/><path d="M12 3v14"/></svg>
+      </div>
+      <div>
+        <div class="fpv-name">Polaris</div>
+        <div class="fpv-meta">2021 Beneteau Oceanis 30.1 · Sail · MXE-00002</div>
+      </div>
+      <div class="fpv-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+    </div>
+
+    <div class="fleet-panel-add">
+      <div class="fpv-add-icon">
+        <svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </div>
+      <span>Register a new vessel</span>
+    </div>
+  </div>
+</div>
+
+
+<!-- ── ACCOUNT & BILLING PANEL (bottom sheet) ── -->
+<div class="fleet-panel-overlay" id="account-overlay" onclick="closeAccountPanel()">
+  <div class="fleet-panel" onclick="event.stopPropagation()">
+    <div class="fleet-panel-handle"></div>
+    <div class="fleet-panel-title">Account &amp; Billing</div>
+
+    <div style="padding:0 20px 4px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid rgba(255,255,255,.08)">
+        <div>
+          <div style="font-family:'Cormorant Garamond',serif;font-size:18px;font-style:italic;color:var(--white)">Full Access</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.4);margin-top:2px">Renews annually · Billed monthly</div>
+        </div>
+        <div style="font-size:8px;letter-spacing:.14em;text-transform:uppercase;font-weight:600;padding:4px 10px;border-radius:12px;background:rgba(23,195,178,.15);color:var(--aqua-bright);border:1px solid rgba(23,195,178,.3)">Active</div>
+      </div>
+
+      <div style="padding:16px 0;border-bottom:1px solid rgba(255,255,255,.08)">
+        <div style="font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.3);font-weight:500;margin-bottom:10px">Payment history</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.6);padding:6px 0">
+          <span>Setup fee — Discovery One</span>
+          <span>Paid</span>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;font-size:12px;color:rgba(255,255,255,.6);padding:6px 0">
+          <span>Full Access — monthly</span>
+          <span>Paid</span>
+        </div>
+      </div>
+
+      <div style="padding:16px 0 4px">
+        <button style="width:100%;background:transparent;color:var(--gold);border:1px solid rgba(201,168,76,.3);padding:12px;font-family:'DM Sans',sans-serif;font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:600;cursor:pointer">Manage billing</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+// ── Account panel ──
+function openAccountPanel() {
+  document.getElementById('account-overlay').classList.add('open');
+}
+function closeAccountPanel() {
+  document.getElementById('account-overlay').classList.remove('open');
+}
+
+// ── Photo upload nudge ──
+function openPhotoUpload() {
+  alert('Demo only — wire to POST /api/vessels/:mxeId/documents with doc_type=\'vessel_photo\' per the UI patch spec.');
+}
+// ── Vessel switcher ──
+function switchVessel(vessel) {
+  ['nimbus','beneteau'].forEach(v => {
+    document.getElementById('vessel-'+v).style.display = v===vessel ? 'block' : 'none';
+    document.getElementById('tab-'+v).classList.toggle('active', v===vessel);
+    const fp = document.getElementById('fp-'+v);
+    if(fp) fp.classList.toggle('active', v===vessel);
+  });
+}
+
+// ── Docs drawer toggle ──
+function toggleDocs() {
+  const activeVessel = document.getElementById('vessel-nimbus').style.display !== 'none' ? '' : '-2';
+  const drawer = document.getElementById('docs-drawer'+activeVessel);
+  drawer.classList.toggle('open');
+}
+
+function openDocs() {
+  const activeVessel = document.getElementById('vessel-nimbus').style.display !== 'none' ? '' : '-2';
+  document.getElementById('docs-drawer'+activeVessel).classList.add('open');
+}
+
+// ── Fleet panel ──
+function openFleetPanel() {
+  document.getElementById('fleet-overlay').classList.add('open');
+}
+function closeFleetPanel() {
+  document.getElementById('fleet-overlay').classList.remove('open');
+}
+</script>
+</body>
+</html>

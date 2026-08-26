@@ -12,13 +12,22 @@ export async function fetchVesselByMxeId(mxeId: string): Promise<VesselRecord | 
   const supabase = getPublicSupabase();
 
   if (!supabase) {
+    console.warn(
+      `[vessel-service] NEXT_PUBLIC_SUPABASE_URL/ANON_KEY not set — serving demo vessel data for ${normalized} instead of Supabase.`,
+    );
     return getDemoVessel(normalized);
   }
 
   const { data, error } = await supabase.from("vessels").select("*").eq("mxe_id", normalized).maybeSingle();
 
-  if (error || !data) {
-    return getDemoVessel(normalized);
+  if (error) {
+    // A real Supabase/query error must surface, not be masked by demo data.
+    throw new Error(`Failed to fetch vessel ${normalized}: ${error.message}`);
+  }
+
+  if (!data) {
+    // Genuine not-found: no row, no error. Let callers 404 — never demo-fill this.
+    return null;
   }
 
   const row = normalizeRecord(data as Record<string, unknown>);
