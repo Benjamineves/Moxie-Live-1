@@ -140,19 +140,23 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
         <div className="marketing-ticker-inner inline-flex">
           {[
             "Your boat's digital home",
-            "Role-gated access",
+            "One boat, one identity",
             "Weatherproof vinyl QR",
-            "Free for boat owners",
-            "Emergency data for Coast Guard",
-            "Marina operator tools",
+            "Scan to verify, instantly",
+            "Role-gated access",
+            "Share exactly what you choose",
+            "Documents always on hand",
+            "Self-serve, no marina required",
           ]
             .concat([
               "Your boat's digital home",
-              "Role-gated access",
+              "One boat, one identity",
               "Weatherproof vinyl QR",
-              "Free for boat owners",
-              "Emergency data for Coast Guard",
-              "Marina operator tools",
+              "Scan to verify, instantly",
+              "Role-gated access",
+              "Share exactly what you choose",
+              "Documents always on hand",
+              "Self-serve, no marina required",
             ])
             .map((t, i) => (
               <span
