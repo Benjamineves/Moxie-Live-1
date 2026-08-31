@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { buildQrSvg } from "@/lib/qr-render";
+import { buildBadgeSvg } from "@/lib/qr-render";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { QrDownload } from "./QrDownload";
@@ -64,18 +64,17 @@ export default async function VesselQrPage({ params, searchParams }: Props) {
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.trim() || "https://moxieyacht.com";
   const targetUrl = `${baseUrl.replace(/\/$/, "")}/${encodeURIComponent(vessel.mxe_id)}`;
-  const svg = buildQrSvg(targetUrl, { width: 320, margin: 1 });
+  // Full badge (wordmark, QR, divider, caption, Patent Pending) from the
+  // single shared layout in lib/badge-layout.ts — see qr-render.ts's
+  // buildBadgeSvg. Both this on-screen view and the printOnly view below
+  // render the identical composition; only QrDownload.tsx's PNG differs
+  // in mechanics (canvas vs. SVG), not in what it shows.
+  const badgeSvg = buildBadgeSvg(vessel.mxe_id, targetUrl, { size: 320 });
 
   if (printOnly) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-[420px] flex-col items-center justify-center bg-[var(--white)] p-6">
-        <p className="font-[family-name:var(--font-display)] text-4xl font-light italic text-[var(--gold)]">
-          {vessel.mxe_id}
-        </p>
-        <div className="mt-4 w-full max-w-[300px]" dangerouslySetInnerHTML={{ __html: svg }} />
-        <p className="mt-3 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
-          {baseUrl.replace(/^https?:\/\//, "")}/{vessel.mxe_id}
-        </p>
+        <div className="w-full max-w-[320px]" dangerouslySetInnerHTML={{ __html: badgeSvg }} />
       </main>
     );
   }
@@ -96,17 +95,12 @@ export default async function VesselQrPage({ params, searchParams }: Props) {
           {vessel.mxe_id}
         </p>
 
-        <section className="mt-4 rounded-2xl bg-[var(--navy-deep)] p-4">
-          <div className="p-4">
-            <div className="mx-auto w-full max-w-[320px]" dangerouslySetInnerHTML={{ __html: svg }} />
-          </div>
-          <p className="mt-3 text-center font-[family-name:var(--font-display)] text-2xl font-light italic text-[var(--gold)]">
-            {vessel.vessel_name}
-          </p>
-          <p className="mt-1 text-center font-[family-name:var(--font-dm)] text-xs text-[rgba(255,255,255,.75)]">
-            {baseUrl.replace(/^https?:\/\//, "")}/{vessel.mxe_id}
-          </p>
+        <section className="mt-4 flex justify-center">
+          <div className="w-full max-w-[320px]" dangerouslySetInnerHTML={{ __html: badgeSvg }} />
         </section>
+        <p className="mt-3 text-center font-[family-name:var(--font-display)] text-2xl font-light italic text-[var(--navy)]">
+          {vessel.vessel_name}
+        </p>
 
         <p className="mt-5 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
           Print this and affix it to your vessel. Anyone with a phone can scan it.

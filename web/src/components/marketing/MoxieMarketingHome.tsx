@@ -218,6 +218,9 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
                 <br />
                 Scan · MXE-00001
               </p>
+              <p className="mt-2 font-[family-name:var(--font-dm)] text-[6px] font-medium uppercase tracking-[0.14em] text-[rgba(255,255,255,0.25)]">
+                Patent Pending
+              </p>
             </div>
           </div>
         </div>
@@ -502,25 +505,12 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
           <div className="mb-9 h-px bg-[var(--divider)]" />
           <div className="flex flex-wrap justify-center gap-x-10 gap-y-6 text-left">
             <div>
-              <div className="mb-1 text-[9px] font-medium uppercase tracking-[0.14em] text-[var(--text3)]">Contact</div>
-              <div className="text-sm text-[var(--navy)]">Ben Eves</div>
-            </div>
-            <div>
               <div className="mb-1 text-[9px] font-medium uppercase tracking-[0.14em] text-[var(--text3)]">Email</div>
               <a
                 className="border-b border-[var(--divider)] text-sm text-[var(--navy)] no-underline transition hover:border-[var(--gold)]"
-                href="mailto:ben@moxieyachting.com"
+                href="mailto:info@moxieyachting.com"
               >
-                ben@moxieyachting.com
-              </a>
-            </div>
-            <div>
-              <div className="mb-1 text-[9px] font-medium uppercase tracking-[0.14em] text-[var(--text3)]">Phone</div>
-              <a
-                className="border-b border-[var(--divider)] text-sm text-[var(--navy)] no-underline transition hover:border-[var(--gold)]"
-                href="tel:+13124650672"
-              >
-                312-465-0672
+                info@moxieyachting.com
               </a>
             </div>
             <div>
@@ -540,7 +530,7 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
           <span className="inline-block h-2 w-2 bg-[var(--aqua-bright)]" aria-hidden />
         </div>
         <p className="text-[11px] leading-relaxed text-[rgba(255,255,255,0.35)]">
-          Ben Eves · CA Yacht Salesperson Lic. S-1-4046-0001 · © 2026 Moxie Marine Technology · moxieyachting.com
+          © 2026 Moxie Marine Technology · moxieyachting.com
         </p>
         <div className="mt-8 flex flex-wrap justify-center gap-4 font-[family-name:var(--font-dm)] text-[11px] text-[rgba(255,255,255,0.45)]">
           {isAuthenticated ? (

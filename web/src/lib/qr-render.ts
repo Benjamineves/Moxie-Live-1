@@ -1,5 +1,6 @@
 import QRCode from "qrcode";
 import { ACTIVE_QR_COLORWAY, QR_SIGNAL_PIXEL_COLOR } from "./qr-colorway";
+import { BADGE_LAYOUT, BADGE_TEXT } from "./badge-layout";
 
 /**
  * qrcode's own toString/toDataURL only support a uniform two-color
@@ -28,14 +29,16 @@ export function getQrModules(text: string) {
 }
 
 /**
- * Hand-built SVG (server-safe, no canvas) for the on-screen/printable
- * views in qr/page.tsx. The signal pixel is drawn unconditionally,
+ * Just the module cells + background, no outer <svg> wrapper — shared by
+ * buildQrSvg (a standalone bare QR) and buildBadgeSvg (the same cells
+ * embedded as a nested <svg> at a specific position within the full
+ * badge composition). The signal pixel is drawn unconditionally,
  * regardless of that module's actual encoded bit — same reasoning as
  * the build spec's original note: it's absorbed by Level H's ~30%
  * damage tolerance exactly like a scuff or worn corner would be, not a
  * bit the decoder is relying on.
  */
-export function buildQrSvg(text: string, { width, margin }: { width: number; margin: number }): string {
+function qrFragment(text: string, margin: number): { dim: number; markup: string } {
   const { size, isDark, signalRow, signalCol } = getQrModules(text);
   const { darkModule, lightModule } = ACTIVE_QR_COLORWAY;
   const dim = size + margin * 2;
@@ -44,14 +47,55 @@ export function buildQrSvg(text: string, { width, margin }: { width: number; mar
   for (let row = 0; row < size; row++) {
     for (let col = 0; col < size; col++) {
       if (!isDark(row, col)) continue;
-      const x = col + margin;
-      const y = row + margin;
-      cells += `<rect x="${x}" y="${y}" width="1" height="1" fill="${darkModule}"/>`;
+      cells += `<rect x="${col + margin}" y="${row + margin}" width="1" height="1" fill="${darkModule}"/>`;
     }
   }
-  // Signal pixel painted last so it always wins regardless of the
-  // underlying bit's dark/light state.
   cells += `<rect x="${signalCol + margin}" y="${signalRow + margin}" width="1" height="1" fill="${QR_SIGNAL_PIXEL_COLOR}"/>`;
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${dim} ${dim}" width="${width}" height="${width}" shape-rendering="crispEdges"><rect width="${dim}" height="${dim}" fill="${lightModule}"/>${cells}</svg>`;
+  return { dim, markup: `<rect width="${dim}" height="${dim}" fill="${lightModule}"/>${cells}` };
+}
+
+/** Hand-built SVG (server-safe, no canvas) for a bare QR code — no badge chrome. */
+export function buildQrSvg(text: string, { width, margin }: { width: number; margin: number }): string {
+  const { dim, markup } = qrFragment(text, margin);
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${dim} ${dim}" width="${width}" height="${width}" shape-rendering="crispEdges">${markup}</svg>`;
+}
+
+const QR_QUIET_MARGIN = 2; // module-units — same value used everywhere the QR block is embedded
+
+/**
+ * Full badge — wordmark, QR (with its quiet zone fully intact, drawn by
+ * qrFragment/buildQrSvg's exact same logic, untouched), gold divider,
+ * caption, Patent Pending. Layout comes entirely from badge-layout.ts;
+ * this function only turns those fractions into SVG markup. Used for
+ * both the on-screen and printable views in qr/page.tsx — one
+ * implementation, not two, for the piece that used to differ between
+ * them (this is also why the PNG counterpart, QrDownload.tsx, only
+ * shares the *layout numbers* rather than this markup directly: canvas
+ * pixel-drawing and SVG-string-building are different enough mechanics
+ * that only the underlying qrcode matrix and layout fractions could be
+ * shared, not the rendering code itself).
+ */
+export function buildBadgeSvg(mxeId: string, targetUrl: string, { size }: { size: number }): string {
+  const UNIT = 1000; // internal coordinate space; `size` only controls on-screen display size via width/height
+  const { darkModule } = ACTIVE_QR_COLORWAY;
+  const L = BADGE_LAYOUT;
+
+  const { dim: qrDim, markup: qrMarkup } = qrFragment(targetUrl, QR_QUIET_MARGIN);
+  const qrPixelSize = L.qrSize * UNIT;
+  const qrX = (UNIT - qrPixelSize) / 2;
+  const qrY = L.qrTopY * UNIT;
+
+  const marginX = L.contentMarginX * UNIT;
+  const cornerR = L.cornerRadiusFraction * UNIT;
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${UNIT} ${UNIT}" width="${size}" height="${size}">
+    <rect width="${UNIT}" height="${UNIT}" rx="${cornerR}" fill="var(--navy)"/>
+    <text x="${UNIT / 2}" y="${L.wordmarkBaselineY * UNIT}" text-anchor="middle" font-family="var(--font-display)" font-style="italic" font-weight="300" font-size="${L.wordmarkFontSize * UNIT}" fill="white">${BADGE_TEXT.wordmark}</text>
+    <svg x="${qrX}" y="${qrY}" width="${qrPixelSize}" height="${qrPixelSize}" viewBox="0 0 ${qrDim} ${qrDim}" shape-rendering="crispEdges">${qrMarkup}</svg>
+    <line x1="${marginX}" y1="${L.dividerY * UNIT}" x2="${UNIT - marginX}" y2="${L.dividerY * UNIT}" stroke="${darkModule}" stroke-opacity="0.5" stroke-width="${0.002 * UNIT}"/>
+    <text x="${UNIT / 2}" y="${L.captionLine1Y * UNIT}" text-anchor="middle" font-family="var(--font-dm)" font-weight="500" font-size="${L.captionFontSize * UNIT}" letter-spacing="${0.02 * UNIT}" fill="rgba(255,255,255,.5)" style="text-transform:uppercase">${BADGE_TEXT.captionLine1}</text>
+    <text x="${UNIT / 2}" y="${L.captionLine2Y * UNIT}" text-anchor="middle" font-family="var(--font-dm)" font-weight="500" font-size="${L.captionFontSize * UNIT}" letter-spacing="${0.02 * UNIT}" fill="rgba(255,255,255,.5)" style="text-transform:uppercase">${BADGE_TEXT.scanLabel(mxeId)}</text>
+    <text x="${UNIT / 2}" y="${L.patentPendingY * UNIT}" text-anchor="middle" font-family="var(--font-dm)" font-weight="500" font-size="${L.patentPendingFontSize * UNIT}" letter-spacing="${0.014 * UNIT}" fill="rgba(255,255,255,.25)" style="text-transform:uppercase">${BADGE_TEXT.patentPending}</text>
+  </svg>`;
 }
