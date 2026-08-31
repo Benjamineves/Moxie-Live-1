@@ -37,7 +37,7 @@ const TIERS: TierCopy[] = [
     price: "$49",
     cadence: "one-time",
     features: [
-      "Weatherproof QR sticker, printed & shipped",
+      "Weatherproof QR badge, printed & shipped",
       "Live public + owner profile",
       "CA Boater Card included — always, on every plan",
       "+1 additional document, 1 photo",
@@ -54,7 +54,7 @@ const TIERS: TierCopy[] = [
       "Everything in Basic, plus:",
       "Unlimited documents & photos",
       "Email reminders before insurance/registration lapse",
-      "Priority sticker production",
+      "Priority badge production",
     ],
     note: "Includes the sticker at no extra charge — most owners find this the better deal over Basic's one-time fee.",
   },

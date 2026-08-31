@@ -116,7 +116,7 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
             <em className="text-[var(--gold-lt)] not-italic">Digital</em> Home.
           </h1>
           <p className="mb-12 max-w-[520px] text-[clamp(15px,1.6vw,18px)] font-light leading-relaxed text-[rgba(255,255,255,0.55)]">
-            A weatherproof QR sticker on the hull. A persistent digital profile for every vessel. What people see
+            A weatherproof QR badge on the hull. A persistent digital profile for every vessel. What people see
             depends on who they are.
           </p>
           <div className="flex flex-wrap items-center gap-3.5">
@@ -172,10 +172,10 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
           <div>
             <p className="mb-4 flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--aqua-bright)]">
               <span className="h-px w-6 bg-[var(--aqua-bright)]" />
-              The QR sticker
+              The QR badge
             </p>
             <h2 className="mb-7 font-[family-name:var(--font-display)] text-[clamp(36px,5vw,62px)] font-light leading-[1.05] text-white">
-              One sticker.
+              One badge.
               <br />
               Every <span className="italic text-[var(--aqua-bright)]">identity.</span>
             </h2>
