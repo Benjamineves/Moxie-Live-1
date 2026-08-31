@@ -81,6 +81,12 @@ export function LoginForm({ nextPath }: Props) {
             className="rounded-lg border border-[var(--divider)] bg-[var(--white)] px-3 py-2.5 text-sm font-normal normal-case tracking-normal text-[var(--text)] outline-none ring-[var(--gold)] focus:ring-2"
           />
         </label>
+        <Link
+          className="-mt-2 self-end font-[family-name:var(--font-dm)] text-xs text-[var(--blue-fg)] underline"
+          href="/forgot-password"
+        >
+          Forgot password?
+        </Link>
         {error ? (
           <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">{error}</p>
         ) : null}

@@ -4,6 +4,9 @@ import { generateNextMxeId } from "@/lib/mxe-id";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 
+const STORAGE_TYPES = ["marina", "mooring", "trailer", "home", "yard", "other"] as const;
+export type StorageType = (typeof STORAGE_TYPES)[number];
+
 export type CreateVesselInput = {
   vessel_name: string;
   vessel_type: string;
@@ -16,6 +19,14 @@ export type CreateVesselInput = {
   photo_url?: string | null;
   doc_registration_url?: string | null;
   doc_insurance_url?: string | null;
+  storage_type: StorageType;
+  storage_description?: string | null;
+  marina_name?: string | null;
+  marina_city?: string | null;
+  slip_number?: string | null;
+  marina_phone?: string | null;
+  is_liveaboard?: boolean | null;
+  slip_notes?: string | null;
 };
 
 function validate(input: CreateVesselInput) {
@@ -26,6 +37,7 @@ function validate(input: CreateVesselInput) {
   if (!Number.isFinite(input.year) || input.year < 1900 || input.year > 2030) {
     return "Year must be between 1900 and 2030.";
   }
+  if (!STORAGE_TYPES.includes(input.storage_type)) return "Invalid storage type.";
   return null;
 }
 
@@ -93,6 +105,20 @@ export async function createVessel(
     ownerDisplayEmail = ownerEmail;
   }
 
+  const VESSEL_LIMIT = 5;
+  const { count: vesselCount, error: countError } = await service
+    .from("vessels")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", ownerId);
+  if (countError) {
+    return { error: `Unable to check vessel count: ${countError.message}` };
+  }
+  if ((vesselCount ?? 0) >= VESSEL_LIMIT) {
+    return { error: "You've reached the 5-vessel limit for one account." };
+  }
+
+  const isMarinaStorage = input.storage_type === "marina" || input.storage_type === "mooring";
+
   for (let attempt = 0; attempt < 3; attempt += 1) {
     const mxeId =
       attempt === 0 && proposedMxeId && /^MXE-\d{5}$/i.test(proposedMxeId)
@@ -114,6 +140,17 @@ export async function createVessel(
       doc_insurance_url: input.doc_insurance_url?.trim() || null,
       owner_name: ownerDisplayName,
       owner_email: ownerDisplayEmail,
+      // marina_id is intentionally never set here — see the migration
+      // comment on vessels.marina_name/marina_city. It's reserved for the
+      // marina role's future create/match flow, not this self-serve funnel.
+      storage_type: input.storage_type,
+      storage_description: isMarinaStorage ? null : input.storage_description?.trim() || null,
+      marina_name: isMarinaStorage ? input.marina_name?.trim() || null : null,
+      marina_city: isMarinaStorage ? input.marina_city?.trim() || null : null,
+      slip_number: isMarinaStorage ? input.slip_number?.trim() || null : null,
+      marina_phone: isMarinaStorage ? input.marina_phone?.trim() || null : null,
+      is_liveaboard: isMarinaStorage ? input.is_liveaboard ?? null : null,
+      slip_notes: isMarinaStorage ? input.slip_notes?.trim() || null : null,
     });
 
     if (!error) return { mxeId };

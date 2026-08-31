@@ -9,8 +9,17 @@ export type PublicProfileProps = {
   draft_ft: number | string | null;
   public_notes: string | null;
   photo_url: string | null;
+  storage_type: string | null;
+  storage_description: string | null;
   marina_name: string | null;
   marina_city: string | null;
+};
+
+const STORAGE_TYPE_LABELS: Record<string, string> = {
+  trailer: "Trailer",
+  home: "Home / Driveway",
+  yard: "Boatyard / Storage",
+  other: "Other storage",
 };
 
 export function VesselPublicProfile(props: PublicProfileProps & { hideFooter?: boolean }) {
@@ -25,15 +34,22 @@ export function VesselPublicProfile(props: PublicProfileProps & { hideFooter?: b
     draft_ft,
     public_notes,
     photo_url,
+    storage_type,
+    storage_description,
     marina_name,
     marina_city,
     hideFooter,
   } = props;
 
+  // marina + mooring share the "Home Marina" render (same grouping the
+  // intake form's storage-type pill uses); trailer/home/yard/other get the
+  // generic "Storage" render with a type label + free-text description.
+  const isMarinaStorage = storage_type == null || storage_type === "marina" || storage_type === "mooring";
   const marinaLine =
-    marina_name || marina_city
+    isMarinaStorage && (marina_name || marina_city)
       ? [marina_name, marina_city].filter(Boolean).join(" · ")
       : null;
+  const storageLabel = !isMarinaStorage ? STORAGE_TYPE_LABELS[storage_type ?? ""] ?? "Storage" : null;
 
   return (
     <article className="mx-auto max-w-lg px-5 pb-16 pt-10 md:px-8">
@@ -93,10 +109,21 @@ export function VesselPublicProfile(props: PublicProfileProps & { hideFooter?: b
         {marinaLine ? (
           <div className="flex justify-between gap-4 border-b border-[var(--divider)] pb-3">
             <dt className="font-[family-name:var(--font-dm)] text-xs uppercase tracking-[0.12em] text-[var(--text3)]">
-              Marina
+              Home Marina
             </dt>
             <dd className="text-right font-[family-name:var(--font-dm)] text-sm text-[var(--text)]">
               {marinaLine}
+            </dd>
+          </div>
+        ) : null}
+        {storageLabel ? (
+          <div className="flex justify-between gap-4 border-b border-[var(--divider)] pb-3">
+            <dt className="font-[family-name:var(--font-dm)] text-xs uppercase tracking-[0.12em] text-[var(--text3)]">
+              Storage
+            </dt>
+            <dd className="text-right font-[family-name:var(--font-dm)] text-sm text-[var(--text)]">
+              {storageLabel}
+              {storage_description ? ` · ${storage_description}` : ""}
             </dd>
           </div>
         ) : null}

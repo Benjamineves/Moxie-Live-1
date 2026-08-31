@@ -120,12 +120,12 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
             depends on who they are.
           </p>
           <div className="flex flex-wrap items-center gap-3.5">
-            <a
-              href="#contact"
+            <Link
+              href="/signup?next=%2Fdashboard"
               className="inline-flex items-center gap-2.5 bg-[var(--aqua-bright)] px-8 py-4 font-[family-name:var(--font-dm)] text-[12px] font-semibold uppercase tracking-[0.18em] text-[var(--navy)] no-underline transition hover:gap-4 hover:bg-[var(--aqua-vapor)]"
             >
-              Get early access →
-            </a>
+              Create your account →
+            </Link>
             <a
               href="#qr-hero"
               className="inline-flex items-center gap-2.5 border-b border-[rgba(255,255,255,0.2)] py-4 font-[family-name:var(--font-dm)] text-[12px] font-medium uppercase tracking-[0.18em] text-[rgba(255,255,255,0.7)] no-underline transition hover:border-[var(--gold)] hover:text-[var(--gold)]"
@@ -184,12 +184,12 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
               can scan it. What they see depends on who they are — your personal information is never exposed to the
               public.
             </p>
-            <a
-              href="#contact"
+            <Link
+              href="/signup?next=%2Fdashboard"
               className="inline-flex items-center gap-2.5 bg-[var(--aqua-bright)] px-8 py-4 font-[family-name:var(--font-dm)] text-[12px] font-semibold uppercase tracking-[0.18em] text-[var(--navy)] no-underline transition hover:bg-[var(--aqua-vapor)]"
             >
-              Get your sticker free →
-            </a>
+              Register your vessel →
+            </Link>
           </div>
           <div className="flex justify-center">
             <div className="w-[240px] rounded-[14px] border border-[rgba(201,168,76,0.2)] bg-[var(--navy)] px-6 pb-5 pt-6 text-center shadow-[0_24px_64px_rgba(0,0,0,0.4)]">
@@ -238,8 +238,8 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
             {[
               {
                 n: "01",
-                title: "We create your vessel profile",
-                body: "Make, model, year, HIN, home marina, insurance, registration — everything in one persistent digital identity. You control what's shared and with whom.",
+                title: "You register your vessel",
+                body: "Make, model, year, HIN, storage details, insurance, registration — everything in one persistent digital identity, filled in by you in a few minutes. You control what's shared and with whom.",
               },
               {
                 n: "02",
@@ -460,27 +460,40 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
                 </div>
               ))}
             </div>
-            <a
-              href="#contact"
+            <Link
+              href="/signup?next=%2Fdashboard"
               className="inline-flex items-center gap-2.5 bg-[var(--gold)] px-8 py-4 font-[family-name:var(--font-dm)] text-[12px] font-semibold uppercase tracking-[0.18em] text-[var(--navy)] no-underline transition hover:bg-[var(--gold-lt)]"
             >
               Create your profile →
-            </a>
+            </Link>
           </div>
         </div>
       </section>
 
       <section id="contact" className="bg-[var(--cream)] px-6 py-[100px] md:px-12">
         <div className="mx-auto max-w-[640px] text-center">
-          <p className="mb-4 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--gold)]">Early access</p>
+          <p className="mb-4 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--gold)]">Get started</p>
           <h2 className="mb-6 font-[family-name:var(--font-display)] text-[clamp(36px,5vw,56px)] font-light leading-tight text-[var(--navy)]">
-            Be first
+            Register today.
             <br />
-            <em className="text-[var(--gold)] not-italic">on the water.</em>
+            <em className="text-[var(--gold)] not-italic">No marina required.</em>
           </h2>
           <p className="mb-9 text-[15px] font-light leading-relaxed text-[var(--text2)]">
-            Moxie is rolling out marina by marina across California, starting in the SF Bay Area. Join the waitlist and
-            we&apos;ll reach out when your marina is next.
+            Create an account and register your vessel — wherever it&apos;s docked, trailered, or moored. Your
+            sticker ships once registration is complete.
+          </p>
+          <Link
+            href="/signup?next=%2Fdashboard"
+            className="inline-flex items-center gap-2.5 bg-[var(--aqua-bright)] px-8 py-4 font-[family-name:var(--font-dm)] text-[12px] font-semibold uppercase tracking-[0.18em] text-[var(--navy)] no-underline transition hover:gap-4 hover:bg-[var(--aqua-vapor)]"
+          >
+            Create your account →
+          </Link>
+
+          <div className="my-12 h-px bg-[var(--divider)]" />
+
+          <p className="mb-1 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--text3)]">Not ready yet?</p>
+          <p className="mb-6 text-[14px] font-light leading-relaxed text-[var(--text2)]">
+            Leave your email and we&apos;ll follow up when the time&apos;s right.
           </p>
           <WaitlistForm />
           <p className="mb-12 text-[12px] text-[var(--text3)]">

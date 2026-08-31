@@ -33,6 +33,12 @@ export async function GET(request: Request) {
     if (!error) {
       return NextResponse.redirect(new URL(next, origin));
     }
+    // A failed recovery-code exchange (expired/already-used link) should
+    // land back on /reset-password, which renders its own expired-link
+    // state when it finds no session — not the generic login error.
+    if (next === "/reset-password") {
+      return NextResponse.redirect(new URL("/reset-password", origin));
+    }
   }
 
   return NextResponse.redirect(new URL("/login?error=auth", origin));

@@ -11,6 +11,12 @@ type Props = {
   className?: string;
 };
 
+// Google sign-in was never configured — hidden rather than left as a
+// visibly broken control on the login/signup pages. Needs a Google Cloud
+// OAuth client set up and registered as a provider in Supabase Auth before
+// this can flip back to true.
+const GOOGLE_OAUTH_ENABLED = false;
+
 function normalizeNext(path: string) {
   const p = path.startsWith("/") ? path : `/${path}`;
   if (!p.startsWith("/") || p.startsWith("//")) return "/dashboard";
@@ -62,21 +68,23 @@ export function OAuthButtons({ nextPath, className = "" }: Props) {
         Continue with
       </p>
       <div className="flex flex-col gap-3">
-        <button
-          type="button"
-          disabled={pending !== null}
-          onClick={() => signInWith("google")}
-          className="flex items-center justify-center gap-2 rounded-lg border border-[var(--divider)] bg-[var(--white)] px-4 py-3 font-[family-name:var(--font-dm)] text-sm font-medium text-[var(--text)] transition hover:bg-[var(--cream2)] disabled:opacity-50"
-        >
-          {pending === "google" ? (
-            "Redirecting…"
-          ) : (
-            <>
-              <GoogleMark className="h-5 w-5 shrink-0" />
-              Continue with Google
-            </>
-          )}
-        </button>
+        {GOOGLE_OAUTH_ENABLED ? (
+          <button
+            type="button"
+            disabled={pending !== null}
+            onClick={() => signInWith("google")}
+            className="flex items-center justify-center gap-2 rounded-lg border border-[var(--divider)] bg-[var(--white)] px-4 py-3 font-[family-name:var(--font-dm)] text-sm font-medium text-[var(--text)] transition hover:bg-[var(--cream2)] disabled:opacity-50"
+          >
+            {pending === "google" ? (
+              "Redirecting…"
+            ) : (
+              <>
+                <GoogleMark className="h-5 w-5 shrink-0" />
+                Continue with Google
+              </>
+            )}
+          </button>
+        ) : null}
         <button
           type="button"
           disabled={pending !== null}

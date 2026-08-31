@@ -59,8 +59,14 @@ export function toPreview(v: VesselRecord): VesselPreview {
 
 /** Field visibility per technical handoff v1 (subset implemented for P0). */
 export function filterVesselForRole(v: VesselRecord, role: ProfileRole): Record<string, unknown> {
-  const marina_name = v.marinas?.name ?? null;
-  const marina_city = v.marinas?.city ?? null;
+  // Prefer the vessel's own free-text marina_name/marina_city (self-serve
+  // intake, build spec §3 addendum). Fall back to the marina_id join only
+  // for vessels seeded before that column existed (MXE-00001/MXE-00002),
+  // which have marina_id set but no free-text value — see the migration
+  // comment on marina_name/marina_city for why marina_id itself is never
+  // populated for new signups.
+  const marina_name = v.marina_name ?? v.marinas?.name ?? null;
+  const marina_city = v.marina_city ?? v.marinas?.city ?? null;
 
   const basePublic = {
     mxe_id: v.mxe_id,
@@ -73,6 +79,8 @@ export function filterVesselForRole(v: VesselRecord, role: ProfileRole): Record<
     draft_ft: v.draft_ft,
     public_notes: v.public_notes,
     photo_url: v.photo_url,
+    storage_type: v.storage_type,
+    storage_description: v.storage_description,
     marina_name,
     marina_city,
   };
@@ -114,6 +122,9 @@ export function filterVesselForRole(v: VesselRecord, role: ProfileRole): Record<
       flares: v.flares,
       sound_device: v.sound_device,
       ca_boater_card: v.ca_boater_card,
+      doc_registration_url: v.doc_registration_url,
+      doc_insurance_url: v.doc_insurance_url,
+      doc_boater_card_url: v.doc_boater_card_url,
     };
   }
 

@@ -1,9 +1,7 @@
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { PermissiveDatabase } from "./schema-stub";
 
-let cachedServiceClient:
-  | ReturnType<typeof createClient>
-  | null
-  | undefined;
+let cachedServiceClient: SupabaseClient<PermissiveDatabase> | null | undefined;
 
 export function createSupabaseServiceClient() {
   if (cachedServiceClient !== undefined) return cachedServiceClient;
@@ -15,7 +13,7 @@ export function createSupabaseServiceClient() {
     return null;
   }
 
-  cachedServiceClient = createClient(url, key, {
+  cachedServiceClient = createClient<PermissiveDatabase>(url, key, {
     auth: { autoRefreshToken: false, persistSession: false },
   });
   return cachedServiceClient;

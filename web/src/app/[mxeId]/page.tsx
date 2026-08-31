@@ -1,17 +1,21 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { ScanSuccess } from "@/components/ScanSuccess";
-import { VesselPublicProfile } from "@/components/VesselPublicProfile";
+import { VesselPublicProfile, type PublicProfileProps } from "@/components/VesselPublicProfile";
 import { VesselOwnerProfile, type OwnerProfileTier } from "@/components/VesselOwnerProfile";
+import { SharedVesselProfile } from "@/components/share/SharedVesselProfile";
 import { fetchVesselByMxeId, filterVesselForRole } from "@/lib/vessel-service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { emailsMatch, getOwnerEmailByUserId } from "@/lib/owner-verify";
+import { getOwnerBillingSummary } from "@/lib/billing-service";
+import { resolveShareByToken } from "@/lib/share-resolve";
 
 const MXE_RE = /^MXE-\d{5}$/i;
 
 type Props = {
   params: Promise<{ mxeId: string }>;
-  searchParams: Promise<{ scan?: string; role?: string }>;
+  searchParams: Promise<{ scan?: string; role?: string; upgraded?: string; share?: string }>;
 };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
@@ -27,6 +31,41 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function VesselPage({ params, searchParams }: Props) {
   const { mxeId } = await params;
   const sp = await searchParams;
+
+  // Trusted Contact share link (docs/moxie_digital_technical_spec_share_profile.md
+  // §5/§7). Resolved by token alone, independent of the vessel lookup
+  // below — the mxeId in the URL is cosmetic for a share link (matches
+  // whatever vessel the token was issued for; the spec's own resolve
+  // endpoint doesn't take an mxeId at all), so this branch runs before
+  // — and instead of — the ordinary MXE-ID validation/fetch/notFound
+  // path that every other view on this page depends on.
+  if (sp.share) {
+    const headerList = await headers();
+    const ip = headerList.get("x-forwarded-for")?.split(",")[0]?.trim() || "unknown";
+    const result = await resolveShareByToken(sp.share, ip);
+
+    if ("error" in result) {
+      return (
+        <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[var(--cream)] px-6 text-center">
+          <h1 className="font-[family-name:var(--font-display)] text-3xl font-light italic text-[var(--navy)]">
+            Link <em className="text-[var(--gold)] not-italic">no longer active.</em>
+          </h1>
+          <p className="max-w-sm font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
+            This share link has expired, been revoked, or already been used.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <SharedVesselProfile
+        vessel={result.vessel}
+        sharedBy={result.sharedBy}
+        label={result.label}
+        expiresAt={result.expiresAt}
+      />
+    );
+  }
 
   if (!MXE_RE.test(mxeId.trim())) {
     notFound();
@@ -91,28 +130,40 @@ export default async function VesselPage({ params, searchParams }: Props) {
     }
 
     const tier = filterVesselForRole(vessel, "owner") as OwnerProfileTier;
+    const billing = (await getOwnerBillingSummary(vessel.owner_id)) ?? {
+      subscriptionTier: "basic" as const,
+      subscriptionStatus: null,
+      payments: [],
+    };
 
     return (
       <div className="min-h-screen bg-[var(--cream)]">
-        <VesselOwnerProfile tier={tier} />
+        <VesselOwnerProfile tier={tier} billing={billing} justUpgraded={sp.upgraded === "1"} />
       </div>
     );
   }
 
-  const tier = filterVesselForRole(vessel, "public") as {
-    mxe_id: string;
-    vessel_name: string;
-    vessel_type: string | null;
-    make: string;
-    model: string;
-    year: number;
-    length_ft: number | string | null;
-    draft_ft: number | string | null;
-    public_notes: string | null;
-    photo_url: string | null;
-    marina_name: string | null;
-    marina_city: string | null;
-  };
+  // Payment gate (build spec §5, P0-A acceptance tests): a vessel that
+  // hasn't cleared payment doesn't get a live public profile — the intake
+  // flow ends at qr_status='pending_payment', and only the Stripe webhook
+  // ever flips it. MXE-00004 is the fixture that exercises this.
+  if (vessel.qr_status !== "active") {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[var(--cream)] px-6 text-center">
+        <p className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--text3)]">
+          {vessel.mxe_id}
+        </p>
+        <h1 className="font-[family-name:var(--font-display)] text-3xl font-light italic text-[var(--navy)]">
+          Not yet active
+        </h1>
+        <p className="max-w-sm font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
+          This vessel&apos;s registration hasn&apos;t been completed yet — there&apos;s no live profile to show.
+        </p>
+      </div>
+    );
+  }
+
+  const tier = filterVesselForRole(vessel, "public") as PublicProfileProps;
 
   return (
     <div className="min-h-screen bg-[var(--cream)]">

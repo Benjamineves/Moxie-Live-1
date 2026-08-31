@@ -26,6 +26,9 @@ export async function GET(
   }
 
   if (role === "public") {
+    if (vessel.qr_status !== "active") {
+      return NextResponse.json({ status: "pending_payment", mxe_id: vessel.mxe_id }, { status: 200 });
+    }
     return NextResponse.json(filterVesselForRole(vessel, "public"));
   }
 

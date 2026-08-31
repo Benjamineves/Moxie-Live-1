@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import QRCode from "qrcode";
+import { buildQrSvg } from "@/lib/qr-render";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { QrDownload } from "./QrDownload";
@@ -48,7 +48,7 @@ export default async function VesselQrPage({ params, searchParams }: Props) {
 
   const { data: vessel } = await service
     .from("vessels")
-    .select("mxe_id, vessel_name, owner_id")
+    .select("mxe_id, vessel_name, owner_id, qr_status")
     .eq("mxe_id", mxeId.toUpperCase())
     .maybeSingle();
 
@@ -56,9 +56,15 @@ export default async function VesselQrPage({ params, searchParams }: Props) {
     redirect("/dashboard");
   }
 
+  // Payment gate (build spec §5/§14): the QR only exists to unlock once
+  // qr_status='active', which only ever happens via the Stripe webhook.
+  if (vessel.qr_status !== "active") {
+    redirect(`/dashboard/${encodeURIComponent(vessel.mxe_id)}/payment`);
+  }
+
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.trim() || "https://moxieyacht.com";
   const targetUrl = `${baseUrl.replace(/\/$/, "")}/${encodeURIComponent(vessel.mxe_id)}`;
-  const svg = await QRCode.toString(targetUrl, { type: "svg", margin: 1, width: 320 });
+  const svg = buildQrSvg(targetUrl, { width: 320, margin: 1 });
 
   if (printOnly) {
     return (
@@ -91,7 +97,7 @@ export default async function VesselQrPage({ params, searchParams }: Props) {
         </p>
 
         <section className="mt-4 rounded-2xl bg-[var(--navy-deep)] p-4">
-          <div className="rounded-xl bg-[var(--cream)] p-4">
+          <div className="p-4">
             <div className="mx-auto w-full max-w-[320px]" dangerouslySetInnerHTML={{ __html: svg }} />
           </div>
           <p className="mt-3 text-center font-[family-name:var(--font-display)] text-2xl font-light italic text-[var(--gold)]">

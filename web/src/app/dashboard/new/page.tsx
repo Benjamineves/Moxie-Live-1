@@ -38,7 +38,7 @@ export default async function NewVesselPage() {
           Register a vessel
         </h1>
         <p className="mt-2 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
-          Complete all three steps to get your MXE ID and print-ready QR code.
+          Complete all four steps to get your MXE ID and print-ready QR code.
         </p>
         <div className="mt-6">
           <VesselIntakeForm />

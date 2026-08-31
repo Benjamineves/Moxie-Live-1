@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>Moxie · Share Profile</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
+body{font-family:'DM Sans',system-ui,sans-serif;background:#f5f2ec;color:#0d1f35;-webkit-font-smoothing:antialiased;min-height:100vh}
+
+:root{
+  --navy:#0d1f35;--navy2:#132943;--navy3:#1a3a5c;--navy-deep:#071020;
+  --gold:#c9a84c;--gold-lt:#dfc06a;--gold-dim:rgba(201,168,76,.12);--gold-line:rgba(201,168,76,.3);
+  --cream:#f5f2ec;--cream2:#ede9e0;--white:#fff;
+  --text:#0d1f35;--text2:#3a5068;--text3:#6b8299;--divider:rgba(13,31,53,.1);
+  --aqua-bright:#17C3B2;--aqua-vapor:#13F1D1;--aqua-lagoon:#1FA394;--aqua-abyss:#0B6E6A;
+  --green-bg:#E1F5EE;--green-fg:#085041;
+  --blue-bg:#E6F1FB;--blue-fg:#0C447C;
+  --amber-bg:#FAEEDA;--amber-fg:#633806;
+  --red-bg:#FAECE7;--red-fg:#712B13;
+  --gray-bg:#F1EFE8;--gray-fg:#888780;
+}
+
+/* ── DEMO SWITCHER ── */
+.demo-bar{
+  background:var(--navy-deep);border-bottom:1px solid rgba(255,255,255,.08);
+  padding:12px 20px;display:flex;align-items:center;gap:8px;
+  position:sticky;top:0;z-index:9999;flex-wrap:wrap;
+}
+.demo-bar-label{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.3);font-weight:500;margin-right:4px}
+.demo-pill{
+  padding:6px 14px;border-radius:20px;font-size:10px;letter-spacing:.1em;
+  text-transform:uppercase;font-weight:500;cursor:pointer;border:1px solid rgba(255,255,255,.15);
+  background:transparent;color:rgba(255,255,255,.45);font-family:'DM Sans',sans-serif;
+  transition:all .15s;
+}
+.demo-pill.active{background:rgba(201,168,76,.15);color:var(--gold);border-color:var(--gold-line)}
+.demo-pill:hover:not(.active){background:rgba(255,255,255,.06);color:rgba(255,255,255,.7)}
+
+/* ── SHARED CHROME ── */
+.role-bar{
+  background:var(--navy-deep);padding:10px 20px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid rgba(201,168,76,.12);
+}
+.role-bar-left{display:flex;align-items:center;gap:10px}
+.pixel-m-sm{width:22px;height:22px;flex-shrink:0}
+.role-wordmark{font-family:'Cormorant Garamond',serif;font-size:16px;font-style:italic;color:var(--white)}
+.role-wordmark .m{color:var(--gold)}
+.role-badge{font-size:8px;letter-spacing:.16em;text-transform:uppercase;font-weight:500;padding:3px 10px;border-radius:12px;border:1px solid}
+
+/* ── VESSEL HERO ── */
+.vessel-hero{
+  position:relative;min-height:240px;overflow:hidden;
+  display:flex;flex-direction:column;justify-content:flex-end;
+  padding:28px 24px 24px;
+  background:linear-gradient(160deg,var(--navy) 0%,var(--navy2) 50%,var(--navy3) 100%);
+}
+.vessel-hero::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;border-radius:50%;background:var(--gold);opacity:.8}
+.vessel-hero::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,transparent 20%,rgba(13,31,53,.7) 100%)}
+.hero-content{position:relative;z-index:2}
+.hero-scan-id{font-size:9px;letter-spacing:.18em;text-transform:uppercase;color:rgba(255,255,255,.4);margin-bottom:6px;font-weight:500;display:flex;align-items:center;gap:8px}
+.hero-scan-id::before{content:'';width:14px;height:1px;background:rgba(255,255,255,.3)}
+.signal-dot{width:6px;height:6px;border-radius:50%;background:var(--aqua-bright);display:inline-block;margin-left:4px;animation:sigPulse 3s ease-in-out infinite}
+@keyframes sigPulse{0%,80%,100%{background:var(--aqua-bright);transform:scale(1)}40%{background:var(--aqua-vapor);transform:scale(1.6)}}
+.hero-name{font-family:'Cormorant Garamond',serif;font-size:clamp(28px,7vw,44px);font-weight:300;font-style:italic;color:var(--white);line-height:1;margin-bottom:5px}
+.hero-tag{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5)}
+
+/* ── PROFILE BODY ── */
+.profile-body{background:var(--white);max-width:600px;margin:0 auto;padding-bottom:120px}
+.spec-strip{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:1px solid var(--divider)}
+.spec-cell{padding:16px 18px;border-right:1px solid var(--divider)}
+.spec-cell:last-child{border-right:none}
+.spec-k{font-size:8px;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);margin-bottom:3px;font-weight:500}
+.spec-v{font-size:14px;font-weight:600;color:var(--navy)}
+.spec-v.priv{font-size:11px;color:var(--text3);font-style:italic;font-weight:400}
+.profile-section{padding:20px 20px;border-bottom:1px solid var(--divider)}
+.section-label{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--text3);font-weight:500;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.section-label::after{content:'';flex:1;height:1px;background:var(--divider)}
+.marina-row{display:flex;align-items:center;gap:12px}
+.marina-icon{width:38px;height:38px;border-radius:50%;background:var(--gold-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.marina-icon svg{width:16px;height:16px;stroke:var(--gold);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.marina-name{font-size:14px;font-weight:600;color:var(--navy);margin-bottom:1px}
+.marina-detail{font-size:12px;color:var(--text3)}
+
+/* ── SHARE BUTTON (on owner profile) ── */
+.share-fab{
+  position:fixed;bottom:88px;right:20px;z-index:200;
+  display:flex;align-items:center;gap:8px;
+  background:var(--aqua-bright);color:var(--navy);
+  padding:12px 20px;border-radius:28px;
+  font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+  cursor:pointer;border:none;font-family:'DM Sans',sans-serif;
+  box-shadow:0 4px 20px rgba(23,195,178,.4);
+  transition:all .2s;
+}
+.share-fab:hover{background:var(--aqua-vapor);transform:translateY(-1px);box-shadow:0 6px 28px rgba(23,195,178,.5)}
+.share-fab svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+
+/* ── OWNER BOTTOM NAV ── */
+.owner-bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;z-index:100;
+  background:rgba(13,31,53,.97);backdrop-filter:blur(12px);
+  border-top:1px solid rgba(201,168,76,.15);
+  display:flex;max-width:600px;margin:0 auto;
+}
+.bnav-item{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 8px 12px;cursor:pointer;text-decoration:none;transition:opacity .2s}
+.bnav-item.active .bnav-lbl{color:var(--gold)}
+.bnav-item.active .bnav-ico svg{stroke:var(--gold)}
+.bnav-item:not(.active){opacity:.4}
+.bnav-ico{margin-bottom:3px}
+.bnav-ico svg{width:20px;height:20px;stroke:var(--white);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;display:block}
+.bnav-lbl{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--white);font-weight:500}
+
+/* ══════════════════════════════════════
+   SHARE BOTTOM SHEET
+══════════════════════════════════════ */
+.sheet-overlay{
+  display:none;position:fixed;inset:0;z-index:500;
+  background:rgba(7,16,32,.75);backdrop-filter:blur(4px);
+  -webkit-backdrop-filter:blur(4px);
+}
+.sheet-overlay.open{display:block}
+.share-sheet{
+  position:absolute;bottom:0;left:0;right:0;
+  background:var(--white);border-radius:20px 20px 0 0;
+  max-width:600px;margin:0 auto;
+  max-height:92vh;overflow-y:auto;
+  transform:translateY(100%);
+  transition:transform .35s cubic-bezier(.32,.72,0,1);
+}
+.sheet-overlay.open .share-sheet{transform:translateY(0)}
+.sheet-handle{width:36px;height:4px;border-radius:2px;background:var(--divider);margin:12px auto 0}
+
+/* Sheet header */
+.sheet-header{padding:20px 20px 16px;border-bottom:1px solid var(--divider)}
+.sheet-title{font-family:'Cormorant Garamond',serif;font-size:24px;font-weight:300;color:var(--navy);margin-bottom:4px}
+.sheet-title em{font-style:italic;color:var(--gold)}
+.sheet-sub{font-size:13px;color:var(--text2);font-weight:300;line-height:1.5}
+
+/* Share mode toggle */
+.share-mode-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:16px 20px;border-bottom:1px solid var(--divider)}
+.share-mode-card{
+  padding:14px;border:1.5px solid var(--divider);border-radius:10px;
+  cursor:pointer;transition:all .2s;position:relative;
+}
+.share-mode-card.selected{border-color:var(--aqua-bright);background:rgba(23,195,178,.04)}
+.share-mode-card.selected .smc-check{opacity:1}
+.smc-check{
+  position:absolute;top:10px;right:10px;
+  width:16px;height:16px;border-radius:50%;
+  background:var(--aqua-bright);
+  display:flex;align-items:center;justify-content:center;
+  opacity:0;transition:opacity .2s;
+}
+.smc-check svg{width:9px;height:9px;stroke:var(--navy);fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.smc-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;margin-bottom:8px}
+.smc-icon svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.smc-title{font-size:12px;font-weight:600;color:var(--navy);margin-bottom:2px}
+.smc-desc{font-size:10px;color:var(--text3);line-height:1.4}
+
+/* Label + expiry row */
+.sheet-field-row{padding:14px 20px;border-bottom:1px solid var(--divider)}
+.sheet-field-label{font-size:11px;font-weight:500;color:var(--text2);margin-bottom:6px;display:block}
+.sheet-input{
+  width:100%;padding:10px 14px;border:1px solid var(--divider);
+  font-family:'DM Sans',sans-serif;font-size:14px;color:var(--navy);
+  background:var(--cream);transition:border-color .2s;border-radius:0;
+}
+.sheet-input:focus{outline:none;border-color:var(--aqua-bright)}
+.expiry-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.expiry-chip{
+  padding:6px 14px;border:1px solid var(--divider);border-radius:20px;
+  font-size:11px;font-weight:500;color:var(--text2);cursor:pointer;
+  background:var(--cream);transition:all .15s;
+}
+.expiry-chip.selected{background:var(--navy);color:var(--gold);border-color:var(--navy)}
+.expiry-chip:hover:not(.selected){border-color:var(--navy);color:var(--navy)}
+
+/* What they'll see — toggle controls */
+.visibility-section{padding:16px 20px;border-bottom:1px solid var(--divider)}
+.vis-toggle-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 0;border-bottom:1px solid var(--divider);
+}
+.vis-toggle-row:last-child{border-bottom:none}
+.vis-toggle-left{display:flex;align-items:center;gap:10px}
+.vis-icon{width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.vis-icon svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.vis-field-name{font-size:13px;font-weight:500;color:var(--navy)}
+.vis-field-sub{font-size:11px;color:var(--text3)}
+/* iOS-style toggle */
+.ios-toggle{position:relative;width:40px;height:22px;flex-shrink:0}
+.ios-toggle input{opacity:0;width:0;height:0;position:absolute}
+.ios-slider{
+  position:absolute;inset:0;background:#d1d1d6;cursor:pointer;
+  border-radius:11px;transition:.25s;
+}
+.ios-slider::before{
+  content:'';position:absolute;height:16px;width:16px;
+  left:3px;bottom:3px;background:white;
+  border-radius:50%;transition:.25s;
+  box-shadow:0 1px 3px rgba(0,0,0,.2);
+}
+.ios-toggle input:checked+.ios-slider{background:var(--aqua-bright)}
+.ios-toggle input:checked+.ios-slider::before{transform:translateX(18px)}
+
+/* Trusted note */
+.trusted-note{
+  margin:0 20px 0;padding:12px 14px;
+  background:rgba(23,195,178,.06);border-left:2px solid var(--aqua-bright);
+  font-size:12px;color:var(--text2);line-height:1.5;
+}
+.trusted-note strong{color:var(--navy)}
+
+/* Share presets */
+.preset-row{padding:14px 20px 4px;border-bottom:1px solid var(--divider)}
+.preset-label{font-size:11px;font-weight:500;color:var(--text2);margin-bottom:8px;display:block}
+.preset-chips{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px}
+.preset-chip{
+  padding:7px 13px;border:1px solid var(--divider);border-radius:20px;
+  font-size:11px;font-weight:500;color:var(--text2);cursor:pointer;
+  background:var(--white);transition:all .15s;display:flex;align-items:center;gap:5px;
+}
+.preset-chip svg{width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.preset-chip.selected{background:var(--navy);color:var(--gold);border-color:var(--navy)}
+.preset-chip:hover:not(.selected){border-color:var(--navy);color:var(--navy)}
+
+/* Note textarea (per-share, e.g. lockbox codes) */
+.note-field{padding:0 20px 4px;display:none}
+.note-field.show{display:block}
+.note-textarea{
+  width:100%;padding:11px 14px;border:1px solid var(--divider);
+  font-family:'DM Sans',sans-serif;font-size:13px;color:var(--navy);
+  background:var(--cream);resize:vertical;min-height:64px;line-height:1.5;
+}
+.note-textarea:focus{outline:none;border-color:var(--amber-fg)}
+.note-field-hint{font-size:10px;color:var(--text3);margin-top:5px;line-height:1.4}
+
+/* Full Access tier lock badge on gated cards */
+.tier-lock-badge{
+  position:absolute;top:10px;left:10px;display:flex;align-items:center;gap:3px;
+  padding:2px 8px;border-radius:8px;background:var(--navy);color:var(--gold);
+  font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+}
+.tier-lock-badge svg{width:8px;height:8px;stroke:currentColor;fill:none;stroke-width:2.5}
+.share-mode-card.locked{cursor:pointer}
+.share-mode-card.locked .smc-icon{opacity:.5}
+.share-mode-card.locked .smc-title,.share-mode-card.locked .smc-desc{opacity:.55}
+
+/* Upsell panel (Basic tier hits Trusted Contact) */
+.upsell-panel{padding:28px 24px;text-align:center;display:none}
+.upsell-panel.show{display:block}
+.upsell-icon{
+  width:52px;height:52px;border-radius:50%;margin:0 auto 16px;
+  background:var(--gold-dim);display:flex;align-items:center;justify-content:center;
+}
+.upsell-icon svg{width:22px;height:22px;stroke:var(--gold);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.upsell-h{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;color:var(--navy);margin-bottom:8px}
+.upsell-h em{font-style:italic;color:var(--gold)}
+.upsell-sub{font-size:13px;color:var(--text2);line-height:1.6;font-weight:300;max-width:340px;margin:0 auto 20px}
+.upsell-examples{display:flex;flex-direction:column;gap:8px;max-width:320px;margin:0 auto 22px;text-align:left}
+.upsell-example{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text2)}
+.upsell-example svg{width:14px;height:14px;stroke:var(--aqua-lagoon);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
+.upsell-cta{
+  display:inline-flex;align-items:center;gap:8px;padding:13px 26px;
+  background:var(--navy);color:var(--gold);border:none;
+  font-family:'DM Sans',sans-serif;font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;
+  cursor:pointer;transition:all .2s;
+}
+.upsell-cta:hover{background:var(--navy2)}
+.upsell-cta-sub{font-size:10px;color:var(--text3);margin-top:10px}
+
+/* Demo tier switcher */
+.demo-tier-toggle{display:flex;align-items:center;gap:6px;margin-left:auto}
+
+/* Share actions */
+.sheet-actions{padding:16px 20px 32px;display:flex;flex-direction:column;gap:10px}
+.btn-generate{
+  width:100%;padding:14px;background:var(--navy);color:var(--gold);
+  border:none;font-family:'DM Sans',sans-serif;font-size:12px;
+  letter-spacing:.14em;text-transform:uppercase;font-weight:700;
+  cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn-generate:hover{background:var(--navy2)}
+.btn-generate svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.btn-copy-public{
+  width:100%;padding:12px;background:var(--cream);color:var(--text2);
+  border:1px solid var(--divider);font-family:'DM Sans',sans-serif;font-size:12px;
+  letter-spacing:.12em;text-transform:uppercase;font-weight:500;
+  cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.btn-copy-public:hover{border-color:var(--navy);color:var(--navy)}
+
+/* Link generated state */
+.link-generated{
+  padding:16px;background:var(--green-bg);border:1px solid rgba(8,80,65,.2);
+  display:none;margin:0 20px;border-radius:0;
+}
+.link-generated.show{display:block}
+.lg-label{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--green-fg);font-weight:600;margin-bottom:8px}
+.lg-url{
+  font-family:monospace;font-size:12px;color:var(--navy);
+  background:var(--white);padding:10px 12px;border-radius:4px;
+  border:1px solid rgba(8,80,65,.15);word-break:break-all;margin-bottom:10px;
+}
+.lg-actions{display:flex;gap:8px}
+.lg-btn{
+  flex:1;padding:9px;font-family:'DM Sans',sans-serif;font-size:10px;
+  letter-spacing:.1em;text-transform:uppercase;font-weight:600;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:5px;border:none;
+  transition:all .15s;
+}
+.lg-btn svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.lg-btn.copy{background:var(--green-fg);color:var(--white)}
+.lg-btn.sms{background:var(--navy);color:var(--gold)}
+
+/* ══════════════════════════════════════
+   ACTIVE SHARES MANAGER
+══════════════════════════════════════ */
+.shares-manager{background:var(--white);max-width:600px;margin:0 auto;padding-bottom:80px}
+.shares-header{
+  background:var(--navy-deep);padding:28px 20px 24px;
+  border-bottom:3px solid var(--gold);
+}
+.shares-header-top{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.shares-eyebrow{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:rgba(255,255,255,.4);font-weight:500}
+.shares-h{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:300;color:var(--white);line-height:1;margin-top:4px}
+.shares-h em{font-style:italic;color:var(--gold)}
+.shares-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:rgba(255,255,255,.08)}
+.stat-cell{padding:14px 16px;background:var(--navy-deep)}
+.stat-num{font-family:'Cormorant Garamond',serif;font-size:28px;font-weight:300;color:var(--white);line-height:1;margin-bottom:2px}
+.stat-num.aqua{color:var(--aqua-bright)}
+.stat-num.gold{color:var(--gold)}
+.stat-label{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.35);font-weight:500}
+
+.shares-section-label{
+  font-size:9px;letter-spacing:.2em;text-transform:uppercase;
+  color:var(--text3);font-weight:500;
+  padding:16px 20px 8px;background:var(--cream);
+  border-bottom:1px solid var(--divider);
+}
+.share-card{
+  padding:16px 20px;border-bottom:1px solid var(--divider);
+  background:var(--white);display:flex;gap:14px;align-items:flex-start;
+}
+.share-card:hover{background:#fdfbf8}
+.share-avatar{
+  width:40px;height:40px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;font-family:'Cormorant Garamond',serif;
+  font-size:16px;font-style:italic;font-weight:400;
+}
+.share-avatar.trusted{background:rgba(23,195,178,.12);color:var(--aqua-lagoon)}
+.share-avatar.public{background:var(--gray-bg);color:var(--gray-fg)}
+.share-avatar.expired{background:var(--divider);color:var(--text3)}
+.share-content{flex:1;min-width:0}
+.share-name{font-size:14px;font-weight:600;color:var(--navy);margin-bottom:2px}
+.share-meta{font-size:11px;color:var(--text3);margin-bottom:6px;line-height:1.4}
+.share-tags{display:flex;gap:5px;flex-wrap:wrap}
+.share-tag{
+  display:inline-flex;align-items:center;gap:3px;
+  padding:2px 8px;border-radius:8px;font-size:9px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+}
+.share-tag.location{background:var(--blue-bg);color:var(--blue-fg)}
+.share-tag.contact{background:var(--green-bg);color:var(--green-fg)}
+.share-tag.specs{background:var(--gray-bg);color:var(--gray-fg)}
+.share-tag.active{background:rgba(23,195,178,.12);color:var(--aqua-lagoon)}
+.share-tag.expired-tag{background:var(--divider);color:var(--text3)}
+.share-tag.public-tag{background:var(--gray-bg);color:var(--gray-fg)}
+.share-tag.access{background:var(--amber-bg);color:var(--amber-fg)}
+.share-tag.ownership{background:rgba(201,168,76,.16);color:#7a5f1e}
+.share-actions{display:flex;flex-direction:column;gap:6px;align-items:flex-end;flex-shrink:0}
+.revoke-btn{
+  padding:6px 12px;background:transparent;border:1px solid var(--divider);
+  font-family:'DM Sans',sans-serif;font-size:9px;letter-spacing:.1em;
+  text-transform:uppercase;font-weight:600;color:var(--text3);cursor:pointer;
+  transition:all .15s;border-radius:4px;
+}
+.revoke-btn:hover{border-color:var(--red-fg);color:var(--red-fg);background:var(--red-bg)}
+.share-expiry{font-size:10px;color:var(--text3);text-align:right}
+.share-expiry.soon{color:var(--amber-fg);font-weight:500}
+.new-share-btn{
+  margin:16px 20px;width:calc(100% - 40px);
+  padding:14px;background:var(--navy);color:var(--gold);
+  border:none;font-family:'DM Sans',sans-serif;font-size:11px;
+  letter-spacing:.14em;text-transform:uppercase;font-weight:700;
+  cursor:pointer;transition:all .2s;display:flex;align-items:center;justify-content:center;gap:8px;
+}
+.new-share-btn:hover{background:var(--navy2)}
+.new-share-btn svg{width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* ══════════════════════════════════════
+   TRUSTED CONTACT (RECIPIENT) VIEW
+══════════════════════════════════════ */
+.trusted-bar{
+  background:linear-gradient(135deg,var(--aqua-abyss),#0d3830);
+  padding:10px 20px;display:flex;align-items:center;justify-content:space-between;
+}
+.trusted-bar-left{display:flex;align-items:center;gap:10px}
+.trusted-bar-badge{
+  font-size:8px;letter-spacing:.16em;text-transform:uppercase;font-weight:500;
+  padding:3px 10px;border-radius:12px;
+  background:rgba(23,195,178,.2);color:#7fe8dc;border:1px solid rgba(23,195,178,.3);
+}
+.trusted-bar-right{font-size:10px;color:rgba(255,255,255,.4);letter-spacing:.1em;text-transform:uppercase}
+
+/* Shared-by notice */
+.shared-by-banner{
+  display:flex;align-items:center;gap:12px;
+  padding:14px 20px;
+  background:rgba(23,195,178,.06);
+  border-bottom:1px solid rgba(23,195,178,.15);
+}
+.shared-by-avatar{
+  width:36px;height:36px;border-radius:50%;
+  background:var(--navy);display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;font-family:'Cormorant Garamond',serif;
+  font-size:14px;font-style:italic;color:var(--gold);
+}
+.shared-by-text{font-size:12px;color:var(--text2);line-height:1.4;flex:1}
+.shared-by-text strong{color:var(--navy)}
+.shared-by-expiry{font-size:10px;color:var(--aqua-lagoon);font-weight:500;white-space:nowrap}
+
+/* Trusted access fields (elevated above public) */
+.trusted-detail-row{
+  display:flex;align-items:center;gap:12px;
+  padding:12px 14px;background:rgba(23,195,178,.04);
+  border:1px solid rgba(23,195,178,.12);border-radius:6px;margin-bottom:8px;
+}
+.trusted-detail-icon{
+  width:30px;height:30px;border-radius:6px;
+  background:rgba(23,195,178,.12);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.trusted-detail-icon svg{width:13px;height:13px;stroke:var(--aqua-lagoon);fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.trusted-detail-k{font-size:10px;color:var(--text3);margin-bottom:1px;font-weight:500}
+.trusted-detail-v{font-size:14px;font-weight:600;color:var(--navy)}
+.trusted-call-btn{
+  margin-left:auto;display:flex;align-items:center;gap:6px;
+  background:var(--green-bg);color:var(--green-fg);
+  padding:7px 14px;border-radius:20px;
+  font-size:11px;font-weight:500;text-decoration:none;flex-shrink:0;
+  transition:background .2s;
+}
+.trusted-call-btn:hover{background:#c8edde}
+.trusted-call-btn svg{width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+/* Register CTA (on trusted/shared views) */
+.register-cta{
+  margin:20px;padding:20px;
+  background:var(--navy);border-radius:10px;
+  display:flex;align-items:center;gap:16px;
+}
+.register-cta-text{flex:1}
+.register-cta-eyebrow{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:rgba(255,255,255,.4);font-weight:500;margin-bottom:4px}
+.register-cta-h{font-family:'Cormorant Garamond',serif;font-size:18px;font-style:italic;color:var(--white);line-height:1.2}
+.register-cta-h .m{color:var(--gold)}
+.register-cta-sub{font-size:11px;color:rgba(255,255,255,.45);margin-top:4px;line-height:1.4}
+.register-cta-btn{
+  background:var(--gold);color:var(--navy);padding:10px 18px;
+  font-family:'DM Sans',sans-serif;font-size:10px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;
+  white-space:nowrap;text-decoration:none;flex-shrink:0;
+  transition:background .2s;display:block;
+}
+.register-cta-btn:hover{background:var(--gold-lt)}
+
+/* Screen wrappers */
+.screen{display:none}
+.screen.active{display:block}
+</style>
+</head>
+<body>
+
+<!-- ── DEMO BAR ── -->
+<div class="demo-bar">
+  <span class="demo-bar-label">Demo</span>
+  <button class="demo-pill active" onclick="showScreen('owner')">Owner + Share Sheet</button>
+  <button class="demo-pill" onclick="showScreen('shares')">Active Shares</button>
+  <button class="demo-pill" onclick="showScreen('trusted')">Trusted Contact View</button>
+  <div class="demo-tier-toggle">
+    <span class="demo-bar-label">Account tier</span>
+    <button class="demo-pill active" id="tier-full" onclick="setTier('full')">Full Access</button>
+    <button class="demo-pill" id="tier-basic" onclick="setTier('basic')">Basic</button>
+  </div>
+</div>
+
+
+<!-- ═══════════════════════════════════════════════
+     SCREEN 1: OWNER PROFILE + SHARE SHEET
+═══════════════════════════════════════════════ -->
+<div class="screen active" id="screen-owner">
+
+  <!-- Owner bar -->
+  <div class="role-bar">
+    <div class="role-bar-left">
+      <svg class="pixel-m-sm" viewBox="0 0 100 100">
+        <rect x="0" y="0" width="22" height="9" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="0" y="0" width="9" height="22" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="78" y="0" width="22" height="9" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="91" y="0" width="9" height="22" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="0" y="91" width="22" height="9" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="0" y="78" width="9" height="22" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="78" y="91" width="22" height="9" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="91" y="78" width="9" height="22" rx="1" fill="#c9a84c" opacity=".55"/>
+        <rect x="15" y="25" width="10" height="10" fill="#c9a84c"/><rect x="15" y="35" width="10" height="10" fill="#c9a84c"/><rect x="15" y="45" width="10" height="10" fill="#c9a84c"/><rect x="15" y="55" width="10" height="10" fill="#c9a84c"/><rect x="15" y="65" width="10" height="10" fill="#c9a84c"/><rect x="15" y="75" width="10" height="10" fill="#c9a84c"/>
+        <rect x="25" y="35" width="10" height="10" fill="#c9a84c"/><rect x="35" y="45" width="10" height="10" fill="#c9a84c"/><rect x="45" y="35" width="10" height="10" fill="#c9a84c"/><rect x="55" y="45" width="10" height="10" fill="#c9a84c"/><rect x="65" y="35" width="10" height="10" fill="#c9a84c"/>
+        <rect x="75" y="25" width="10" height="10" fill="#c9a84c"/><rect x="75" y="35" width="10" height="10" fill="#c9a84c"/><rect x="75" y="45" width="10" height="10" fill="#c9a84c"/><rect x="75" y="55" width="10" height="10" fill="#c9a84c"/><rect x="75" y="65" width="10" height="10" fill="#c9a84c"/><rect x="75" y="75" width="10" height="10" fill="#c9a84c"/>
+        <rect x="85" y="85" width="8" height="8" fill="#17C3B2"/>
+      </svg>
+      <span class="role-wordmark"><span class="m">M</span>oxie</span>
+      <span class="role-badge" style="background:rgba(201,168,76,.15);color:var(--gold);border-color:rgba(201,168,76,.25)">Boat Owner</span>
+      <span class="role-badge" id="owner-tier-badge" style="background:rgba(23,195,178,.15);color:var(--aqua-bright);border-color:rgba(23,195,178,.3)">Full Access</span>
+    </div>
+    <a href="#" onclick="showScreen('shares');return false" style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:rgba(255,255,255,.4);text-decoration:none;font-weight:500;display:flex;align-items:center;gap:5px">
+      <svg style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round" viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      Shares
+    </a>
+  </div>
+
+  <!-- Hero -->
+  <div class="vessel-hero">
+    <div class="hero-content">
+      <div class="hero-scan-id">MXE-00001<span class="signal-dot"></span></div>
+      <div class="hero-name">Discovery One</div>
+      <div class="hero-tag">2023 Nimbus T8 &nbsp;·&nbsp; Portobello Marina</div>
+    </div>
+  </div>
+
+  <div class="profile-body">
+    <div class="spec-strip">
+      <div class="spec-cell"><div class="spec-k">Make</div><div class="spec-v">Nimbus</div></div>
+      <div class="spec-cell"><div class="spec-k">Year</div><div class="spec-v">2023</div></div>
+      <div class="spec-cell"><div class="spec-k">Length</div><div class="spec-v">26'</div></div>
+      <div class="spec-cell"><div class="spec-k">Type</div><div class="spec-v">Power</div></div>
+      <div class="spec-cell"><div class="spec-k">Slip</div><div class="spec-v">38</div></div>
+      <div class="spec-cell"><div class="spec-k">HIN</div><div class="spec-v priv">Owner only</div></div>
+    </div>
+
+    <div class="profile-section">
+      <div class="section-label">Home Marina</div>
+      <div class="marina-row">
+        <div class="marina-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+        <div><div class="marina-name">Portobello Marina</div><div class="marina-detail">Oakland, CA &nbsp;·&nbsp; Slip 38 &nbsp;·&nbsp; (510) 555-0110</div></div>
+      </div>
+    </div>
+
+    <div class="profile-section">
+      <div class="section-label">About This Vessel</div>
+      <p style="font-size:14px;color:var(--text2);line-height:1.75;font-weight:300">2023 Nimbus T8 day cruiser. Single Yamaha F150 outboard. Based at Portobello Marina, Oakland CA.</p>
+    </div>
+  </div>
+
+  <!-- Share FAB -->
+  <button class="share-fab" onclick="openSheet()">
+    <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+    Share Profile
+  </button>
+
+  <!-- Owner bottom nav -->
+  <nav class="owner-bottom-nav">
+    <a href="#" class="bnav-item active"><div class="bnav-ico"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div><div class="bnav-lbl">Profile</div></a>
+    <a href="#" class="bnav-item"><div class="bnav-ico"><svg viewBox="0 0 24 24"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg></div><div class="bnav-lbl">My Fleet</div></a>
+    <a href="#" class="bnav-item" onclick="event.preventDefault();showScreen('shares')"><div class="bnav-ico"><svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg></div><div class="bnav-lbl">Shares</div></a>
+    <a href="#" class="bnav-item"><div class="bnav-ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg></div><div class="bnav-lbl">Account</div></a>
+  </nav>
+
+  <!-- ── SHARE BOTTOM SHEET ── -->
+  <div class="sheet-overlay" id="sheet-overlay" onclick="closeSheet(event)">
+    <div class="share-sheet" id="share-sheet" onclick="event.stopPropagation()">
+      <div class="sheet-handle"></div>
+
+      <div class="sheet-header">
+        <div class="sheet-title">Share <em>Discovery One</em></div>
+        <div class="sheet-sub">Choose what to share and with whom. You control access — revoke any link instantly.</div>
+      </div>
+
+      <!-- Share mode -->
+      <div class="share-mode-row">
+        <div class="share-mode-card selected" id="mode-trusted" onclick="selectMode('trusted')">
+          <div class="tier-lock-badge" id="trusted-lock-badge" style="display:none"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Full Access</div>
+          <div class="smc-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="smc-icon" style="background:rgba(23,195,178,.12);color:var(--aqua-lagoon)"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div>
+          <div class="smc-title">Trusted Contact</div>
+          <div class="smc-desc">Share selected details. Unique link, expiry, revokable.</div>
+        </div>
+        <div class="share-mode-card" id="mode-public" onclick="selectMode('public')">
+          <div class="smc-check"><svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg></div>
+          <div class="smc-icon" style="background:var(--gray-bg);color:var(--gray-fg)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+          <div class="smc-title">Public Link</div>
+          <div class="smc-desc">Copy your public profile URL. No login required.</div>
+        </div>
+      </div>
+
+      <!-- Upsell panel: shown instead of trusted-fields when account tier is Basic -->
+      <div class="upsell-panel" id="trusted-upsell">
+        <div class="upsell-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+        <div class="upsell-h">A <em>Full Access</em> feature</div>
+        <div class="upsell-sub">Trusted Contact sharing lets you send exactly the right details to exactly the right person — without handing over your login or your whole profile.</div>
+        <div class="upsell-examples">
+          <div class="upsell-example"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Send title/escrow every document and record on file</div>
+          <div class="upsell-example"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>Give a cleaner or caterer the slip, lockbox code, and nothing else</div>
+          <div class="upsell-example"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Set an expiry so access disappears on its own</div>
+        </div>
+        <button class="upsell-cta" onclick="closeSheet(null)">Upgrade to Full Access</button>
+        <div class="upsell-cta-sub">Public profile sharing is still included on Basic — use the Public Link tab.</div>
+      </div>
+
+      <!-- Trusted contact fields -->
+      <div id="trusted-fields">
+        <div class="preset-row">
+          <label class="preset-label">Quick setup for a common vendor <span style="color:var(--text3);font-weight:400">(optional — sets suggested fields below)</span></label>
+          <div class="preset-chips">
+            <div class="preset-chip" id="preset-escrow" onclick="selectPreset('escrow')">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+              Title &amp; Escrow
+            </div>
+            <div class="preset-chip" id="preset-marina" onclick="selectPreset('marina')">
+              <svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+              Marina / Dock Staff
+            </div>
+            <div class="preset-chip" id="preset-vendor" onclick="selectPreset('vendor')">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>
+              Cleaner / Caterer
+            </div>
+            <div class="preset-chip selected" id="preset-custom" onclick="selectPreset('custom')">Custom</div>
+          </div>
+        </div>
+        <div class="sheet-field-row">
+          <label class="sheet-field-label">Label this share <span style="color:var(--text3);font-weight:400">(so you remember who it's for)</span></label>
+          <input class="sheet-input" id="share-label" placeholder="e.g. Diver — Juan, Catering — Sarah, Captain Mike…" value="Diver — Juan">
+        </div>
+
+        <div class="sheet-field-row">
+          <label class="sheet-field-label">Link expires</label>
+          <div class="expiry-chips">
+            <div class="expiry-chip" onclick="selectExpiry(this)">One-time</div>
+            <div class="expiry-chip selected" onclick="selectExpiry(this)">24 hours</div>
+            <div class="expiry-chip" onclick="selectExpiry(this)">7 days</div>
+            <div class="expiry-chip" onclick="selectExpiry(this)">No expiry</div>
+          </div>
+        </div>
+
+        <div class="visibility-section">
+          <div class="section-label" style="margin-bottom:10px">What they'll see</div>
+
+          <div class="vis-toggle-row">
+            <div class="vis-toggle-left">
+              <div class="vis-icon" style="background:var(--gray-bg)"><svg viewBox="0 0 24 24" style="color:var(--gray-fg)"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg></div>
+              <div><div class="vis-field-name">Vessel specs</div><div class="vis-field-sub">Make, model, year, length, type</div></div>
+            </div>
+            <label class="ios-toggle"><input type="checkbox" checked disabled><div class="ios-slider"></div></label>
+          </div>
+
+          <div class="vis-toggle-row">
+            <div class="vis-toggle-left">
+              <div class="vis-icon" style="background:var(--blue-bg)"><svg viewBox="0 0 24 24" style="color:var(--blue-fg)"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+              <div><div class="vis-field-name">Location details</div><div class="vis-field-sub">Marina, slip number, address</div></div>
+            </div>
+            <label class="ios-toggle"><input type="checkbox" checked id="tog-location"><div class="ios-slider"></div></label>
+          </div>
+
+          <div class="vis-toggle-row">
+            <div class="vis-toggle-left">
+              <div class="vis-icon" style="background:var(--green-bg)"><svg viewBox="0 0 24 24" style="color:var(--green-fg)"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8a16 16 0 0 0 8.09 8.09l.95-.95a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div>
+              <div><div class="vis-field-name">Owner contact</div><div class="vis-field-sub">Your name and phone number</div></div>
+            </div>
+            <label class="ios-toggle"><input type="checkbox" checked id="tog-contact"><div class="ios-slider"></div></label>
+          </div>
+
+          <div class="vis-toggle-row">
+            <div class="vis-toggle-left">
+              <div class="vis-icon" style="background:var(--amber-bg)"><svg viewBox="0 0 24 24" style="color:var(--amber-fg)"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>
+              <div><div class="vis-field-name">Documents</div><div class="vis-field-sub">Insurance, registration, uploaded files</div></div>
+            </div>
+            <label class="ios-toggle"><input type="checkbox" id="tog-docs"><div class="ios-slider"></div></label>
+          </div>
+
+          <div class="vis-toggle-row">
+            <div class="vis-toggle-left">
+              <div class="vis-icon" style="background:rgba(201,168,76,.16)"><svg viewBox="0 0 24 24" style="color:#7a5f1e"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg></div>
+              <div><div class="vis-field-name">Ownership record</div><div class="vis-field-sub">HIN, registration #, title status</div></div>
+            </div>
+            <label class="ios-toggle"><input type="checkbox" id="tog-ownership"><div class="ios-slider"></div></label>
+          </div>
+
+          <div class="vis-toggle-row">
+            <div class="vis-toggle-left">
+              <div class="vis-icon" style="background:rgba(23,195,178,.12)"><svg viewBox="0 0 24 24" style="color:var(--aqua-lagoon)"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+              <div><div class="vis-field-name">Access &amp; instructions</div><div class="vis-field-sub">Lockbox code, gate code, notes for this contact</div></div>
+            </div>
+            <label class="ios-toggle"><input type="checkbox" id="tog-access" onchange="toggleAccessNote(this)"><div class="ios-slider"></div></label>
+          </div>
+        </div>
+
+        <div class="note-field" id="access-note-field">
+          <textarea class="note-textarea" id="access-note-text" placeholder="e.g. Lockbox code: 4471 · Dock gate code: #2298 · Boat is second cleat on the left, cover strap is on the bow rail"></textarea>
+          <div class="note-field-hint">Visible only to this contact, only while the link is active. Not stored as part of the vessel's permanent record.</div>
+        </div>
+
+        <div style="padding:14px 20px 14px">
+          <div class="trusted-note" id="trusted-scope-note">
+            <strong>They won't see:</strong> emergency contacts, billing info, or anything you haven't toggled on. You can revoke this link at any time from your Shares dashboard.
+          </div>
+        </div>
+
+        <!-- Generated link (hidden until generated) -->
+        <div class="link-generated" id="link-generated">
+          <div class="lg-label">Share link ready</div>
+          <div class="lg-url" id="generated-url">moxieyacht.com/MXE-00001?share=d7x2k9</div>
+          <div class="lg-actions">
+            <button class="lg-btn copy" onclick="copyLink()">
+              <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+              Copy link
+            </button>
+            <button class="lg-btn sms" onclick="closeSheet(null)">
+              <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              Send via text
+            </button>
+          </div>
+        </div>
+
+        <div class="sheet-actions">
+          <button class="btn-generate" onclick="generateLink()">
+            <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+            Generate share link
+          </button>
+        </div>
+      </div>
+
+      <!-- Public mode fields -->
+      <div id="public-fields" style="display:none">
+        <div style="padding:20px">
+          <p style="font-size:14px;color:var(--text2);line-height:1.7;font-weight:300;margin-bottom:16px">This is your public profile — anyone with the link can view your vessel's basic information. No account required.</p>
+          <div style="background:var(--cream);padding:12px 14px;border-radius:4px;font-family:monospace;font-size:13px;color:var(--navy);border:1px solid var(--divider);margin-bottom:14px">moxieyacht.com/MXE-00001</div>
+        </div>
+        <div class="sheet-actions">
+          <button class="btn-generate" onclick="copyPublic()">
+            <svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+            Copy public link
+          </button>
+          <button class="btn-copy-public" onclick="closeSheet(null)">Cancel</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /screen-owner -->
+
+
+<!-- ═══════════════════════════════════════════════
+     SCREEN 2: ACTIVE SHARES MANAGER
+═══════════════════════════════════════════════ -->
+<div class="screen" id="screen-shares">
+
+  <div class="shares-manager">
+    <!-- Header -->
+    <div class="shares-header">
+      <div class="shares-header-top">
+        <svg class="pixel-m-sm" viewBox="0 0 100 100">
+          <rect x="15" y="25" width="10" height="10" fill="#c9a84c"/><rect x="15" y="35" width="10" height="10" fill="#c9a84c"/><rect x="15" y="45" width="10" height="10" fill="#c9a84c"/><rect x="15" y="55" width="10" height="10" fill="#c9a84c"/><rect x="15" y="65" width="10" height="10" fill="#c9a84c"/><rect x="15" y="75" width="10" height="10" fill="#c9a84c"/>
+          <rect x="25" y="35" width="10" height="10" fill="#c9a84c"/><rect x="35" y="45" width="10" height="10" fill="#c9a84c"/><rect x="45" y="35" width="10" height="10" fill="#c9a84c"/><rect x="55" y="45" width="10" height="10" fill="#c9a84c"/><rect x="65" y="35" width="10" height="10" fill="#c9a84c"/>
+          <rect x="75" y="25" width="10" height="10" fill="#c9a84c"/><rect x="75" y="35" width="10" height="10" fill="#c9a84c"/><rect x="75" y="45" width="10" height="10" fill="#c9a84c"/><rect x="75" y="55" width="10" height="10" fill="#c9a84c"/><rect x="75" y="65" width="10" height="10" fill="#c9a84c"/><rect x="75" y="75" width="10" height="10" fill="#c9a84c"/>
+          <rect x="85" y="85" width="8" height="8" fill="#17C3B2"/>
+        </svg>
+        <div>
+          <div class="shares-eyebrow">Discovery One · MXE-00001</div>
+          <div class="shares-h">Active <em>Shares</em></div>
+        </div>
+      </div>
+      <div class="shares-stats">
+        <div class="stat-cell"><div class="stat-num aqua">4</div><div class="stat-label">Active links</div></div>
+        <div class="stat-cell"><div class="stat-num gold">8</div><div class="stat-label">Sent this month</div></div>
+        <div class="stat-cell"><div class="stat-num" style="color:rgba(255,255,255,.4)">4</div><div class="stat-label">Expired</div></div>
+      </div>
+    </div>
+
+    <!-- New share button -->
+    <button class="new-share-btn" onclick="showScreen('owner');setTimeout(openSheet,100)">
+      <svg viewBox="0 0 24 24"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+      Share profile
+    </button>
+
+    <!-- Active shares -->
+    <div class="shares-section-label">Active · 4 links</div>
+
+    <div class="share-card">
+      <div class="share-avatar trusted" style="background:rgba(201,168,76,.16);color:#7a5f1e">T</div>
+      <div class="share-content">
+        <div class="share-name">Escrow — Triton Marine Title</div>
+        <div class="share-meta">Trusted contact · Created today · moxieyacht.com/MXE-00001?share=r4t9wq</div>
+        <div class="share-tags">
+          <span class="share-tag active">Active</span>
+          <span class="share-tag ownership">Ownership</span>
+          <span class="share-tag specs" style="background:var(--amber-bg);color:var(--amber-fg)">Documents</span>
+          <span class="share-tag contact">Contact</span>
+        </div>
+      </div>
+      <div class="share-actions">
+        <button class="revoke-btn" onclick="revokeShare(this)">Revoke</button>
+        <div class="share-expiry">Expires in 7 days</div>
+      </div>
+    </div>
+
+    <div class="share-card">
+      <div class="share-avatar trusted">J</div>
+      <div class="share-content">
+        <div class="share-name">Diver — Juan</div>
+        <div class="share-meta">Trusted contact · Created today · moxieyacht.com/MXE-00001?share=d7x2k9</div>
+        <div class="share-tags">
+          <span class="share-tag active">Active</span>
+          <span class="share-tag location">Location</span>
+          <span class="share-tag contact">Contact</span>
+          <span class="share-tag specs">Specs</span>
+        </div>
+      </div>
+      <div class="share-actions">
+        <button class="revoke-btn" onclick="revokeShare(this)">Revoke</button>
+        <div class="share-expiry soon">Expires in 23h</div>
+      </div>
+    </div>
+
+    <div class="share-card">
+      <div class="share-avatar trusted">S</div>
+      <div class="share-content">
+        <div class="share-name">Catering — Sarah</div>
+        <div class="share-meta">Trusted contact · Created 3 days ago · moxieyacht.com/MXE-00001?share=k8m1p4</div>
+        <div class="share-tags">
+          <span class="share-tag active">Active</span>
+          <span class="share-tag location">Location</span>
+          <span class="share-tag access">Access</span>
+          <span class="share-tag specs">Specs</span>
+        </div>
+      </div>
+      <div class="share-actions">
+        <button class="revoke-btn" onclick="revokeShare(this)">Revoke</button>
+        <div class="share-expiry">Expires in 4 days</div>
+      </div>
+    </div>
+
+    <div class="share-card">
+      <div class="share-avatar public">∞</div>
+      <div class="share-content">
+        <div class="share-name">Public profile link</div>
+        <div class="share-meta">Shared publicly · moxieyacht.com/MXE-00001</div>
+        <div class="share-tags">
+          <span class="share-tag active">Active</span>
+          <span class="share-tag public-tag">Public view only</span>
+        </div>
+      </div>
+      <div class="share-actions">
+        <button class="revoke-btn">Copy</button>
+        <div class="share-expiry">No expiry</div>
+      </div>
+    </div>
+
+    <!-- Expired shares -->
+    <div class="shares-section-label" style="margin-top:8px">Expired · last 30 days</div>
+
+    <div class="share-card" style="opacity:.55">
+      <div class="share-avatar expired">M</div>
+      <div class="share-content">
+        <div class="share-name">Captain Mike</div>
+        <div class="share-meta">Trusted contact · Expired 5 days ago</div>
+        <div class="share-tags">
+          <span class="share-tag expired-tag">Expired</span>
+          <span class="share-tag location">Location</span>
+          <span class="share-tag contact">Contact</span>
+        </div>
+      </div>
+      <div class="share-actions">
+        <button class="revoke-btn" style="opacity:.6">Resend</button>
+        <div class="share-expiry">Expired Jun 18</div>
+      </div>
+    </div>
+
+    <div class="share-card" style="opacity:.55">
+      <div class="share-avatar expired">D</div>
+      <div class="share-content">
+        <div class="share-name">Detailer — Dave</div>
+        <div class="share-meta">Trusted contact · Expired 12 days ago</div>
+        <div class="share-tags">
+          <span class="share-tag expired-tag">Expired</span>
+          <span class="share-tag location">Location</span>
+        </div>
+      </div>
+      <div class="share-actions">
+        <button class="revoke-btn" style="opacity:.6">Resend</button>
+        <div class="share-expiry">Expired Jun 11</div>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /screen-shares -->
+
+
+<!-- ═══════════════════════════════════════════════
+     SCREEN 3: TRUSTED CONTACT RECIPIENT VIEW
+═══════════════════════════════════════════════ -->
+<div class="screen" id="screen-trusted">
+
+  <!-- Trusted bar -->
+  <div class="trusted-bar">
+    <div class="trusted-bar-left">
+      <svg class="pixel-m-sm" viewBox="0 0 100 100">
+        <rect x="15" y="25" width="10" height="10" fill="#c9a84c"/><rect x="15" y="35" width="10" height="10" fill="#c9a84c"/><rect x="15" y="45" width="10" height="10" fill="#c9a84c"/><rect x="15" y="55" width="10" height="10" fill="#c9a84c"/><rect x="15" y="65" width="10" height="10" fill="#c9a84c"/><rect x="15" y="75" width="10" height="10" fill="#c9a84c"/>
+        <rect x="25" y="35" width="10" height="10" fill="#c9a84c"/><rect x="35" y="45" width="10" height="10" fill="#c9a84c"/><rect x="45" y="35" width="10" height="10" fill="#c9a84c"/><rect x="55" y="45" width="10" height="10" fill="#c9a84c"/><rect x="65" y="35" width="10" height="10" fill="#c9a84c"/>
+        <rect x="75" y="25" width="10" height="10" fill="#c9a84c"/><rect x="75" y="35" width="10" height="10" fill="#c9a84c"/><rect x="75" y="45" width="10" height="10" fill="#c9a84c"/><rect x="75" y="55" width="10" height="10" fill="#c9a84c"/><rect x="75" y="65" width="10" height="10" fill="#c9a84c"/><rect x="75" y="75" width="10" height="10" fill="#c9a84c"/>
+        <rect x="85" y="85" width="8" height="8" fill="#17C3B2"/>
+      </svg>
+      <span class="role-wordmark"><span class="m">M</span>oxie</span>
+      <span class="trusted-bar-badge">Shared Profile</span>
+    </div>
+    <div class="trusted-bar-right">Expires in 23h</div>
+  </div>
+
+  <!-- Shared by banner -->
+  <div class="shared-by-banner">
+    <div class="shared-by-avatar">BE</div>
+    <div class="shared-by-text">
+      <strong>Ben Eves</strong> shared this vessel profile with you.<br>
+      You're seeing details the owner chose to include.
+    </div>
+    <div class="shared-by-expiry">24h access</div>
+  </div>
+
+  <!-- Hero -->
+  <div class="vessel-hero" style="min-height:220px">
+    <div class="hero-content">
+      <div class="hero-scan-id">MXE-00001<span class="signal-dot"></span></div>
+      <div class="hero-name">Discovery One</div>
+      <div class="hero-tag">2023 Nimbus T8 &nbsp;·&nbsp; Power</div>
+    </div>
+  </div>
+
+  <div class="profile-body">
+    <!-- Public specs always shown -->
+    <div class="spec-strip">
+      <div class="spec-cell"><div class="spec-k">Make</div><div class="spec-v">Nimbus</div></div>
+      <div class="spec-cell"><div class="spec-k">Year</div><div class="spec-v">2023</div></div>
+      <div class="spec-cell"><div class="spec-k">Length</div><div class="spec-v">26'</div></div>
+      <div class="spec-cell"><div class="spec-k">Type</div><div class="spec-v">Power</div></div>
+      <div class="spec-cell"><div class="spec-k">Draft</div><div class="spec-v">2.5'</div></div>
+      <div class="spec-cell"><div class="spec-k">Engine</div><div class="spec-v" style="font-size:11px">F150 OB</div></div>
+    </div>
+
+    <!-- Trusted-tier: location details -->
+    <div class="profile-section">
+      <div class="section-label">Location</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="trusted-detail-row">
+          <div class="trusted-detail-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
+          <div>
+            <div class="trusted-detail-k">Marina</div>
+            <div class="trusted-detail-v">Portobello Marina, Oakland CA</div>
+          </div>
+        </div>
+        <div class="trusted-detail-row">
+          <div class="trusted-detail-icon"><svg viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg></div>
+          <div>
+            <div class="trusted-detail-k">Slip</div>
+            <div class="trusted-detail-v">Slip 38 · Dock B</div>
+          </div>
+          <a href="https://maps.google.com" target="_blank" class="trusted-call-btn">
+            <svg viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg>
+            Navigate
+          </a>
+        </div>
+        <div class="trusted-detail-row">
+          <div class="trusted-detail-icon"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7"/><line x1="12" y1="2" x2="12" y2="22"/></svg></div>
+          <div>
+            <div class="trusted-detail-k">Marina Phone</div>
+            <div class="trusted-detail-v">(510) 555-0110</div>
+          </div>
+          <a href="tel:+15105550110" class="trusted-call-btn">
+            <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8a16 16 0 0 0 8.09 8.09l.95-.95a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            Call
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trusted-tier: owner contact -->
+    <div class="profile-section">
+      <div class="section-label">Owner Contact</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div class="trusted-detail-row">
+          <div class="trusted-detail-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg></div>
+          <div>
+            <div class="trusted-detail-k">Owner</div>
+            <div class="trusted-detail-v">Ben Eves</div>
+          </div>
+          <a href="tel:+13124650672" class="trusted-call-btn">
+            <svg viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.6 1.27h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 8a16 16 0 0 0 8.09 8.09l.95-.95a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+            Call
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Trusted-tier: access & instructions (owner-written note, this share only) -->
+    <div class="profile-section">
+      <div class="section-label">Access &amp; Instructions</div>
+      <div class="trusted-detail-row" style="align-items:flex-start">
+        <div class="trusted-detail-icon"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></div>
+        <div>
+          <div class="trusted-detail-k">Note from Ben</div>
+          <div class="trusted-detail-v" style="font-size:13px;font-weight:400;line-height:1.55">Lockbox code: 4471 · Dock gate code: #2298 · Boat is second cleat on the left, cover strap is on the bow rail.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="profile-section">
+      <div class="section-label">About This Vessel</div>
+      <p style="font-size:14px;color:var(--text2);line-height:1.75;font-weight:300">2023 Nimbus T8 day cruiser. Single Yamaha F150 outboard. Based at Portobello Marina, Oakland CA.</p>
+    </div>
+
+    <!-- Register CTA — acquisition touchpoint -->
+    <div class="register-cta">
+      <div class="register-cta-text">
+        <div class="register-cta-eyebrow">Own a vessel?</div>
+        <div class="register-cta-h">Get your boat on <span class="m">M</span>oxie.</div>
+        <div class="register-cta-sub">Digital identity, docs on file, share with anyone.</div>
+      </div>
+      <a href="#" class="register-cta-btn">Learn more</a>
+    </div>
+
+    <!-- Powered by -->
+    <div style="padding:20px;text-align:center;background:var(--cream)">
+      <div style="font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--text3);font-weight:500;margin-bottom:4px">Powered by</div>
+      <div style="font-family:'Cormorant Garamond',serif;font-size:16px;font-style:italic;color:var(--navy)"><span style="color:var(--gold)">M</span>oxie</div>
+      <div style="font-size:10px;color:var(--text3);margin-top:2px">moxieyachting.com</div>
+    </div>
+  </div>
+
+</div><!-- /screen-trusted -->
+
+<script>
+// ── Screen switcher ──
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.demo-pill').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-'+id).classList.add('active');
+  const map = {owner:0,shares:1,trusted:2};
+  document.querySelectorAll('.demo-pill')[map[id]].classList.add('active');
+  window.scrollTo(0,0);
+}
+
+// ── Account tier (demo only — in-app this comes from the user's subscription_tier) ──
+let currentTier = 'full';
+function setTier(tier) {
+  currentTier = tier;
+  document.getElementById('tier-full').classList.toggle('active', tier==='full');
+  document.getElementById('tier-basic').classList.toggle('active', tier==='basic');
+  document.getElementById('owner-tier-badge').textContent = tier==='full' ? 'Full Access' : 'Basic';
+  document.getElementById('owner-tier-badge').style.background = tier==='full' ? 'rgba(23,195,178,.15)' : 'var(--gray-bg)';
+  document.getElementById('owner-tier-badge').style.color = tier==='full' ? 'var(--aqua-bright)' : 'var(--gray-fg)';
+  document.getElementById('owner-tier-badge').style.borderColor = tier==='full' ? 'rgba(23,195,178,.3)' : 'var(--divider)';
+  document.getElementById('trusted-lock-badge').style.display = tier==='basic' ? 'flex' : 'none';
+  // Re-evaluate whichever mode is currently selected
+  const trustedSelected = document.getElementById('mode-trusted').classList.contains('selected');
+  selectMode(trustedSelected ? 'trusted' : 'public');
+}
+
+// ── Share sheet ──
+function openSheet() {
+  document.getElementById('sheet-overlay').classList.add('open');
+  document.getElementById('link-generated').classList.remove('show');
+}
+function closeSheet(e) {
+  if(!e || e.target === document.getElementById('sheet-overlay')) {
+    document.getElementById('sheet-overlay').classList.remove('open');
+  }
+}
+
+// ── Mode select ──
+function selectMode(mode) {
+  document.getElementById('mode-trusted').classList.toggle('selected', mode==='trusted');
+  document.getElementById('mode-public').classList.toggle('selected', mode==='public');
+  const gated = mode==='trusted' && currentTier==='basic';
+  document.getElementById('trusted-fields').style.display = (mode==='trusted' && !gated) ? 'block' : 'none';
+  document.getElementById('trusted-upsell').classList.toggle('show', gated);
+  document.getElementById('public-fields').style.display = mode==='public' ? 'block' : 'none';
+}
+
+// ── Share presets ──
+const PRESETS = {
+  escrow:  { label:'Escrow — Triton Marine Title', expiry:2, toggles:{location:true, contact:true, docs:true, ownership:true, access:false} },
+  marina:  { label:'Marina Staff — Portobello',    expiry:3, toggles:{location:true, contact:true, docs:false, ownership:false, access:true} },
+  vendor:  { label:'Cleaner — ',                   expiry:1, toggles:{location:true, contact:false, docs:false, ownership:false, access:true} },
+};
+function selectPreset(name) {
+  document.querySelectorAll('.preset-chip').forEach(c => c.classList.remove('selected'));
+  document.getElementById('preset-'+name).classList.add('selected');
+  if (name === 'custom') return;
+  const p = PRESETS[name];
+  document.getElementById('share-label').value = p.label;
+  document.querySelectorAll('.expiry-chip').forEach((c,i) => c.classList.toggle('selected', i===p.expiry));
+  document.getElementById('tog-location').checked = p.toggles.location;
+  document.getElementById('tog-contact').checked = p.toggles.contact;
+  document.getElementById('tog-docs').checked = p.toggles.docs;
+  document.getElementById('tog-ownership').checked = p.toggles.ownership;
+  document.getElementById('tog-access').checked = p.toggles.access;
+  toggleAccessNote(document.getElementById('tog-access'));
+}
+
+// ── Access note textarea ──
+function toggleAccessNote(el) {
+  document.getElementById('access-note-field').classList.toggle('show', el.checked);
+}
+
+// ── Expiry chips ──
+function selectExpiry(el) {
+  document.querySelectorAll('.expiry-chip').forEach(c => c.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+// ── Generate link ──
+function generateLink() {
+  const label = document.getElementById('share-label').value || 'Shared link';
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  const token = Array.from({length:6}, () => chars[Math.floor(Math.random()*chars.length)]).join('');
+  document.getElementById('generated-url').textContent = `moxieyacht.com/MXE-00001?share=${token}`;
+  document.getElementById('link-generated').classList.add('show');
+  document.querySelector('.btn-generate').textContent = '✓ Link generated — share it';
+  document.querySelector('.btn-generate').style.background = 'var(--aqua-lagoon)';
+  document.querySelector('.btn-generate').style.color = 'var(--white)';
+}
+
+// ── Copy actions ──
+function copyLink() {
+  const url = document.getElementById('generated-url').textContent;
+  navigator.clipboard?.writeText(url).catch(()=>{});
+  const btn = document.querySelector('.lg-btn.copy');
+  btn.textContent = '✓ Copied';
+  setTimeout(() => { btn.innerHTML = '<svg viewBox="0 0 24 24" style="width:12px;height:12px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy link'; }, 1500);
+}
+function copyPublic() {
+  navigator.clipboard?.writeText('moxieyacht.com/MXE-00001').catch(()=>{});
+  closeSheet(null);
+}
+
+// ── Revoke share ──
+function revokeShare(btn) {
+  const card = btn.closest('.share-card');
+  card.style.transition = 'opacity .3s, max-height .4s';
+  card.style.opacity = '0';
+  card.style.maxHeight = '0';
+  card.style.overflow = 'hidden';
+  setTimeout(() => card.remove(), 400);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "moxie-web",
+      "url": "http://localhost:3010",
+      "port": 3010
+    }
+  ]
+}

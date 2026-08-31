@@ -10,5 +10,11 @@ export async function GET(
   if (!vessel) {
     return NextResponse.json({ error: "Vessel not found" }, { status: 404 });
   }
+  // Payment gate: a pending vessel's identity isn't public yet, so the scan
+  // preview withholds it too rather than leaking name/make/model through a
+  // side door the "not yet active" gate on the profile page is meant to close.
+  if (vessel.qr_status !== "active") {
+    return NextResponse.json({ status: "pending_payment", mxe_id: vessel.mxe_id }, { status: 200 });
+  }
   return NextResponse.json(toPreview(vessel));
 }

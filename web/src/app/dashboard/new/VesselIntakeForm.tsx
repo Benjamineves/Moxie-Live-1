@@ -3,9 +3,9 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { createVessel, previewNextMxeId } from "./actions";
-
-const vesselTypes = ["Sailboat", "Powerboat", "Catamaran", "Trawler", "Dinghy", "Other"] as const;
+import { StorageTypePicker, isMarinaGroup, storageTypeLabel } from "@/components/StorageTypePicker";
+import { vesselTypes } from "@/lib/vessel-types";
+import { createVessel, previewNextMxeId, type StorageType } from "./actions";
 
 type FormState = {
   vessel_name: string;
@@ -16,6 +16,14 @@ type FormState = {
   length_ft: string;
   draft_ft: string;
   public_notes: string;
+  storage_type: StorageType;
+  marina_name: string;
+  marina_city: string;
+  slip_number: string;
+  marina_phone: string;
+  is_liveaboard: boolean;
+  slip_notes: string;
+  storage_description: string;
   photo_url: string;
   doc_registration_url: string;
   doc_insurance_url: string;
@@ -37,6 +45,14 @@ export function VesselIntakeForm() {
     length_ft: "",
     draft_ft: "",
     public_notes: "",
+    storage_type: "marina",
+    marina_name: "",
+    marina_city: "",
+    slip_number: "",
+    marina_phone: "",
+    is_liveaboard: false,
+    slip_notes: "",
+    storage_description: "",
     photo_url: "",
     doc_registration_url: "",
     doc_insurance_url: "",
@@ -168,10 +184,15 @@ export function VesselIntakeForm() {
       return;
     }
     if (step === 2) {
+      setGeneralError(null);
+      setStep(3);
+      return;
+    }
+    if (step === 3) {
       startTransition(async () => {
         try {
           await ensureMxeId();
-          setStep(3);
+          setStep(4);
         } catch (error) {
           setGeneralError(error instanceof Error ? error.message : "Could not prepare review step.");
         }
@@ -195,6 +216,14 @@ export function VesselIntakeForm() {
           photo_url: form.photo_url || null,
           doc_registration_url: form.doc_registration_url || null,
           doc_insurance_url: form.doc_insurance_url || null,
+          storage_type: form.storage_type,
+          storage_description: form.storage_description || null,
+          marina_name: form.marina_name || null,
+          marina_city: form.marina_city || null,
+          slip_number: form.slip_number || null,
+          marina_phone: form.marina_phone || null,
+          is_liveaboard: form.is_liveaboard,
+          slip_notes: form.slip_notes || null,
         },
         mxeId || undefined,
       );
@@ -203,19 +232,19 @@ export function VesselIntakeForm() {
         setGeneralError(result.error ?? "Failed to create vessel.");
         return;
       }
-      router.push(`/dashboard/${encodeURIComponent(result.mxeId)}/qr`);
+      router.push(`/dashboard/${encodeURIComponent(result.mxeId)}/payment`);
     });
   }
 
   return (
     <div className="rounded-2xl border border-[var(--divider)] bg-[var(--white)] p-4 sm:p-6">
       <p className="font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
-        Step {step} / 3
+        Step {step} / 4
       </p>
       <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[var(--cream2)]">
         <div
           className="h-full rounded-full bg-[var(--aqua-bright)] transition-all"
-          style={{ width: `${(step / 3) * 100}%` }}
+          style={{ width: `${(step / 4) * 100}%` }}
         />
       </div>
 
@@ -258,6 +287,90 @@ export function VesselIntakeForm() {
 
       {step === 2 ? (
         <div className="mt-6 grid gap-5">
+          <Field label="Where is your vessel stored?">
+            <StorageTypePicker
+              value={form.storage_type}
+              onChange={(next) => setForm((p) => ({ ...p, storage_type: next }))}
+            />
+          </Field>
+
+          {isMarinaGroup(form.storage_type) ? (
+            <>
+              <Field label="Marina name">
+                <input
+                  value={form.marina_name}
+                  onChange={(e) => setForm((p) => ({ ...p, marina_name: e.target.value }))}
+                  placeholder="e.g. Portobello Marina"
+                  className="input"
+                />
+              </Field>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="City, State">
+                  <input
+                    value={form.marina_city}
+                    onChange={(e) => setForm((p) => ({ ...p, marina_city: e.target.value }))}
+                    placeholder="e.g. Oakland, CA"
+                    className="input"
+                  />
+                </Field>
+                <Field label="Slip number">
+                  <input
+                    value={form.slip_number}
+                    onChange={(e) => setForm((p) => ({ ...p, slip_number: e.target.value }))}
+                    placeholder="e.g. 38, B-12"
+                    className="input"
+                  />
+                </Field>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Field label="Marina phone">
+                  <input
+                    type="tel"
+                    value={form.marina_phone}
+                    onChange={(e) => setForm((p) => ({ ...p, marina_phone: e.target.value }))}
+                    placeholder="(510) 555-0110"
+                    className="input"
+                  />
+                </Field>
+                <Field label="Liveaboard?">
+                  <select
+                    value={form.is_liveaboard ? "yes" : "no"}
+                    onChange={(e) => setForm((p) => ({ ...p, is_liveaboard: e.target.value === "yes" }))}
+                    className="input"
+                  >
+                    <option value="no">No</option>
+                    <option value="yes">Yes</option>
+                  </select>
+                </Field>
+              </div>
+              <Field label="Slip / mooring notes">
+                <textarea
+                  value={form.slip_notes}
+                  onChange={(e) => setForm((p) => ({ ...p, slip_notes: e.target.value }))}
+                  placeholder="Optional — anything marina staff should know."
+                  className="input min-h-24"
+                />
+              </Field>
+            </>
+          ) : (
+            <Field label="Storage location">
+              <input
+                value={form.storage_description}
+                onChange={(e) => setForm((p) => ({ ...p, storage_description: e.target.value }))}
+                placeholder="e.g. Home — Walnut Creek, CA or Bay Marine Boatworks, Richmond"
+                className="input"
+              />
+              <span className="font-[family-name:var(--font-dm)] text-xs text-[var(--text2)]">
+                A brief description of where the boat lives. Appears on your public profile in place of a marina
+                name.
+              </span>
+            </Field>
+          )}
+        </div>
+      ) : null}
+
+      {step === 3 ? (
+        <div className="mt-6 grid gap-5">
           <UploadField
             label="Vessel photo"
             accept="image/*"
@@ -286,7 +399,7 @@ export function VesselIntakeForm() {
         </div>
       ) : null}
 
-      {step === 3 ? (
+      {step === 4 ? (
         <div className="mt-6 space-y-3 rounded-xl border border-[var(--divider)] bg-[var(--cream)] p-4">
           <p className="font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
             Assigned MXE ID
@@ -294,6 +407,11 @@ export function VesselIntakeForm() {
           <p className="font-[family-name:var(--font-display)] text-3xl font-light italic text-[var(--gold)]">{mxeId || "Generating..."}</p>
           <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
             {form.vessel_name} · {form.make} {form.model} · {form.year}
+          </p>
+          <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
+            {isMarinaGroup(form.storage_type)
+              ? `${storageTypeLabel[form.storage_type]} · ${form.marina_name || "—"}${form.marina_city ? `, ${form.marina_city}` : ""}`
+              : `${storageTypeLabel[form.storage_type]} · ${form.storage_description || "No description provided."}`}
           </p>
           <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">{form.public_notes || "No public notes provided."}</p>
         </div>
@@ -310,7 +428,7 @@ export function VesselIntakeForm() {
         >
           Back
         </button>
-        {step < 3 ? (
+        {step < 4 ? (
           <button
             type="button"
             onClick={stepForward}
