@@ -1,31 +1,25 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
-import { ActivationPoller } from "./ActivationPoller";
+import { ActivationPoller } from "@/components/ActivationPoller";
 
 type Props = {
   params: Promise<{ mxeId: string }>;
-  searchParams: Promise<{ upgrade?: string }>;
 };
 
 /**
- * Landing spot after Stripe confirms payment client-side. qr_status/
- * subscription_tier only ever flip via the webhook (build spec §4), which
- * can lag the redirect by a second or two — this page waits it out instead
- * of the QR/profile page having to special-case "just paid" vs. "never
- * paid."
+ * Landing spot after Stripe confirms the badge-fee payment client-side.
+ * qr_status only ever flips via the webhook (build spec §4), which can lag
+ * the redirect by a second or two — this page waits it out instead of the
+ * QR/profile page having to special-case "just paid" vs. "never paid."
  *
- * An upgrade (Basic -> Full on an already-active vessel) never touches
- * qr_status — it's already 'active' going in — so the first-activation
- * check below would otherwise fire immediately and send an upgrading owner
- * to the QR reveal page for a sticker they already have. `?upgrade=1`
- * (set by PaymentForm when isUpgrade is true) switches this to watch
- * subscription_tier instead and land on the profile with a confirmation.
+ * This page is badge-fee-only now — the Basic/Full upgrade path that used
+ * to also land here (via ?upgrade=1) moved to /dashboard/upgrade/processing
+ * alongside the rest of the account-level subscription flow (build spec §9
+ * item 16).
  */
-export default async function PaymentProcessingPage({ params, searchParams }: Props) {
+export default async function PaymentProcessingPage({ params }: Props) {
   const { mxeId } = await params;
-  const sp = await searchParams;
-  const isUpgrade = sp.upgrade === "1";
 
   const supabase = await createSupabaseServerClient();
   if (!supabase) {
@@ -68,21 +62,6 @@ export default async function PaymentProcessingPage({ params, searchParams }: Pr
 
   if (!vessel || !ownerIds.includes(vessel.owner_id)) {
     redirect("/dashboard");
-  }
-
-  if (isUpgrade) {
-    const { data: ownerRow } = await service
-      .from("users")
-      .select("subscription_tier")
-      .eq("id", vessel.owner_id)
-      .maybeSingle();
-    const subscriptionTier = (ownerRow as { subscription_tier: string | null } | null)?.subscription_tier;
-
-    if (subscriptionTier === "full") {
-      redirect(`/${encodeURIComponent(vessel.mxe_id)}?role=owner&upgraded=1`);
-    }
-
-    return <ActivationPoller mxeId={vessel.mxe_id} mode="upgrade" />;
   }
 
   if (vessel.qr_status === "active") {

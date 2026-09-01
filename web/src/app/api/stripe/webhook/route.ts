@@ -52,15 +52,15 @@ export async function POST(request: Request) {
     switch (event.type) {
       case "payment_intent.succeeded": {
         const intent = event.data.object as Stripe.PaymentIntent;
-        if (intent.metadata?.payment_type === "setup_fee") {
-          await activateFromSetupFee(service, intent);
+        if (intent.metadata?.payment_type === "badge_fee") {
+          await activateFromBadgeFee(service, intent);
         }
         break;
       }
 
       case "invoice.paid": {
         const invoice = event.data.object as Stripe.Invoice;
-        await recordSubscriptionInvoice(service, invoice);
+        await recordAccountSubscriptionInvoice(service, invoice);
         break;
       }
 
@@ -119,11 +119,16 @@ async function activateVessel(
   }
 }
 
-/** Path A — Basic tier, build spec §4. */
-async function activateFromSetupFee(service: ServiceClient, intent: Stripe.PaymentIntent) {
+/**
+ * Badge fee — one-time, per vessel, always. Activates that vessel's
+ * qr_status regardless of the account's subscription tier; this is now
+ * the ONLY thing that ever does (see recordAccountSubscriptionInvoice
+ * below, which used to also activate a vessel and no longer does).
+ */
+async function activateFromBadgeFee(service: ServiceClient, intent: Stripe.PaymentIntent) {
   const mxeId = intent.metadata?.mxe_id;
   if (!mxeId) {
-    console.error(`[stripe-webhook] payment_intent.succeeded ${intent.id} has payment_type=setup_fee but no metadata.mxe_id.`);
+    console.error(`[stripe-webhook] payment_intent.succeeded ${intent.id} has payment_type=badge_fee but no metadata.mxe_id.`);
     return;
   }
 
@@ -149,7 +154,7 @@ async function activateFromSetupFee(service: ServiceClient, intent: Stripe.Payme
   if (!existingPayment) {
     await service.from("vessel_payments").insert({
       vessel_id: vessel.id,
-      payment_type: "setup_fee",
+      payment_type: "badge_fee",
       stripe_payment_intent_id: intent.id,
       amount_cents: intent.amount,
       status: "paid",
@@ -160,8 +165,15 @@ async function activateFromSetupFee(service: ServiceClient, intent: Stripe.Payme
   await activateVessel(service, vessel, mxeId, `payment_intent.succeeded ${intent.id}`);
 }
 
-/** Path B — Full tier, both the first invoice and renewals land here. */
-async function recordSubscriptionInvoice(service: ServiceClient, invoice: Stripe.Invoice) {
+/**
+ * Full Access subscription — account-level (build spec §9 item 16). One
+ * subscription per account, covering every vessel that account owns.
+ * Unlike the old per-vessel version, this never activates a vessel's
+ * qr_status — that's the badge fee's job, unconditionally, regardless of
+ * tier. This only ever updates the owner's account-level tier/status and
+ * logs the charge.
+ */
+async function recordAccountSubscriptionInvoice(service: ServiceClient, invoice: Stripe.Invoice) {
   // Invoice.subscription was removed from the Stripe API (installed SDK:
   // stripe@22) — the subscription now lives under parent.subscription_details.
   const subscriptionDetails = invoice.parent?.subscription_details;
@@ -178,16 +190,21 @@ async function recordSubscriptionInvoice(service: ServiceClient, invoice: Stripe
   }
 
   const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
-  const mxeId = subscription.metadata?.mxe_id;
-  if (!mxeId) {
-    console.error(`[stripe-webhook] invoice.paid ${invoice.id} / subscription ${subscriptionId} has no metadata.mxe_id.`);
-    return;
-  }
+  const customerId = typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id;
 
-  const { data: vesselRow } = await service.from("vessels").select("id, qr_status").eq("mxe_id", mxeId).maybeSingle();
-  const vessel = vesselRow as { id: string; qr_status: string | null } | null;
-  if (!vessel) {
-    console.error(`[stripe-webhook] invoice.paid ${invoice.id}: no vessel found for mxe_id=${mxeId}.`);
+  // stripe_customer_id, not subscription.metadata.owner_id — the customer
+  // id is already the unique, indexed key every other billing lookup in
+  // this codebase uses, and doesn't depend on metadata having survived
+  // (metadata is still set at creation for traceability in the Stripe
+  // dashboard, just not relied on here).
+  const { data: ownerRow } = await service
+    .from("users")
+    .select("id")
+    .eq("stripe_customer_id", customerId)
+    .maybeSingle();
+  const owner = ownerRow as { id: string } | null;
+  if (!owner) {
+    console.error(`[stripe-webhook] invoice.paid ${invoice.id}: no user found for stripe_customer_id=${customerId}.`);
     return;
   }
 
@@ -195,38 +212,31 @@ async function recordSubscriptionInvoice(service: ServiceClient, invoice: Stripe
   // sits behind invoice.payments, a paginated list needing its own expand
   // + fetch. Not worth the extra round-trip purely for a dedup key: the
   // invoice's own id is unique per invoice and equally good for idempotency.
-  //
-  // Same rule as activateFromSetupFee: this check only guards the payment
-  // record insert, and must never gate the activation attempt below.
   const { data: existingPayment } = await service
-    .from("vessel_payments")
+    .from("account_payments")
     .select("id")
-    .eq("stripe_payment_intent_id", invoice.id)
+    .eq("stripe_invoice_id", invoice.id)
     .maybeSingle();
 
   if (!existingPayment) {
-    await service.from("vessel_payments").insert({
-      vessel_id: vessel.id,
-      payment_type: "subscription",
-      stripe_payment_intent_id: invoice.id,
+    await service.from("account_payments").insert({
+      owner_id: owner.id,
+      stripe_invoice_id: invoice.id,
       amount_cents: invoice.amount_paid,
       status: "paid",
       paid_at: new Date().toISOString(),
     });
   }
 
-  const isFirstInvoice = invoice.billing_reason === "subscription_create";
-  if (isFirstInvoice) {
-    await activateVessel(service, vessel, mxeId, `invoice.paid ${invoice.id} (subscription_create)`);
-  } else {
-    console.log(`[stripe-webhook] invoice.paid ${invoice.id}: billing_reason=${invoice.billing_reason}, not activating (only subscription_create does).`);
-  }
-
-  const customerId = typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id;
   await service
     .from("users")
-    .update({ subscription_status: "active", subscription_tier: "full", stripe_customer_id: customerId })
-    .eq("stripe_customer_id", customerId);
+    .update({
+      subscription_status: "active",
+      subscription_tier: "full",
+      stripe_customer_id: customerId,
+      stripe_subscription_id: subscription.id,
+    })
+    .eq("id", owner.id);
 }
 
 /**
@@ -239,10 +249,26 @@ async function syncSubscriptionStatus(service: ServiceClient, subscription: Stri
   const customerId = typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id;
 
   if (subscription.status === "canceled" || subscription.status === "unpaid") {
+    // The tier/status downgrade is scoped by customer alone, same as every
+    // other branch here — that must land regardless of what
+    // stripe_subscription_id currently holds, so a stuck "full" tier is
+    // never possible even if the ID column is somehow out of sync.
     await service
       .from("users")
       .update({ subscription_status: "canceled", subscription_tier: "basic" })
       .eq("stripe_customer_id", customerId);
+
+    // Clearing the ID is a separate, best-effort statement, scoped to
+    // exactly the subscription that just ended — keeps the column meaning
+    // "the currently active subscription, if any" without risking, in
+    // some future world with more than one subscription in play, clearing
+    // a different (possibly still-active) subscription's ID than the one
+    // this event is actually about.
+    await service
+      .from("users")
+      .update({ stripe_subscription_id: null })
+      .eq("stripe_customer_id", customerId)
+      .eq("stripe_subscription_id", subscription.id);
   } else if (subscription.status === "past_due") {
     await service.from("users").update({ subscription_status: "past_due" }).eq("stripe_customer_id", customerId);
   } else if (subscription.status === "active") {

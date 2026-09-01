@@ -55,22 +55,12 @@ export default async function VesselPaymentPage({ params }: Props) {
     redirect("/dashboard");
   }
 
-  // Already active — but a Basic customer can still land here to upgrade
-  // to Full (the Account & Billing panel's CTA does exactly this). Only
-  // skip straight to /qr once there's genuinely nothing left to offer:
-  // active AND already on Full. An active-but-Basic vessel falls through
-  // to the tier picker below unchanged.
+  // This page is the badge fee only now — Full Access is an account-level
+  // upgrade (see /dashboard/upgrade), not something a specific vessel's
+  // payment step offers. Once a vessel is active, there's nothing left to
+  // do here regardless of tier.
   if (vessel.qr_status === "active") {
-    const { data: ownerRow } = await service
-      .from("users")
-      .select("subscription_tier")
-      .eq("id", vessel.owner_id)
-      .maybeSingle();
-    const subscriptionTier = (ownerRow as { subscription_tier: string | null } | null)?.subscription_tier;
-
-    if (subscriptionTier === "full") {
-      redirect(`/dashboard/${encodeURIComponent(vessel.mxe_id)}/qr`);
-    }
+    redirect(`/dashboard/${encodeURIComponent(vessel.mxe_id)}/qr`);
   }
 
   const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim();
@@ -88,17 +78,12 @@ export default async function VesselPaymentPage({ params }: Props) {
     );
   }
 
-  // If we get here without redirecting above, an active vessel can only be
-  // active-and-Basic (active-and-Full already redirected) — i.e. an upgrade.
-  const isUpgrade = vessel.qr_status === "active";
-
   return (
     <PaymentForm
       mxeId={vessel.mxe_id}
       vesselName={vessel.vessel_name}
       vesselTag={[vessel.year, vessel.make, vessel.model].filter(Boolean).join(" ")}
       publishableKey={publishableKey}
-      isUpgrade={isUpgrade}
     />
   );
 }

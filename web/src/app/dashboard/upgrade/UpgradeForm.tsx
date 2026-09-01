@@ -3,27 +3,21 @@
 import { useEffect, useState, useTransition, type FormEvent } from "react";
 import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
-import { createBadgeFeeIntent } from "./actions";
-
-type Props = {
-  mxeId: string;
-  vesselName: string;
-  vesselTag: string;
-  publishableKey: string;
-};
+import { createFullAccessUpgradeIntent } from "./actions";
 
 // Placeholder amount — build spec §9 item 9 treats exact pricing as a
 // business decision to plug in later; this just needs to match whatever
-// STRIPE_PRICE_ID_BADGE is configured to in Stripe.
-const BADGE_FEE_COPY = {
-  price: "$49",
-  cadence: "one-time",
+// STRIPE_PRICE_ID_FULL is configured to in Stripe.
+const FULL_ACCESS_COPY = {
+  price: "$12.42/mo",
+  cadence: "billed annually",
   features: [
-    "Weatherproof QR badge, printed & shipped",
-    "Live public + owner profile",
-    "CA Boater Card included — always, on every plan",
-    "Photo + registration document storage",
+    "Unlimited documents & photos, every vessel",
+    "Sharing, ownership transfer, and archiving",
+    "Email reminders before insurance/registration lapse",
+    "Priority badge production",
   ],
+  note: "Covers your whole fleet — up to 5 vessels on one account, one subscription. Vessel badge fees are still paid per vessel, separately.",
 };
 
 let stripePromise: Promise<StripeJs | null> | null = null;
@@ -32,7 +26,7 @@ function getStripeJs(publishableKey: string) {
   return stripePromise;
 }
 
-export function PaymentForm({ mxeId, vesselName, vesselTag, publishableKey }: Props) {
+export function UpgradeForm({ publishableKey }: { publishableKey: string }) {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -40,7 +34,7 @@ export function PaymentForm({ mxeId, vesselName, vesselTag, publishableKey }: Pr
   useEffect(() => {
     let cancelled = false;
     startTransition(async () => {
-      const result = await createBadgeFeeIntent(mxeId);
+      const result = await createFullAccessUpgradeIntent();
       if (cancelled) return;
       if ("error" in result) {
         setError(result.error);
@@ -51,7 +45,7 @@ export function PaymentForm({ mxeId, vesselName, vesselTag, publishableKey }: Pr
     return () => {
       cancelled = true;
     };
-  }, [mxeId]);
+  }, []);
 
   const stripe = getStripeJs(publishableKey);
 
@@ -60,43 +54,40 @@ export function PaymentForm({ mxeId, vesselName, vesselTag, publishableKey }: Pr
       <main className="mx-auto w-full max-w-xl">
         <header className="mb-6">
           <p className="font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
-            Final step · Activate
+            Account &amp; Billing · Upgrade
           </p>
           <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-light text-[var(--navy)]">
-            One boat, <em className="text-[var(--gold)] not-italic">one identity.</em>
+            Full <em className="text-[var(--gold)] not-italic">Access.</em>
           </h1>
           <p className="mt-2 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
-            Your badge prints and ships the moment this clears. {vesselName}&apos;s profile goes live at the same
-            time — anyone who scans it from then on sees a real, active vessel identity.
+            One subscription for your whole account — every vessel you register from here on is covered
+            automatically, no separate upgrade per boat.
           </p>
-          <p className="mt-1 font-[family-name:var(--font-dm)] text-xs text-[var(--text3)]">{vesselTag}</p>
         </header>
 
-        <div className="rounded-xl border border-[var(--divider)] bg-[var(--white)] p-5 shadow-sm">
+        <div className="rounded-xl border border-[var(--gold)] bg-[var(--white)] p-5 shadow-[0_0_0_3px_var(--gold-dim)]">
           <div className="flex items-start justify-between gap-4">
             <span className="font-[family-name:var(--font-display)] text-xl italic text-[var(--navy)]">
-              Badge activation
+              Full Access
             </span>
             <div className="text-right">
               <div className="font-[family-name:var(--font-dm)] text-xl font-semibold text-[var(--navy)]">
-                {BADGE_FEE_COPY.price}
+                {FULL_ACCESS_COPY.price}
               </div>
               <div className="font-[family-name:var(--font-dm)] text-[10px] uppercase tracking-[0.08em] text-[var(--text3)]">
-                {BADGE_FEE_COPY.cadence}
+                {FULL_ACCESS_COPY.cadence}
               </div>
             </div>
           </div>
           <ul className="mt-3 flex flex-col gap-1.5">
-            {BADGE_FEE_COPY.features.map((f) => (
+            {FULL_ACCESS_COPY.features.map((f) => (
               <li key={f} className="font-[family-name:var(--font-dm)] text-[13px] leading-relaxed text-[var(--text2)]">
                 — {f}
               </li>
             ))}
           </ul>
-          <p className="mt-3 font-[family-name:var(--font-dm)] text-[11px] italic leading-relaxed text-[var(--text3)]">
-            Every vessel needs its own badge — this covers {vesselName}&apos;s specifically. Want unlimited
-            documents, sharing, and email reminders across your whole fleet? That&apos;s Full Access, a separate
-            account-wide upgrade available anytime from Account &amp; Billing.
+          <p className="mt-2.5 font-[family-name:var(--font-dm)] text-[11px] italic leading-relaxed text-[var(--text3)]">
+            {FULL_ACCESS_COPY.note}
           </p>
         </div>
 
@@ -106,7 +97,7 @@ export function PaymentForm({ mxeId, vesselName, vesselTag, publishableKey }: Pr
           ) : null}
           {clientSecret ? (
             <Elements key={clientSecret} stripe={stripe} options={{ clientSecret }}>
-              <CheckoutInner mxeId={mxeId} vesselName={vesselName} />
+              <CheckoutInner />
             </Elements>
           ) : error ? null : (
             <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--text3)]">
@@ -119,7 +110,7 @@ export function PaymentForm({ mxeId, vesselName, vesselTag, publishableKey }: Pr
   );
 }
 
-function CheckoutInner({ mxeId, vesselName }: { mxeId: string; vesselName: string }) {
+function CheckoutInner() {
   const stripe = useStripe();
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
@@ -131,7 +122,7 @@ function CheckoutInner({ mxeId, vesselName }: { mxeId: string; vesselName: strin
     setSubmitting(true);
     setError(null);
 
-    const processingUrl = `${window.location.origin}/dashboard/${encodeURIComponent(mxeId)}/payment/processing`;
+    const processingUrl = `${window.location.origin}/dashboard/upgrade/processing`;
 
     const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
       elements,
@@ -168,7 +159,7 @@ function CheckoutInner({ mxeId, vesselName }: { mxeId: string; vesselName: strin
         disabled={!stripe || submitting}
         className="mt-6 w-full rounded-lg bg-[var(--aqua-bright)] px-6 py-3.5 font-[family-name:var(--font-dm)] text-sm font-bold uppercase tracking-[0.12em] text-[var(--navy-deep)] disabled:opacity-50"
       >
-        {submitting ? "Processing…" : `Activate ${vesselName} →`}
+        {submitting ? "Processing…" : "Upgrade to Full Access →"}
       </button>
     </form>
   );

@@ -8,10 +8,19 @@ const TIMEOUT_MS = 45_000;
 
 /**
  * Re-runs the server component on an interval until it sees the relevant
- * field flip — qr_status to 'active' for first-time activation, or
- * subscription_tier to 'full' for an upgrade (the page itself redirects
- * once it does). Purely a polling nudge — no client-side code here ever
- * writes either field.
+ * field flip — qr_status to 'active' for first-time vessel activation, or
+ * subscription_tier to 'full' for an account-level Full Access upgrade
+ * (the page itself redirects once it does). Purely a polling nudge — no
+ * client-side code here ever writes either field.
+ *
+ * Shared by two unrelated routes: dashboard/[mxeId]/payment/processing
+ * (badge-fee activation) and dashboard/upgrade/processing (account-level
+ * subscription upgrade, build spec §9 item 16) — hence living in the
+ * general components directory rather than under either route.
+ *
+ * mxeId is optional because the account-level upgrade isn't about any
+ * specific vessel — mode="upgrade" without an mxeId shows account-generic
+ * copy instead of naming one.
  *
  * Stops after TIMEOUT_MS instead of spinning forever: if the webhook never
  * arrives (misconfigured `stripe listen`, a mismatched STRIPE_WEBHOOK_SECRET,
@@ -23,7 +32,7 @@ export function ActivationPoller({
   mxeId,
   mode = "activate",
 }: {
-  mxeId: string;
+  mxeId?: string;
   mode?: "activate" | "upgrade";
 }) {
   const router = useRouter();
@@ -51,7 +60,7 @@ export function ActivationPoller({
         </p>
         <p className="max-w-sm font-[family-name:var(--font-dm)] text-sm text-[rgba(255,255,255,.6)]">
           {mode === "upgrade"
-            ? `${mxeId}'s upgrade hasn't completed after 45 seconds. If your card was charged, the payment went through but confirmation hasn't reached us yet — this doesn't need to be retried blindly. Check your Stripe Dashboard before paying again.`
+            ? `${mxeId ? `${mxeId}'s` : "Your account's"} upgrade hasn't completed after 45 seconds. If your card was charged, the payment went through but confirmation hasn't reached us yet — this doesn't need to be retried blindly. Check your Stripe Dashboard before paying again.`
             : `${mxeId} hasn't activated after 45 seconds. If your card was charged, the payment went through but confirmation hasn't reached us yet — this doesn't need to be retried blindly. Check your Stripe Dashboard before paying again.`}
         </p>
         <div className="mt-2 flex gap-3">
@@ -74,7 +83,7 @@ export function ActivationPoller({
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--navy-deep)] px-6 text-center">
       <div className="h-10 w-10 animate-spin rounded-full border-2 border-[rgba(255,255,255,.15)] border-t-[var(--aqua-bright)]" />
       <p className="font-[family-name:var(--font-display)] text-2xl font-light italic text-white">
-        {mode === "upgrade" ? "Upgrading to Full Access" : `Activating ${mxeId}`}
+        {mode === "upgrade" ? "Upgrading to Full Access" : `Activating ${mxeId ?? "vessel"}`}
       </p>
       <p className="max-w-xs font-[family-name:var(--font-dm)] text-sm text-[rgba(255,255,255,.6)]">
         This usually takes a few seconds — your payment is confirmed, we&apos;re finishing setup.

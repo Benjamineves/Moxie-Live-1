@@ -16,7 +16,14 @@ async function signOutAction() {
   redirect("/login");
 }
 
-export default async function DashboardPage() {
+type Props = {
+  searchParams: Promise<{ upgraded?: string }>;
+};
+
+export default async function DashboardPage({ searchParams }: Props) {
+  const sp = await searchParams;
+  const justUpgraded = sp.upgraded === "1";
+
   const supabase = await createSupabaseServerClient();
   if (!supabase) {
     redirect("/login?next=/dashboard");
@@ -97,6 +104,13 @@ export default async function DashboardPage() {
       </header>
 
       <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6">
+        {justUpgraded ? (
+          <div className="mb-6 rounded-xl border border-[var(--gold-line)] bg-[var(--gold-dim)] px-4 py-3">
+            <p className="font-[family-name:var(--font-dm)] text-sm font-medium text-[var(--navy)]">
+              You&apos;re on Full Access — every vessel on this account is covered.
+            </p>
+          </div>
+        ) : null}
         <div className="mb-6 flex items-end justify-between gap-4">
           <div>
             <p className="font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.12em] text-[var(--text3)]">

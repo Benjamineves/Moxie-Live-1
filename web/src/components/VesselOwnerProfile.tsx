@@ -122,7 +122,7 @@ export function VesselOwnerProfile({
             >
               Shares
             </Link>
-            <AccountBillingPanel billing={billing} mxeId={tier.mxe_id} />
+            <AccountBillingPanel billing={billing} />
             <SignOutButton />
           </div>
         </div>

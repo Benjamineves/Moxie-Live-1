@@ -15,10 +15,11 @@ export type BillingSummary = {
 
 /**
  * Account-level, not per-vessel — payment history spans every vessel the
- * owner has, and tier/status live on `users`, not `vessels`. Shared by the
- * GET /api/users/:userId/billing route (build spec §14) and the owner
- * profile page, which pre-fetches this once per page load rather than
- * re-querying it when the fleet switcher changes vessels.
+ * owner has, and tier/status live on `users`, not `vessels` (build spec §9
+ * item 16). Two separate charge types feed the combined history: badge
+ * fees (vessel_payments, one row per vessel) and Full Access subscription
+ * charges (account_payments, one row per account) — merged and sorted here
+ * since the account panel shows them as one list.
  */
 export async function getOwnerBillingSummary(ownerId: string): Promise<BillingSummary | null> {
   const service = createSupabaseServiceClient();
@@ -36,24 +37,41 @@ export async function getOwnerBillingSummary(ownerId: string): Promise<BillingSu
   const vesselNameById = new Map(vessels.map((v) => [v.id, v.vessel_name]));
   const vesselIds = vessels.map((v) => v.id);
 
-  let paymentRows: { vessel_id: string; payment_type: string; status: string; paid_at: string | null }[] = [];
+  let badgePayments: { vessel_id: string; payment_type: string; status: string; paid_at: string | null }[] = [];
   if (vesselIds.length > 0) {
     const { data } = await service
       .from("vessel_payments")
       .select("vessel_id, payment_type, status, paid_at")
       .in("vessel_id", vesselIds)
       .order("paid_at", { ascending: false });
-    paymentRows = (data ?? []) as typeof paymentRows;
+    badgePayments = (data ?? []) as typeof badgePayments;
   }
 
-  return {
-    subscriptionTier: user?.subscription_tier === "full" ? "full" : "basic",
-    subscriptionStatus: user?.subscription_status ?? null,
-    payments: paymentRows.map((p) => ({
+  const { data: subscriptionPaymentRows } = await service
+    .from("account_payments")
+    .select("status, paid_at")
+    .eq("owner_id", ownerId)
+    .order("paid_at", { ascending: false });
+  const subscriptionPayments = (subscriptionPaymentRows ?? []) as { status: string; paid_at: string | null }[];
+
+  const payments: BillingPayment[] = [
+    ...badgePayments.map((p) => ({
       vesselName: vesselNameById.get(p.vessel_id) ?? "Vessel",
       paymentType: p.payment_type,
       status: p.status,
       paidAt: p.paid_at,
     })),
+    ...subscriptionPayments.map((p) => ({
+      vesselName: "Account",
+      paymentType: "subscription",
+      status: p.status,
+      paidAt: p.paid_at,
+    })),
+  ].sort((a, b) => (b.paidAt ?? "").localeCompare(a.paidAt ?? ""));
+
+  return {
+    subscriptionTier: user?.subscription_tier === "full" ? "full" : "basic",
+    subscriptionStatus: user?.subscription_status ?? null,
+    payments,
   };
 }

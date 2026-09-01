@@ -6,7 +6,7 @@ import { openBillingPortal } from "@/lib/owner-actions";
 import type { BillingSummary } from "@/lib/billing-service";
 
 const PAYMENT_TYPE_LABELS: Record<string, string> = {
-  setup_fee: "Setup fee",
+  badge_fee: "Badge fee",
   subscription: "Full Access",
 };
 
@@ -25,7 +25,7 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
  * Profile/My Fleet/Docs tabs exist in the app yet, so this only ports the
  * one entry point that was actually asked for.
  */
-export function AccountBillingPanel({ billing, mxeId }: { billing: BillingSummary; mxeId: string }) {
+export function AccountBillingPanel({ billing }: { billing: BillingSummary }) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -120,7 +120,7 @@ export function AccountBillingPanel({ billing, mxeId }: { billing: BillingSummar
                   </>
                 ) : (
                   <Link
-                    href={`/dashboard/${encodeURIComponent(mxeId)}/payment`}
+                    href="/dashboard/upgrade"
                     className="block w-full bg-[var(--aqua-bright)] px-3 py-3 text-center font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--navy)]"
                   >
                     Upgrade to Full Access →
