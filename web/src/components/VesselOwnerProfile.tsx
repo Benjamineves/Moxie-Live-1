@@ -136,18 +136,12 @@ export function VesselOwnerProfile({
 
       <VesselPublicProfile {...publicProps} hideFooter />
 
-      {!tier.photo_url ? (
-        <AddPhotoNudge mxeId={tier.mxe_id} vesselName={tier.vessel_name} />
-      ) : (
-        <ReplacePhotoControl mxeId={tier.mxe_id} />
-      )}
+      {!tier.photo_url ? <AddPhotoNudge mxeId={tier.mxe_id} vesselName={tier.vessel_name} /> : null}
 
-      <div className="mx-auto flex max-w-lg justify-end gap-4 px-5 md:px-8">
+      <div className="mx-auto flex max-w-lg flex-col items-end gap-3 px-5 md:px-8">
+        {tier.photo_url ? <ReplacePhotoControl mxeId={tier.mxe_id} /> : null}
         <VesselDetailsEdit mxeId={tier.mxe_id} vessel_name={tier.vessel_name} />
         <NotesEdit mxeId={tier.mxe_id} public_notes={tier.public_notes} />
-      </div>
-
-      <div className="mx-auto max-w-lg px-5 md:px-8">
         <RequestIdentityCorrection
           mxeId={tier.mxe_id}
           currentValues={{
