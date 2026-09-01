@@ -114,11 +114,19 @@ export async function createVessel(
     ownerDisplayEmail = ownerEmail;
   }
 
+  // Only vessels that actually completed activation count against the
+  // cap. Before this, an abandoned/never-paid registration burned a slot
+  // forever — exactly the scenario the dashboard's resume path (finish
+  // activating an unpaid vessel) exists to fix, so the cap can't be
+  // exempt from the same fix: someone who abandons checkout twice
+  // shouldn't come back to find their account artificially full of
+  // vessels that were never real.
   const VESSEL_LIMIT = 5;
   const { count: vesselCount, error: countError } = await service
     .from("vessels")
     .select("id", { count: "exact", head: true })
-    .eq("owner_id", ownerId);
+    .eq("owner_id", ownerId)
+    .eq("qr_status", "active");
   if (countError) {
     return { error: `Unable to check vessel count: ${countError.message}` };
   }

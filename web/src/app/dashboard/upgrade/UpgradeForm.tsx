@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition, type FormEvent } from "react";
+import { useCallback, useEffect, useState, useTransition, type FormEvent } from "react";
 import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { createFullAccessUpgradeIntent } from "./actions";
@@ -31,32 +31,42 @@ export function UpgradeForm({ publishableKey }: { publishableKey: string }) {
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  useEffect(() => {
-    let cancelled = false;
+  const attempt = useCallback((onCancelled: () => boolean) => {
     startTransition(async () => {
       // createFullAccessUpgradeIntent catches its own Stripe/DB errors and
       // returns {error} rather than throwing — this try/catch is a second
       // layer in case something still escapes. Without it, an uncaught
       // rejection here left the UI stuck on "Loading…" forever with no
-      // visible error (see the badge-fee checkout page for the confirmed
-      // live case of this exact failure mode).
+      // visible error and no way to retry (see the badge-fee checkout
+      // page for the confirmed live case of this exact failure mode).
       try {
         const result = await createFullAccessUpgradeIntent();
-        if (cancelled) return;
+        if (onCancelled()) return;
         if ("error" in result) {
           setError(result.error);
           return;
         }
         setClientSecret(result.clientSecret);
       } catch (err) {
-        if (cancelled) return;
+        if (onCancelled()) return;
         setError(err instanceof Error ? err.message : "Could not start checkout. Please try again.");
       }
     });
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    attempt(() => cancelled);
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [attempt]);
+
+  function retry() {
+    setError(null);
+    setClientSecret(null);
+    attempt(() => false);
+  }
 
   const stripe = getStripeJs(publishableKey);
 
@@ -104,7 +114,19 @@ export function UpgradeForm({ publishableKey }: { publishableKey: string }) {
 
         <div className="mt-8">
           {error ? (
-            <p className="mb-4 font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">{error}</p>
+            <div className="mb-4 rounded-xl border border-[var(--red-fg)] bg-[var(--red-bg)] p-4">
+              <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">
+                Couldn&apos;t start checkout: {error}
+              </p>
+              <button
+                type="button"
+                onClick={retry}
+                disabled={pending}
+                className="mt-3 rounded-lg border border-[var(--red-fg)] px-4 py-2 font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--red-fg)] disabled:opacity-50"
+              >
+                {pending ? "Retrying…" : "Try again"}
+              </button>
+            </div>
           ) : null}
           {clientSecret ? (
             <Elements key={clientSecret} stripe={stripe} options={{ clientSecret }}>

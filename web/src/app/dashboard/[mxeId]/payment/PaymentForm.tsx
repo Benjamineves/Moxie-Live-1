@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition, type FormEvent } from "react";
+import { useCallback, useEffect, useState, useTransition, type FormEvent } from "react";
 import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { createBadgeFeeIntent } from "./actions";
@@ -37,32 +37,46 @@ export function PaymentForm({ mxeId, vesselName, vesselTag, publishableKey }: Pr
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
+  const attempt = useCallback(
+    (onCancelled: () => boolean) => {
+      startTransition(async () => {
+        // createBadgeFeeIntent catches its own Stripe/DB errors and
+        // returns {error} rather than throwing — but this try/catch is a
+        // second layer in case something still escapes (a network
+        // failure reaching the action at all, for instance). Without it,
+        // an uncaught rejection here left the UI stuck on "Loading…"
+        // forever with no visible error and no way to retry — confirmed
+        // live on the badge-fee checkout page.
+        try {
+          const result = await createBadgeFeeIntent(mxeId);
+          if (onCancelled()) return;
+          if ("error" in result) {
+            setError(result.error);
+            return;
+          }
+          setClientSecret(result.clientSecret);
+        } catch (err) {
+          if (onCancelled()) return;
+          setError(err instanceof Error ? err.message : "Could not start checkout. Please try again.");
+        }
+      });
+    },
+    [mxeId],
+  );
+
   useEffect(() => {
     let cancelled = false;
-    startTransition(async () => {
-      // createBadgeFeeIntent catches its own Stripe/DB errors and returns
-      // {error} rather than throwing — but this try/catch is a second
-      // layer in case something still escapes (a network failure reaching
-      // the action at all, for instance). Without it, an uncaught
-      // rejection here left the UI stuck on "Loading…" forever with no
-      // visible error — confirmed live on the badge-fee checkout page.
-      try {
-        const result = await createBadgeFeeIntent(mxeId);
-        if (cancelled) return;
-        if ("error" in result) {
-          setError(result.error);
-          return;
-        }
-        setClientSecret(result.clientSecret);
-      } catch (err) {
-        if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Could not start checkout. Please try again.");
-      }
-    });
+    attempt(() => cancelled);
     return () => {
       cancelled = true;
     };
-  }, [mxeId]);
+  }, [attempt]);
+
+  function retry() {
+    setError(null);
+    setClientSecret(null);
+    attempt(() => false);
+  }
 
   const stripe = getStripeJs(publishableKey);
 
@@ -113,7 +127,19 @@ export function PaymentForm({ mxeId, vesselName, vesselTag, publishableKey }: Pr
 
         <div className="mt-8">
           {error ? (
-            <p className="mb-4 font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">{error}</p>
+            <div className="mb-4 rounded-xl border border-[var(--red-fg)] bg-[var(--red-bg)] p-4">
+              <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">
+                Couldn&apos;t start checkout: {error}
+              </p>
+              <button
+                type="button"
+                onClick={retry}
+                disabled={pending}
+                className="mt-3 rounded-lg border border-[var(--red-fg)] px-4 py-2 font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--red-fg)] disabled:opacity-50"
+              >
+                {pending ? "Retrying…" : "Try again"}
+              </button>
+            </div>
           ) : null}
           {clientSecret ? (
             <Elements key={clientSecret} stripe={stripe} options={{ clientSecret }}>

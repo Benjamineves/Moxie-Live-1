@@ -97,6 +97,13 @@ export function filterVesselForRole(v: VesselRecord, role: ProfileRole): Record<
   if (role === "owner") {
     return {
       ...basePublic,
+      // Owner-only: whether this vessel still needs the badge fee paid.
+      // Not part of basePublic — the public page already gates on this
+      // separately (via the full VesselRecord, before this function is
+      // even called) and shows its own "not yet active" state instead of
+      // ever reaching VesselPublicProfile, so public callers don't need
+      // it duplicated here.
+      qr_status: v.qr_status,
       slip_number: v.slip_number,
       marina_phone: v.marina_phone,
       is_liveaboard: v.is_liveaboard,

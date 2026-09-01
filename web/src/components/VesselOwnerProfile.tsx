@@ -19,6 +19,7 @@ import { ShareSheet } from "@/components/share/ShareSheet";
 import type { BillingSummary } from "@/lib/billing-service";
 
 export type OwnerProfileTier = PublicProfileProps & {
+  qr_status?: string | null;
   slip_number?: string | null;
   marina_phone?: string | null;
   is_liveaboard?: boolean | null;
@@ -101,6 +102,15 @@ export function VesselOwnerProfile({
   const isMarinaStorage =
     tier.storage_type == null || tier.storage_type === "marina" || tier.storage_type === "mooring";
 
+  // Unlike the public page (which gates on this before ever reaching
+  // VesselPublicProfile), the owner view has always rendered regardless
+  // of activation state — there was previously no way for an owner to
+  // even tell, from here, that checkout never finished. Not
+  // dismissible: the underlying problem persists until the badge fee is
+  // actually paid, so this stays visible on every visit rather than
+  // being closeable once and forgotten.
+  const needsActivation = tier.qr_status != null && tier.qr_status !== "active";
+
   return (
     <>
       <BfcacheRefresh />
@@ -127,6 +137,23 @@ export function VesselOwnerProfile({
           </div>
         </div>
       </header>
+
+      {needsActivation ? (
+        <div className="border-b border-[var(--red-fg)] bg-[var(--red-bg)] px-5 py-4 text-center">
+          <p className="font-[family-name:var(--font-dm)] text-sm font-semibold text-[var(--red-fg)]">
+            This vessel isn&apos;t active yet — the badge fee hasn&apos;t been paid.
+          </p>
+          <p className="mt-1 font-[family-name:var(--font-dm)] text-xs text-[var(--red-fg)]">
+            No badge ships and no public profile goes live until this is finished.
+          </p>
+          <Link
+            href={`/dashboard/${encodeURIComponent(tier.mxe_id)}/payment`}
+            className="mt-3 inline-flex rounded-lg bg-[var(--red-fg)] px-5 py-2.5 font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-white"
+          >
+            Finish activating this vessel →
+          </Link>
+        </div>
+      ) : null}
 
       {justUpgraded ? (
         <div className="border-b border-[var(--divider)] bg-[var(--green-bg)] px-5 py-3 text-center">

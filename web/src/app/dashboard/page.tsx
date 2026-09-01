@@ -155,52 +155,78 @@ export default async function DashboardPage({ searchParams }: Props) {
 
         {ownedVessels.length > 0 ? (
           <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {ownedVessels.map((vessel) => (
-              <article
-                key={vessel.id}
-                className="overflow-hidden rounded-2xl border border-[var(--divider)] bg-[var(--white)] shadow-sm"
-              >
-                <div className="aspect-[16/10] bg-[var(--cream2)]">
-                  {vessel.photo_url?.startsWith("http") ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={vessel.photo_url} alt={vessel.vessel_name} className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="flex h-full items-center justify-center text-4xl text-[var(--gold)]">⚓</div>
-                  )}
-                </div>
-                <div className="p-4">
-                  <p className="inline-flex rounded-full bg-[var(--gold-dim)] px-2.5 py-1 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--navy)]">
-                    {vessel.mxe_id}
-                  </p>
-                  <h3 className="mt-3 font-[family-name:var(--font-display)] text-2xl font-light italic text-[var(--navy)]">
-                    {vessel.vessel_name}
-                  </h3>
-                  <p className="mt-1 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
-                    {vessel.make} {vessel.model} · {vessel.year}
-                  </p>
-                  <div className="mt-4 flex flex-wrap gap-3">
-                    <Link
-                      href={`/${encodeURIComponent(vessel.mxe_id)}`}
-                      className="font-[family-name:var(--font-dm)] text-sm text-[var(--blue-fg)] underline"
-                    >
-                      View public profile
-                    </Link>
-                    <Link
-                      href={`/${encodeURIComponent(vessel.mxe_id)}?role=owner`}
-                      className="font-[family-name:var(--font-dm)] text-sm text-[var(--blue-fg)] underline"
-                    >
-                      Manage
-                    </Link>
-                    <Link
-                      href={`/dashboard/${encodeURIComponent(vessel.mxe_id)}/qr`}
-                      className="font-[family-name:var(--font-dm)] text-sm text-[var(--blue-fg)] underline"
-                    >
-                      QR code
-                    </Link>
+            {ownedVessels.map((vessel) => {
+              const needsActivation = vessel.qr_status !== "active";
+              return (
+                <article
+                  key={vessel.id}
+                  className={`overflow-hidden rounded-2xl border bg-[var(--white)] shadow-sm ${
+                    needsActivation ? "border-[var(--red-fg)]" : "border-[var(--divider)]"
+                  }`}
+                >
+                  <div className="aspect-[16/10] bg-[var(--cream2)]">
+                    {vessel.photo_url?.startsWith("http") ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={vessel.photo_url} alt={vessel.vessel_name} className="h-full w-full object-cover" />
+                    ) : (
+                      <div className="flex h-full items-center justify-center text-4xl text-[var(--gold)]">⚓</div>
+                    )}
                   </div>
-                </div>
-              </article>
-            ))}
+                  <div className="p-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="inline-flex rounded-full bg-[var(--gold-dim)] px-2.5 py-1 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--navy)]">
+                        {vessel.mxe_id}
+                      </p>
+                      {needsActivation ? (
+                        <p className="inline-flex rounded-full bg-[var(--red-bg)] px-2.5 py-1 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--red-fg)]">
+                          Needs activation
+                        </p>
+                      ) : null}
+                    </div>
+                    <h3 className="mt-3 font-[family-name:var(--font-display)] text-2xl font-light italic text-[var(--navy)]">
+                      {vessel.vessel_name}
+                    </h3>
+                    <p className="mt-1 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
+                      {vessel.make} {vessel.model} · {vessel.year}
+                    </p>
+                    {needsActivation ? (
+                      <>
+                        <p className="mt-3 font-[family-name:var(--font-dm)] text-xs text-[var(--red-fg)]">
+                          Badge fee unpaid — no badge ships and no public profile until this is finished.
+                        </p>
+                        <Link
+                          href={`/dashboard/${encodeURIComponent(vessel.mxe_id)}/payment`}
+                          className="mt-4 inline-flex rounded-lg bg-[var(--red-fg)] px-4 py-2 font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-white"
+                        >
+                          Finish activating →
+                        </Link>
+                      </>
+                    ) : (
+                      <div className="mt-4 flex flex-wrap gap-3">
+                        <Link
+                          href={`/${encodeURIComponent(vessel.mxe_id)}`}
+                          className="font-[family-name:var(--font-dm)] text-sm text-[var(--blue-fg)] underline"
+                        >
+                          View public profile
+                        </Link>
+                        <Link
+                          href={`/${encodeURIComponent(vessel.mxe_id)}?role=owner`}
+                          className="font-[family-name:var(--font-dm)] text-sm text-[var(--blue-fg)] underline"
+                        >
+                          Manage
+                        </Link>
+                        <Link
+                          href={`/dashboard/${encodeURIComponent(vessel.mxe_id)}/qr`}
+                          className="font-[family-name:var(--font-dm)] text-sm text-[var(--blue-fg)] underline"
+                        >
+                          QR code
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
           </section>
         ) : null}
       </main>
