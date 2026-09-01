@@ -90,6 +90,8 @@ export function VesselOwnerProfile({
     photo_url: tier.photo_url,
     storage_type: tier.storage_type,
     storage_description: tier.storage_description,
+    storage_state: tier.storage_state,
+    storage_city: tier.storage_city,
     marina_name: tier.marina_name,
     marina_city: tier.marina_city,
   };
@@ -165,6 +167,8 @@ export function VesselOwnerProfile({
             mxeId={tier.mxe_id}
             storage_type={tier.storage_type}
             storage_description={tier.storage_description}
+            storage_state={tier.storage_state}
+            storage_city={tier.storage_city}
             marina_name={tier.marina_name}
             marina_city={tier.marina_city}
             slip_number={tier.slip_number}

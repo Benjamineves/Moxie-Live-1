@@ -22,7 +22,12 @@ export type VesselRecord = {
   is_public?: boolean | null;
   storage_type: string | null;
   storage_description: string | null;
+  /** Two-letter USPS code for where the vessel is stored (not registered). */
+  storage_state: string | null;
+  /** City name only, no state suffix. Captured for every storage type. */
+  storage_city: string | null;
   marina_name: string | null;
+  /** Legacy combined "City, ST" string — marina/mooring rows predating storage_city/storage_state. */
   marina_city: string | null;
   qr_status: string | null;
   qr_generated_at: string | null;

@@ -3,6 +3,7 @@
 import { generateNextMxeId } from "@/lib/mxe-id";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { isValidStateCode, normalizeStateCode } from "@/lib/us-states";
 
 const STORAGE_TYPES = ["marina", "mooring", "trailer", "home", "yard", "other"] as const;
 export type StorageType = (typeof STORAGE_TYPES)[number];
@@ -20,6 +21,8 @@ export type CreateVesselInput = {
   doc_registration_url?: string | null;
   doc_insurance_url?: string | null;
   storage_type: StorageType;
+  storage_state: string;
+  storage_city?: string | null;
   storage_description?: string | null;
   marina_name?: string | null;
   marina_city?: string | null;
@@ -38,6 +41,12 @@ function validate(input: CreateVesselInput) {
     return "Year must be between 1900 and 2030.";
   }
   if (!STORAGE_TYPES.includes(input.storage_type)) return "Invalid storage type.";
+  // Storage state is the one new required field. Validated here as well
+  // as in the form, against the shared 50-state + DC list, so a crafted
+  // request can't write an arbitrary string into the column the
+  // geographic dashboard reads.
+  if (!input.storage_state?.trim()) return "Storage state is required.";
+  if (!isValidStateCode(input.storage_state)) return "Invalid storage state.";
   return null;
 }
 
@@ -144,6 +153,13 @@ export async function createVessel(
       // comment on vessels.marina_name/marina_city. It's reserved for the
       // marina role's future create/match flow, not this self-serve funnel.
       storage_type: input.storage_type,
+      // Structured location — captured for every storage type, not just
+      // marina/mooring. New vessels populate these instead of the legacy
+      // combined "City, ST" marina_city string, which stays in the
+      // schema (and in the display fallback) only for rows that predate
+      // this change.
+      storage_state: normalizeStateCode(input.storage_state),
+      storage_city: input.storage_city?.trim() || null,
       storage_description: isMarinaStorage ? null : input.storage_description?.trim() || null,
       marina_name: isMarinaStorage ? input.marina_name?.trim() || null : null,
       marina_city: isMarinaStorage ? input.marina_city?.trim() || null : null,

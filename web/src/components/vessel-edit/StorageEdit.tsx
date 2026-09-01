@@ -3,13 +3,15 @@
 import { useSectionEdit } from "@/lib/useSectionEdit";
 import { updateVesselOwnerFields } from "@/lib/owner-actions";
 import { StorageTypePicker, isMarinaGroup, type StorageType } from "@/components/StorageTypePicker";
+import { US_STATES } from "@/lib/us-states";
 import { inputClass, labelClass, editTriggerClass, saveButtonClass, cancelButtonClass } from "./formStyles";
 
 type Fields = {
   storage_type: StorageType;
   storage_description: string;
+  storage_state: string;
+  storage_city: string;
   marina_name: string;
-  marina_city: string;
   slip_number: string;
   marina_phone: string;
   is_liveaboard: boolean;
@@ -20,6 +22,8 @@ export function StorageEdit({
   mxeId,
   storage_type,
   storage_description,
+  storage_state,
+  storage_city,
   marina_name,
   marina_city,
   slip_number,
@@ -30,6 +34,8 @@ export function StorageEdit({
   mxeId: string;
   storage_type: string | null | undefined;
   storage_description: string | null | undefined;
+  storage_state: string | null | undefined;
+  storage_city: string | null | undefined;
   marina_name: string | null | undefined;
   marina_city: string | null | undefined;
   slip_number: string | null | undefined;
@@ -40,8 +46,12 @@ export function StorageEdit({
   const initial: Fields = {
     storage_type: (storage_type as StorageType) ?? "marina",
     storage_description: storage_description ?? "",
+    storage_state: storage_state ?? "",
+    // Seed the new city field from the legacy combined "City, ST"
+    // string for vessels that predate storage_city, so editing one
+    // doesn't start from blank and silently drop its location.
+    storage_city: storage_city ?? marina_city?.split(",")[0]?.trim() ?? "",
     marina_name: marina_name ?? "",
-    marina_city: marina_city ?? "",
     slip_number: slip_number ?? "",
     marina_phone: marina_phone ?? "",
     is_liveaboard: is_liveaboard ?? false,
@@ -62,13 +72,39 @@ export function StorageEdit({
   return (
     <div className="mt-4 grid gap-4 rounded-xl border border-[var(--divider)] bg-[var(--white)] p-5 shadow-sm">
       <label className={labelClass}>
-        Where is your vessel stored?
+        State
+        <select
+          className={inputClass}
+          value={values.storage_state}
+          onChange={(e) => setValues((p) => ({ ...p, storage_state: e.target.value }))}
+        >
+          <option value="">Select a state…</option>
+          {US_STATES.map((state) => (
+            <option key={state.code} value={state.code}>
+              {state.name}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className={labelClass}>
+        How is it stored?
         <div className="mt-1 normal-case tracking-normal">
           <StorageTypePicker
             value={values.storage_type}
             onChange={(next) => setValues((p) => ({ ...p, storage_type: next }))}
           />
         </div>
+      </label>
+
+      <label className={labelClass}>
+        City
+        <input
+          className={inputClass}
+          value={values.storage_city}
+          onChange={(e) => setValues((p) => ({ ...p, storage_city: e.target.value }))}
+          placeholder="e.g. Oakland"
+        />
       </label>
 
       {marinaGroup ? (
@@ -83,14 +119,6 @@ export function StorageEdit({
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label className={labelClass}>
-              City, State
-              <input
-                className={inputClass}
-                value={values.marina_city}
-                onChange={(e) => setValues((p) => ({ ...p, marina_city: e.target.value }))}
-              />
-            </label>
-            <label className={labelClass}>
               Slip number
               <input
                 className={inputClass}
@@ -98,8 +126,6 @@ export function StorageEdit({
                 onChange={(e) => setValues((p) => ({ ...p, slip_number: e.target.value }))}
               />
             </label>
-          </div>
-          <div className="grid grid-cols-2 gap-3">
             <label className={labelClass}>
               Marina phone
               <input
@@ -109,18 +135,18 @@ export function StorageEdit({
                 onChange={(e) => setValues((p) => ({ ...p, marina_phone: e.target.value }))}
               />
             </label>
-            <label className={labelClass}>
-              Liveaboard?
-              <select
-                className={inputClass}
-                value={values.is_liveaboard ? "yes" : "no"}
-                onChange={(e) => setValues((p) => ({ ...p, is_liveaboard: e.target.value === "yes" }))}
-              >
-                <option value="no">No</option>
-                <option value="yes">Yes</option>
-              </select>
-            </label>
           </div>
+          <label className={labelClass}>
+            Liveaboard?
+            <select
+              className={inputClass}
+              value={values.is_liveaboard ? "yes" : "no"}
+              onChange={(e) => setValues((p) => ({ ...p, is_liveaboard: e.target.value === "yes" }))}
+            >
+              <option value="no">No</option>
+              <option value="yes">Yes</option>
+            </select>
+          </label>
           <label className={labelClass}>
             Slip / mooring notes
             <textarea
@@ -132,12 +158,12 @@ export function StorageEdit({
         </>
       ) : (
         <label className={labelClass}>
-          Storage location
+          Location detail
           <input
             className={inputClass}
             value={values.storage_description}
             onChange={(e) => setValues((p) => ({ ...p, storage_description: e.target.value }))}
-            placeholder="e.g. Home — Walnut Creek, CA"
+            placeholder="e.g. Bay Marine Boatworks"
           />
         </label>
       )}
@@ -154,8 +180,13 @@ export function StorageEdit({
               updateVesselOwnerFields(mxeId, {
                 storage_type: values.storage_type,
                 storage_description: marinaGroup ? null : values.storage_description.trim() || null,
+                storage_state: values.storage_state || null,
+                storage_city: values.storage_city.trim() || null,
                 marina_name: marinaGroup ? values.marina_name.trim() || null : null,
-                marina_city: marinaGroup ? values.marina_city.trim() || null : null,
+                // Cleared once the structured city/state are set, so a
+                // stale combined "City, ST" string can't outlive an edit
+                // and shadow the new fields in the display fallback.
+                marina_city: null,
                 slip_number: marinaGroup ? values.slip_number.trim() || null : null,
                 marina_phone: marinaGroup ? values.marina_phone.trim() || null : null,
                 is_liveaboard: marinaGroup ? values.is_liveaboard : null,

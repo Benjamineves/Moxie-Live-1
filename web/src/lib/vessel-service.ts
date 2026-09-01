@@ -81,6 +81,11 @@ export function filterVesselForRole(v: VesselRecord, role: ProfileRole): Record<
     photo_url: v.photo_url,
     storage_type: v.storage_type,
     storage_description: v.storage_description,
+    // Same public visibility tier the location fields have always had:
+    // city/state are public, while slip_number/marina_phone/slip_notes
+    // stay owner- and marina-only below.
+    storage_state: v.storage_state,
+    storage_city: v.storage_city,
     marina_name,
     marina_city,
   };

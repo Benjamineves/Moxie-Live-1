@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { getStripe } from "@/lib/stripe/server";
 import { resolveOwnerIds, loadOwnedVessel } from "@/lib/vessel-ownership";
+import { normalizeStateCode } from "@/lib/us-states";
 
 /**
  * Updates photo_url on an already-existing vessel — the counterpart to
@@ -59,6 +60,8 @@ const INTRINSIC_FIELDS = ["vessel_name", "reg_state", "reg_number", "reg_expiry"
 type OwnerPatch = Partial<{
   storage_type: string;
   storage_description: string | null;
+  storage_state: string | null;
+  storage_city: string | null;
   marina_name: string | null;
   marina_city: string | null;
   slip_number: string | null;
@@ -90,6 +93,8 @@ type OwnerPatch = Partial<{
 const OWNER_FIELDS = [
   "storage_type",
   "storage_description",
+  "storage_state",
+  "storage_city",
   "marina_name",
   "marina_city",
   "slip_number",
@@ -174,6 +179,20 @@ export async function updateVesselOwnerFields(mxeId: string, patch: OwnerPatch):
 
   const update = pickAllowed(patch, OWNER_FIELDS);
   if (Object.keys(update).length === 0) return {};
+
+  // Same validation the intake action applies — storage_state feeds
+  // geographic reporting, so the edit path can't be the hole that lets
+  // an arbitrary string into that column. Clearing it is allowed.
+  if ("storage_state" in update) {
+    const raw = update.storage_state;
+    if (raw != null && raw !== "") {
+      const normalized = normalizeStateCode(raw);
+      if (!normalized) return { error: "Invalid storage state." };
+      update.storage_state = normalized;
+    } else {
+      update.storage_state = null;
+    }
+  }
 
   const { error } = await service.from("vessels").update(update).eq("id", vessel.id);
   if (error) return { error: error.message };

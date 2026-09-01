@@ -25,6 +25,8 @@ export function getDemoVessel(mxeId: string): VesselRecord | null {
       is_public: true,
       storage_type: "marina",
       storage_description: null,
+      storage_state: "CA",
+      storage_city: "Sausalito",
       marina_name: null,
       marina_city: null,
       qr_status: "active",
