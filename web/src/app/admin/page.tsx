@@ -3,6 +3,8 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-verify";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { AdminNav } from "@/components/AdminNav";
+import { AdminGeoMap } from "@/components/AdminGeoMap";
+import { GEO_REGIONS, classifyRegion, resolveVesselLocationSource } from "@/lib/vessel-geo";
 
 function startOfMonth(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -89,6 +91,34 @@ export default async function AdminOverviewPage() {
     .eq("status", "pending");
 
   const ratioFullPct = totalOwners > 0 ? Math.round((fullCount / totalOwners) * 100) : 0;
+
+  // Region-level geo breakdown -- see lib/vessel-geo.ts for the
+  // classification rules. marina_city/storage_description are the
+  // location sources; the legacy marinas join covers MXE-00001/00002,
+  // which predate the marina_city column.
+  const { data: geoVessels } = await service
+    .from("vessels")
+    .select("id, storage_type, marina_id, marina_city, storage_description");
+  const { data: marinaRows } = await service.from("marinas").select("id, city, state");
+  const legacyMarinaLocation = new Map(
+    (marinaRows ?? []).map((m) => [m.id as string, [m.city, m.state].filter(Boolean).join(", ") || null]),
+  );
+
+  const geoCounts: Record<string, number> = {};
+  for (const v of (geoVessels ?? []) as {
+    storage_type: string | null;
+    marina_id: string | null;
+    marina_city: string | null;
+    storage_description: string | null;
+  }[]) {
+    const legacy = v.marina_id ? (legacyMarinaLocation.get(v.marina_id) ?? null) : null;
+    const source = resolveVesselLocationSource(v, legacy);
+    const region = classifyRegion(source);
+    geoCounts[region] = (geoCounts[region] ?? 0) + 1;
+  }
+  const rankedGeoRegions = GEO_REGIONS.map((r) => ({ ...r, count: geoCounts[r.key] ?? 0 })).sort(
+    (a, b) => b.count - a.count,
+  );
 
   return (
     <div className="min-h-screen bg-[var(--cream)] px-4 py-8 sm:px-8">
@@ -187,6 +217,30 @@ export default async function AdminOverviewPage() {
               </div>
             </>
           )}
+        </section>
+
+        {/* Geographic breakdown (region-level; marina-level precision is a
+            later change). Map covers the three named CA regions only --
+            "Other" and "Unclassified" aren't single points, so they show
+            up in the ranked list but not on the map. */}
+        <section className="mb-8 rounded-2xl border border-[var(--divider)] bg-[var(--white)] p-6 shadow-sm">
+          <p className="mb-4 font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.14em] text-[var(--text3)]">
+            Vessels by region
+          </p>
+          <div className="grid gap-6 sm:grid-cols-2 sm:items-center">
+            <AdminGeoMap counts={geoCounts} />
+            <ol className="flex flex-col gap-2">
+              {rankedGeoRegions.map((r) => (
+                <li
+                  key={r.key}
+                  className="flex items-center justify-between border-b border-[var(--divider)] pb-2 font-[family-name:var(--font-dm)] text-sm text-[var(--navy)] last:border-b-0"
+                >
+                  <span className={r.key === "unclassified" ? "text-[var(--text3)]" : undefined}>{r.label}</span>
+                  <span className="font-semibold">{r.count}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
         </section>
 
         {/* 4. Needs attention */}
