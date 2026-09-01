@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { PixelM } from "@/components/PixelM";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireAdmin } from "@/lib/admin-verify";
 import type { VesselRecord } from "@/types/vessel";
 
 async function signOutAction() {
@@ -55,6 +56,12 @@ export default async function DashboardPage() {
 
   const ownedVessels = ((vessels ?? []) as VesselRecord[]).filter((v) => v.mxe_id);
 
+  // Server-checked, not CSS-hidden — requireAdmin() re-verifies role +
+  // the ADMIN_EMAILS allowlist independently of anything else on this
+  // page, same as every other admin surface in the app. A non-admin
+  // never receives this link in the rendered HTML at all.
+  const admin = await requireAdmin();
+
   return (
     <div className="min-h-screen bg-[var(--cream)]">
       <header className="sticky top-0 z-20 border-b border-[var(--divider)] bg-[var(--navy-deep)] px-4 py-3">
@@ -69,6 +76,14 @@ export default async function DashboardPage() {
             <span className="hidden font-[family-name:var(--font-dm)] text-xs text-[rgba(255,255,255,.75)] sm:block">
               {user.email}
             </span>
+            {admin ? (
+              <Link
+                href="/admin"
+                className="font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--gold)] hover:underline"
+              >
+                Admin
+              </Link>
+            ) : null}
             <form action={signOutAction}>
               <button
                 type="submit"
