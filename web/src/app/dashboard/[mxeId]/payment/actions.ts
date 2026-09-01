@@ -84,31 +84,44 @@ export async function createBadgeFeeIntent(mxeId: string): Promise<IntentResult>
     }
   }
 
-  if (!customerId) {
-    const customer = await stripe.customers.create({
-      email: owner?.email ?? user.email ?? undefined,
-      metadata: { user_id: owner?.id ?? user.id },
-    });
-    customerId = customer.id;
-    if (owner?.id) {
-      await service.from("users").update({ stripe_customer_id: customerId }).eq("id", owner.id);
+  // Everything past this point talks to Stripe with real inputs (a price
+  // ID from env, a customer id, amounts) that can be wrong in ways that
+  // only surface at request time — a stale/wrong/wrong-mode price ID, a
+  // restricted account, etc. Catching here and returning a clean
+  // {error} — rather than letting the exception propagate up through the
+  // Server Action boundary — matters because Next.js redacts a *thrown*
+  // server action error down to a generic message in production; a
+  // returned {error} string reaches the client's UI verbatim instead.
+  try {
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: owner?.email ?? user.email ?? undefined,
+        metadata: { user_id: owner?.id ?? user.id },
+      });
+      customerId = customer.id;
+      if (owner?.id) {
+        await service.from("users").update({ stripe_customer_id: customerId }).eq("id", owner.id);
+      }
     }
+
+    const priceId = process.env.STRIPE_PRICE_ID_BADGE?.trim();
+    if (!priceId) return { error: "Missing STRIPE_PRICE_ID_BADGE." };
+
+    const price = await stripe.prices.retrieve(priceId);
+    if (!price.unit_amount) return { error: "Badge price has no unit amount configured." };
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: price.unit_amount,
+      currency: price.currency,
+      customer: customerId,
+      automatic_payment_methods: { enabled: true },
+      metadata: { mxe_id: vessel.mxe_id, vessel_id: vessel.id, payment_type: "badge_fee" },
+    });
+
+    if (!paymentIntent.client_secret) return { error: "Stripe did not return a client secret." };
+    return { clientSecret: paymentIntent.client_secret };
+  } catch (err) {
+    console.error(`[payment] createBadgeFeeIntent failed for ${vessel.mxe_id}:`, err);
+    return { error: err instanceof Error ? err.message : "Could not start checkout. Please try again." };
   }
-
-  const priceId = process.env.STRIPE_PRICE_ID_BADGE?.trim();
-  if (!priceId) return { error: "Missing STRIPE_PRICE_ID_BADGE." };
-
-  const price = await stripe.prices.retrieve(priceId);
-  if (!price.unit_amount) return { error: "Badge price has no unit amount configured." };
-
-  const paymentIntent = await stripe.paymentIntents.create({
-    amount: price.unit_amount,
-    currency: price.currency,
-    customer: customerId,
-    automatic_payment_methods: { enabled: true },
-    metadata: { mxe_id: vessel.mxe_id, vessel_id: vessel.id, payment_type: "badge_fee" },
-  });
-
-  if (!paymentIntent.client_secret) return { error: "Stripe did not return a client secret." };
-  return { clientSecret: paymentIntent.client_secret };
 }

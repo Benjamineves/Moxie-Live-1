@@ -81,58 +81,73 @@ export async function createFullAccessUpgradeIntent(): Promise<IntentResult> {
     }
   }
 
-  if (!customerId) {
-    const customer = await stripe.customers.create({
-      email: owner.email ?? user.email ?? undefined,
-      metadata: { user_id: owner.id },
-    });
-    customerId = customer.id;
-    await service.from("users").update({ stripe_customer_id: customerId }).eq("id", owner.id);
-  }
-
-  const priceId = process.env.STRIPE_PRICE_ID_FULL?.trim();
-  if (!priceId) return { error: "Missing STRIPE_PRICE_ID_FULL." };
-
-  const subscription = await stripe.subscriptions.create({
-    customer: customerId,
-    items: [{ price: priceId }],
-    payment_behavior: "default_incomplete",
-    payment_settings: { save_default_payment_method: "on_subscription" },
-    // See dashboard/[mxeId]/payment/actions.ts's original comment on this
-    // exact expand path — same Stripe API-version reasoning applies here.
-    expand: ["latest_invoice", "latest_invoice.confirmation_secret"],
-    metadata: { owner_id: owner.id },
-  });
-
-  const invoice = subscription.latest_invoice;
-  const clientSecret = invoice && typeof invoice !== "string" ? (invoice.confirmation_secret?.client_secret ?? null) : null;
-
-  if (!clientSecret) {
-    console.error(
-      `[upgrade] Full-tier subscription ${subscription.id} (owner=${owner.id}) returned no confirmation_secret.client_secret. ` +
-        `latest_invoice=${typeof invoice === "string" ? invoice : (invoice?.id ?? "null")}, ` +
-        `has_confirmation_secret=${typeof invoice !== "string" && !!invoice?.confirmation_secret}`,
-    );
-    return { error: "Stripe did not return a payment client secret for the subscription." };
-  }
-
-  // Record the subscription id as soon as it exists, ahead of the webhook
-  // — the webhook (invoice.paid) is what flips subscription_status/tier to
-  // active, but stripe_subscription_id itself is safe to set immediately
-  // since Stripe already assigned it the moment subscriptions.create()
-  // returned, regardless of whether the first invoice ends up paid.
-  await service.from("users").update({ stripe_subscription_id: subscription.id }).eq("id", owner.id);
-
-  const paymentIntentId = clientSecret.split("_secret_")[0];
-  if (paymentIntentId) {
-    try {
-      await stripe.paymentIntents.update(paymentIntentId, {
-        metadata: { owner_id: owner.id, payment_type: "subscription" },
+  // Everything past this point talks to Stripe with real inputs (a price
+  // ID from env, a customer id) that can be wrong in ways that only
+  // surface at request time — a stale/wrong/wrong-mode price ID, a
+  // restricted account, etc. Catching here and returning a clean
+  // {error} — rather than letting the exception propagate up through the
+  // Server Action boundary — matters because Next.js redacts a *thrown*
+  // server action error down to a generic message in production; a
+  // returned {error} string reaches the client's UI verbatim instead.
+  try {
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: owner.email ?? user.email ?? undefined,
+        metadata: { user_id: owner.id },
       });
-    } catch (err) {
-      console.error(`[upgrade] Failed to tag PaymentIntent ${paymentIntentId} with metadata:`, err);
+      customerId = customer.id;
+      await service.from("users").update({ stripe_customer_id: customerId }).eq("id", owner.id);
     }
-  }
 
-  return { clientSecret };
+    const priceId = process.env.STRIPE_PRICE_ID_FULL?.trim();
+    if (!priceId) return { error: "Missing STRIPE_PRICE_ID_FULL." };
+
+    const subscription = await stripe.subscriptions.create({
+      customer: customerId,
+      items: [{ price: priceId }],
+      payment_behavior: "default_incomplete",
+      payment_settings: { save_default_payment_method: "on_subscription" },
+      // See dashboard/[mxeId]/payment/actions.ts's original comment on this
+      // exact expand path — same Stripe API-version reasoning applies here.
+      expand: ["latest_invoice", "latest_invoice.confirmation_secret"],
+      metadata: { owner_id: owner.id },
+    });
+
+    const invoice = subscription.latest_invoice;
+    const clientSecret =
+      invoice && typeof invoice !== "string" ? (invoice.confirmation_secret?.client_secret ?? null) : null;
+
+    if (!clientSecret) {
+      console.error(
+        `[upgrade] Full-tier subscription ${subscription.id} (owner=${owner.id}) returned no confirmation_secret.client_secret. ` +
+          `latest_invoice=${typeof invoice === "string" ? invoice : (invoice?.id ?? "null")}, ` +
+          `has_confirmation_secret=${typeof invoice !== "string" && !!invoice?.confirmation_secret}`,
+      );
+      return { error: "Stripe did not return a payment client secret for the subscription." };
+    }
+
+    // Record the subscription id as soon as it exists, ahead of the
+    // webhook — the webhook (invoice.paid) is what flips
+    // subscription_status/tier to active, but stripe_subscription_id
+    // itself is safe to set immediately since Stripe already assigned it
+    // the moment subscriptions.create() returned, regardless of whether
+    // the first invoice ends up paid.
+    await service.from("users").update({ stripe_subscription_id: subscription.id }).eq("id", owner.id);
+
+    const paymentIntentId = clientSecret.split("_secret_")[0];
+    if (paymentIntentId) {
+      try {
+        await stripe.paymentIntents.update(paymentIntentId, {
+          metadata: { owner_id: owner.id, payment_type: "subscription" },
+        });
+      } catch (err) {
+        console.error(`[upgrade] Failed to tag PaymentIntent ${paymentIntentId} with metadata:`, err);
+      }
+    }
+
+    return { clientSecret };
+  } catch (err) {
+    console.error(`[upgrade] createFullAccessUpgradeIntent failed for owner ${owner.id}:`, err);
+    return { error: err instanceof Error ? err.message : "Could not start checkout. Please try again." };
+  }
 }

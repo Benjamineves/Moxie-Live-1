@@ -34,13 +34,24 @@ export function UpgradeForm({ publishableKey }: { publishableKey: string }) {
   useEffect(() => {
     let cancelled = false;
     startTransition(async () => {
-      const result = await createFullAccessUpgradeIntent();
-      if (cancelled) return;
-      if ("error" in result) {
-        setError(result.error);
-        return;
+      // createFullAccessUpgradeIntent catches its own Stripe/DB errors and
+      // returns {error} rather than throwing — this try/catch is a second
+      // layer in case something still escapes. Without it, an uncaught
+      // rejection here left the UI stuck on "Loading…" forever with no
+      // visible error (see the badge-fee checkout page for the confirmed
+      // live case of this exact failure mode).
+      try {
+        const result = await createFullAccessUpgradeIntent();
+        if (cancelled) return;
+        if ("error" in result) {
+          setError(result.error);
+          return;
+        }
+        setClientSecret(result.clientSecret);
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Could not start checkout. Please try again.");
       }
-      setClientSecret(result.clientSecret);
     });
     return () => {
       cancelled = true;

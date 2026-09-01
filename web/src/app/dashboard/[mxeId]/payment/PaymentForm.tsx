@@ -40,13 +40,24 @@ export function PaymentForm({ mxeId, vesselName, vesselTag, publishableKey }: Pr
   useEffect(() => {
     let cancelled = false;
     startTransition(async () => {
-      const result = await createBadgeFeeIntent(mxeId);
-      if (cancelled) return;
-      if ("error" in result) {
-        setError(result.error);
-        return;
+      // createBadgeFeeIntent catches its own Stripe/DB errors and returns
+      // {error} rather than throwing — but this try/catch is a second
+      // layer in case something still escapes (a network failure reaching
+      // the action at all, for instance). Without it, an uncaught
+      // rejection here left the UI stuck on "Loading…" forever with no
+      // visible error — confirmed live on the badge-fee checkout page.
+      try {
+        const result = await createBadgeFeeIntent(mxeId);
+        if (cancelled) return;
+        if ("error" in result) {
+          setError(result.error);
+          return;
+        }
+        setClientSecret(result.clientSecret);
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Could not start checkout. Please try again.");
       }
-      setClientSecret(result.clientSecret);
     });
     return () => {
       cancelled = true;
