@@ -13,6 +13,11 @@
  * real state signal (a 2-letter code or state name) is present in the
  * text, and to "unclassified" otherwise — ambiguous or unparseable
  * text is never guessed into a region.
+ *
+ * Coastal cutoffs (as specified, not a default):
+ *   SF Bay Area           — everything north of Santa Cruz (Santa Cruz excluded)
+ *   Central Coast         — Santa Cruz through Ventura/Port Hueneme, inclusive of both ends
+ *   Southern California   — everything south of Ventura (LA, Marina del Rey, OC, San Diego)
  */
 
 export type GeoRegionKey = "sf_bay_area" | "central_coast" | "southern_california" | "other" | "unclassified";
@@ -38,15 +43,20 @@ const SF_BAY_AREA_KEYWORDS = [
   "portobello marina",
 ];
 
+// Central Coast = Santa Cruz through Ventura/Port Hueneme, inclusive of
+// both ends. Santa Cruz itself is Central Coast, NOT SF Bay Area.
 const CENTRAL_COAST_KEYWORDS = [
-  "marina del rey", "playa del rey",
   "santa barbara", "montecito", "goleta", "carpinteria", "ventura", "oxnard",
   "camarillo", "port hueneme", "santa cruz", "capitola", "monterey",
   "pacific grove", "carmel", "seaside", "morro bay", "san luis obispo",
   "pismo beach", "avila beach",
 ];
 
+// Southern California = everything south of Ventura. Marina del
+// Rey/Playa del Rey are LA-area (south of Ventura), so they belong
+// here, not Central Coast.
 const SOUTHERN_CALIFORNIA_KEYWORDS = [
+  "marina del rey", "playa del rey",
   "san diego", "mission bay", "point loma", "coronado", "chula vista",
   "national city", "oceanside", "carlsbad", "encinitas", "la jolla",
   "orange county", "newport beach", "huntington beach", "costa mesa",

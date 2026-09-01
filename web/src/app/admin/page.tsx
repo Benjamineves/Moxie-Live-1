@@ -98,14 +98,16 @@ export default async function AdminOverviewPage() {
   // which predate the marina_city column.
   const { data: geoVessels } = await service
     .from("vessels")
-    .select("id, storage_type, marina_id, marina_city, storage_description");
+    .select("id, mxe_id, storage_type, marina_id, marina_city, storage_description");
   const { data: marinaRows } = await service.from("marinas").select("id, city, state");
   const legacyMarinaLocation = new Map(
     (marinaRows ?? []).map((m) => [m.id as string, [m.city, m.state].filter(Boolean).join(", ") || null]),
   );
 
   const geoCounts: Record<string, number> = {};
+  const unclassifiedVessels: { mxeId: string; source: string | null }[] = [];
   for (const v of (geoVessels ?? []) as {
+    mxe_id: string;
     storage_type: string | null;
     marina_id: string | null;
     marina_city: string | null;
@@ -115,6 +117,9 @@ export default async function AdminOverviewPage() {
     const source = resolveVesselLocationSource(v, legacy);
     const region = classifyRegion(source);
     geoCounts[region] = (geoCounts[region] ?? 0) + 1;
+    if (region === "unclassified") {
+      unclassifiedVessels.push({ mxeId: v.mxe_id, source });
+    }
   }
   const rankedGeoRegions = GEO_REGIONS.map((r) => ({ ...r, count: geoCounts[r.key] ?? 0 })).sort(
     (a, b) => b.count - a.count,
@@ -233,10 +238,26 @@ export default async function AdminOverviewPage() {
               {rankedGeoRegions.map((r) => (
                 <li
                   key={r.key}
-                  className="flex items-center justify-between border-b border-[var(--divider)] pb-2 font-[family-name:var(--font-dm)] text-sm text-[var(--navy)] last:border-b-0"
+                  className="border-b border-[var(--divider)] pb-2 font-[family-name:var(--font-dm)] text-sm text-[var(--navy)] last:border-b-0"
                 >
-                  <span className={r.key === "unclassified" ? "text-[var(--text3)]" : undefined}>{r.label}</span>
-                  <span className="font-semibold">{r.count}</span>
+                  <div className="flex items-center justify-between">
+                    <span className={r.key === "unclassified" ? "text-[var(--text3)]" : undefined}>{r.label}</span>
+                    <span className="font-semibold">{r.count}</span>
+                  </div>
+                  {r.key === "unclassified" && r.count > 0 ? (
+                    <details className="mt-1">
+                      <summary className="cursor-pointer text-xs text-[var(--blue-fg)] underline">
+                        View raw entries
+                      </summary>
+                      <ul className="mt-1 flex flex-col gap-0.5 border-l border-[var(--divider)] pl-3">
+                        {unclassifiedVessels.map((v) => (
+                          <li key={v.mxeId} className="text-xs text-[var(--text3)]">
+                            {v.mxeId}: {v.source ?? "(no location data)"}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  ) : null}
                 </li>
               ))}
             </ol>
