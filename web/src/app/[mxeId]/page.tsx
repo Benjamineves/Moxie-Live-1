@@ -7,6 +7,7 @@ import { VesselOwnerProfile, type OwnerProfileTier } from "@/components/VesselOw
 import { SharedVesselProfile } from "@/components/share/SharedVesselProfile";
 import { fetchVesselByMxeId, filterVesselForRole } from "@/lib/vessel-service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { emailsMatch, getOwnerEmailByUserId } from "@/lib/owner-verify";
 import { getOwnerBillingSummary } from "@/lib/billing-service";
 import { resolveShareByToken } from "@/lib/share-resolve";
@@ -136,9 +137,49 @@ export default async function VesselPage({ params, searchParams }: Props) {
       payments: [],
     };
 
+    let hasPendingDecommissionRequest = false;
+    const service = createSupabaseServiceClient();
+    if (service) {
+      const { data: pendingRequest } = await service
+        .from("vessel_decommission_requests")
+        .select("id")
+        .eq("vessel_id", vessel.id)
+        .eq("status", "pending")
+        .maybeSingle();
+      hasPendingDecommissionRequest = !!pendingRequest;
+    }
+
     return (
       <div className="min-h-screen bg-[var(--cream)]">
-        <VesselOwnerProfile tier={tier} billing={billing} justUpgraded={sp.upgraded === "1"} />
+        <VesselOwnerProfile
+          tier={tier}
+          billing={billing}
+          justUpgraded={sp.upgraded === "1"}
+          hasPendingDecommissionRequest={hasPendingDecommissionRequest}
+        />
+      </div>
+    );
+  }
+
+  // Decommissioned vessels get their own terminal state, checked before
+  // — and instead of — the qr_status gate below: someone may have
+  // scanned an already-decommissioned badge (still on the hull), or the
+  // vessel was decommissioned after it was activated. Don't expose owner
+  // contact or documents here — this returns before filterVesselForRole
+  // is ever called, so no tier object with that data even exists on this
+  // path.
+  if (vessel.lifecycle_status === "decommissioned") {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[var(--cream)] px-6 text-center">
+        <p className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--text3)]">
+          {vessel.mxe_id}
+        </p>
+        <h1 className="font-[family-name:var(--font-display)] text-3xl font-light italic text-[var(--navy)]">
+          No longer <em className="text-[var(--gold)] not-italic">active.</em>
+        </h1>
+        <p className="max-w-sm font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
+          This vessel is no longer part of Moxie&apos;s active fleet.
+        </p>
       </div>
     );
   }

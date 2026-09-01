@@ -33,6 +33,10 @@ export type VesselRecord = {
   qr_generated_at: string | null;
   sticker_order_status: string | null;
   claim_status: string | null;
+  /** Fleet-membership status, independent of qr_status. 'active' | 'decommissioned'. */
+  lifecycle_status: string | null;
+  decommissioned_at: string | null;
+  decommission_reason: string | null;
   slip_number: string | null;
   marina_phone: string | null;
   is_liveaboard: boolean | null;

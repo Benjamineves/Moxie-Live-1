@@ -6,6 +6,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { getStripe } from "@/lib/stripe/server";
 import { resolveOwnerIds, loadOwnedVessel } from "@/lib/vessel-ownership";
 import { normalizeStateCode } from "@/lib/us-states";
+import { isDecommissionReason, type DecommissionReason } from "@/lib/vessel-decommission";
 
 /**
  * Updates photo_url on an already-existing vessel — the counterpart to
@@ -292,6 +293,68 @@ export async function submitIdentityCorrectionRequest(
     current_value: currentValue == null ? null : String(currentValue),
     requested_value: requestedValue.trim(),
     document_path: documentPath,
+    notes: notes?.trim() || null,
+  });
+  if (error) return { error: error.message };
+  return {};
+}
+
+/**
+ * Owner-facing half of the decommission/archive flow — this never writes
+ * lifecycle_status itself, only records the request for an admin to
+ * review. Approval (apply_vessel_decommission) is what actually applies
+ * the status change, atomically, along with revoking active shares.
+ *
+ * Blocks a second pending request for the same vessel rather than
+ * silently allowing duplicates to pile up in the admin queue — a
+ * re-submission is a more consequential mistake to make twice than most
+ * of the other request-style flows in this app.
+ */
+export async function submitDecommissionRequest(
+  mxeId: string,
+  reason: DecommissionReason,
+  notes: string | null,
+): Promise<{ error?: string }> {
+  if (!isDecommissionReason(reason)) return { error: "Invalid reason." };
+
+  const authClient = await createSupabaseServerClient();
+  if (!authClient) return { error: "Missing Supabase auth configuration." };
+
+  const { user, ownerIds } = await resolveOwnerIds(authClient);
+  if (!user) return { error: "You must be signed in." };
+
+  const service = createSupabaseServiceClient();
+  if (!service) return { error: "Missing Supabase service role configuration." };
+
+  const { data: vesselRow } = await service
+    .from("vessels")
+    .select("id, owner_id, mxe_id, lifecycle_status")
+    .eq("mxe_id", mxeId.toUpperCase())
+    .maybeSingle();
+  const vessel = vesselRow as { id: string; owner_id: string; mxe_id: string; lifecycle_status: string | null } | null;
+
+  if (!vessel || !ownerIds.includes(vessel.owner_id)) {
+    return { error: "Vessel not found." };
+  }
+  if (vessel.lifecycle_status === "decommissioned") {
+    return { error: "This vessel is already decommissioned." };
+  }
+
+  const { data: existingPending } = await service
+    .from("vessel_decommission_requests")
+    .select("id")
+    .eq("vessel_id", vessel.id)
+    .eq("status", "pending")
+    .maybeSingle();
+  if (existingPending) {
+    return { error: "A decommission request for this vessel is already pending review." };
+  }
+
+  const { error } = await service.from("vessel_decommission_requests").insert({
+    vessel_id: vessel.id,
+    mxe_id: vessel.mxe_id,
+    owner_id: vessel.owner_id,
+    reason,
     notes: notes?.trim() || null,
   });
   if (error) return { error: error.message };

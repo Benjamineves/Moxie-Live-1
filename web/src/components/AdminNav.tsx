@@ -6,6 +6,7 @@ const LINKS = [
   { href: "/admin/stickers", label: "Sticker fulfillment" },
   { href: "/admin/vessel-identity-log", label: "Identity change log" },
   { href: "/admin/vessel-correction-requests", label: "Correction requests" },
+  { href: "/admin/vessel-decommission-requests", label: "Decommission requests" },
 ] as const;
 
 /**

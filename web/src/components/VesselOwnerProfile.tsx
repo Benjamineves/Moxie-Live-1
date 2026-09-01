@@ -12,14 +12,18 @@ import { ContactEdit } from "@/components/vessel-edit/ContactEdit";
 import { EmergencyEdit } from "@/components/vessel-edit/EmergencyEdit";
 import { RegistrationEdit } from "@/components/vessel-edit/RegistrationEdit";
 import { RequestIdentityCorrection } from "@/components/vessel-edit/RequestIdentityCorrection";
+import { RequestDecommission } from "@/components/vessel-edit/RequestDecommission";
 import { DocumentsEdit } from "@/components/vessel-edit/DocumentsEdit";
 import { InsuranceEdit } from "@/components/vessel-edit/InsuranceEdit";
 import { SafetyEdit } from "@/components/vessel-edit/SafetyEdit";
 import { ShareSheet } from "@/components/share/ShareSheet";
 import type { BillingSummary } from "@/lib/billing-service";
+import { DECOMMISSION_REASON_LABELS, type DecommissionReason } from "@/lib/vessel-decommission";
 
 export type OwnerProfileTier = PublicProfileProps & {
   qr_status?: string | null;
+  lifecycle_status?: string | null;
+  decommission_reason?: string | null;
   slip_number?: string | null;
   marina_phone?: string | null;
   is_liveaboard?: boolean | null;
@@ -73,10 +77,12 @@ export function VesselOwnerProfile({
   tier,
   billing,
   justUpgraded = false,
+  hasPendingDecommissionRequest = false,
 }: {
   tier: OwnerProfileTier;
   billing: BillingSummary;
   justUpgraded?: boolean;
+  hasPendingDecommissionRequest?: boolean;
 }) {
   const publicProps: PublicProfileProps = {
     mxe_id: tier.mxe_id,
@@ -110,6 +116,7 @@ export function VesselOwnerProfile({
   // actually paid, so this stays visible on every visit rather than
   // being closeable once and forgotten.
   const needsActivation = tier.qr_status != null && tier.qr_status !== "active";
+  const isDecommissioned = tier.lifecycle_status === "decommissioned";
 
   return (
     <>
@@ -138,7 +145,21 @@ export function VesselOwnerProfile({
         </div>
       </header>
 
-      {needsActivation ? (
+      {isDecommissioned ? (
+        <div className="border-b border-[var(--divider)] bg-[var(--gray-bg)] px-5 py-4 text-center">
+          <p className="font-[family-name:var(--font-dm)] text-sm font-semibold text-[var(--gray-fg)]">
+            This vessel has been decommissioned{" "}
+            {tier.decommission_reason
+              ? `(${DECOMMISSION_REASON_LABELS[tier.decommission_reason as DecommissionReason] ?? tier.decommission_reason})`
+              : null}
+            .
+          </p>
+          <p className="mt-1 font-[family-name:var(--font-dm)] text-xs text-[var(--gray-fg)]">
+            It&apos;s no longer part of your active fleet and doesn&apos;t count against your vessel limit. The
+            record, documents, and history are all still here — contact us if you need it reactivated.
+          </p>
+        </div>
+      ) : needsActivation ? (
         <div className="border-b border-[var(--red-fg)] bg-[var(--red-bg)] px-5 py-4 text-center">
           <p className="font-[family-name:var(--font-dm)] text-sm font-semibold text-[var(--red-fg)]">
             This vessel isn&apos;t active yet — the badge fee hasn&apos;t been paid.
@@ -183,6 +204,9 @@ export function VesselOwnerProfile({
             engine: tier.engine,
           }}
         />
+        {!isDecommissioned ? (
+          <RequestDecommission mxeId={tier.mxe_id} hasPendingRequest={hasPendingDecommissionRequest} />
+        ) : null}
       </div>
 
       <section className="mx-auto max-w-lg px-5 pb-10 md:px-8">

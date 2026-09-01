@@ -104,6 +104,11 @@ export function filterVesselForRole(v: VesselRecord, role: ProfileRole): Record<
       // ever reaching VesselPublicProfile, so public callers don't need
       // it duplicated here.
       qr_status: v.qr_status,
+      // Same reasoning as qr_status above — the public page already
+      // gates on lifecycle_status separately, before this function is
+      // ever called for a decommissioned vessel's public view.
+      lifecycle_status: v.lifecycle_status,
+      decommission_reason: v.decommission_reason,
       slip_number: v.slip_number,
       marina_phone: v.marina_phone,
       is_liveaboard: v.is_liveaboard,

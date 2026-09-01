@@ -114,19 +114,25 @@ export async function createVessel(
     ownerDisplayEmail = ownerEmail;
   }
 
-  // Only vessels that actually completed activation count against the
-  // cap. Before this, an abandoned/never-paid registration burned a slot
-  // forever — exactly the scenario the dashboard's resume path (finish
-  // activating an unpaid vessel) exists to fix, so the cap can't be
-  // exempt from the same fix: someone who abandons checkout twice
-  // shouldn't come back to find their account artificially full of
-  // vessels that were never real.
+  // Only vessels that both completed activation AND are still part of
+  // the active fleet count against the cap. Two independent conditions,
+  // deliberately not one: qr_status='active' excludes an abandoned/
+  // never-paid registration (the scenario the dashboard's resume path
+  // exists to fix — someone who abandons checkout twice shouldn't come
+  // back to find their account artificially full of vessels that were
+  // never real). lifecycle_status='active' excludes a decommissioned
+  // vessel, which keeps whatever qr_status it already had — decommission
+  // never touches qr_status — so qr_status alone can't tell a currently-
+  // archived vessel apart from a real active one. This exact composite
+  // filter is also what reactivate_vessel's cap check uses server-side
+  // (20260906_vessel_decommission.sql) — the two must stay in sync.
   const VESSEL_LIMIT = 5;
   const { count: vesselCount, error: countError } = await service
     .from("vessels")
     .select("id", { count: "exact", head: true })
     .eq("owner_id", ownerId)
-    .eq("qr_status", "active");
+    .eq("qr_status", "active")
+    .eq("lifecycle_status", "active");
   if (countError) {
     return { error: `Unable to check vessel count: ${countError.message}` };
   }

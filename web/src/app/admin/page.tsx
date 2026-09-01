@@ -90,6 +90,11 @@ export default async function AdminOverviewPage() {
     .select("id", { count: "exact", head: true })
     .eq("status", "pending");
 
+  const { count: pendingDecommissions } = await service
+    .from("vessel_decommission_requests")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pending");
+
   const ratioFullPct = totalOwners > 0 ? Math.round((fullCount / totalOwners) * 100) : 0;
 
   // Region-level geo breakdown -- see lib/vessel-geo.ts for the
@@ -269,7 +274,7 @@ export default async function AdminOverviewPage() {
           <p className="mb-4 font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.14em] text-[var(--text3)]">
             Needs attention
           </p>
-          <div className="grid gap-4 sm:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-3">
             <Link
               href="/admin/stickers"
               className="block rounded-2xl border border-[var(--divider)] bg-[var(--white)] p-5 shadow-sm transition hover:border-[var(--gold-line)]"
@@ -290,6 +295,17 @@ export default async function AdminOverviewPage() {
               </p>
               <p className="mt-1 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
                 Open correction requests →
+              </p>
+            </Link>
+            <Link
+              href="/admin/vessel-decommission-requests"
+              className="block rounded-2xl border border-[var(--divider)] bg-[var(--white)] p-5 shadow-sm transition hover:border-[var(--gold-line)]"
+            >
+              <p className="font-[family-name:var(--font-display)] text-4xl font-light text-[var(--navy)]">
+                {pendingDecommissions ?? 0}
+              </p>
+              <p className="mt-1 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
+                Pending decommission requests →
               </p>
             </Link>
           </div>

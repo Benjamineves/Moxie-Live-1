@@ -62,6 +62,8 @@ export default async function DashboardPage({ searchParams }: Props) {
     .order("created_at", { ascending: false });
 
   const ownedVessels = ((vessels ?? []) as VesselRecord[]).filter((v) => v.mxe_id);
+  const activeFleet = ownedVessels.filter((v) => v.lifecycle_status !== "decommissioned");
+  const archivedVessels = ownedVessels.filter((v) => v.lifecycle_status === "decommissioned");
 
   // Server-checked, not CSS-hidden — requireAdmin() re-verifies role +
   // the ADMIN_EMAILS allowlist independently of anything else on this
@@ -136,7 +138,7 @@ export default async function DashboardPage({ searchParams }: Props) {
           </div>
         ) : null}
 
-        {!error && ownedVessels.length === 0 ? (
+        {!error && activeFleet.length === 0 && archivedVessels.length === 0 ? (
           <section className="rounded-2xl border border-[var(--divider)] bg-[var(--white)] p-6 text-center">
             <h2 className="font-[family-name:var(--font-display)] text-2xl font-light italic text-[var(--navy)]">
               No vessels yet
@@ -153,9 +155,9 @@ export default async function DashboardPage({ searchParams }: Props) {
           </section>
         ) : null}
 
-        {ownedVessels.length > 0 ? (
+        {activeFleet.length > 0 ? (
           <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {ownedVessels.map((vessel) => {
+            {activeFleet.map((vessel) => {
               const needsActivation = vessel.qr_status !== "active";
               return (
                 <article
@@ -227,6 +229,35 @@ export default async function DashboardPage({ searchParams }: Props) {
                 </article>
               );
             })}
+          </section>
+        ) : null}
+
+        {archivedVessels.length > 0 ? (
+          <section className="mt-10">
+            <p className="mb-4 font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
+              Archived
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {archivedVessels.map((vessel) => (
+                <div
+                  key={vessel.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-[var(--divider)] bg-[var(--cream2)] p-4"
+                >
+                  <div>
+                    <p className="font-[family-name:var(--font-dm)] text-xs text-[var(--text3)]">{vessel.mxe_id}</p>
+                    <p className="font-[family-name:var(--font-display)] text-lg italic text-[var(--text2)]">
+                      {vessel.vessel_name}
+                    </p>
+                  </div>
+                  <Link
+                    href={`/${encodeURIComponent(vessel.mxe_id)}?role=owner`}
+                    className="shrink-0 font-[family-name:var(--font-dm)] text-xs text-[var(--blue-fg)] underline"
+                  >
+                    View →
+                  </Link>
+                </div>
+              ))}
+            </div>
           </section>
         ) : null}
       </main>
