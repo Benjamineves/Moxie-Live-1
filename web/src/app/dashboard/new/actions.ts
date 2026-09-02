@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { isValidStateCode, normalizeStateCode } from "@/lib/us-states";
 import { VESSEL_LIMIT, type SubscriptionTier } from "@/lib/tier-config";
+import { isAdminEmail } from "@/lib/admin-verify";
 
 const STORAGE_TYPES = ["marina", "mooring", "trailer", "home", "yard", "other"] as const;
 export type StorageType = (typeof STORAGE_TYPES)[number];
@@ -132,6 +133,11 @@ export async function createVessel(
   // filter is also what reactivate_vessel's cap check uses server-side
   // (20260906_vessel_decommission.sql) — the two must stay in sync.
   const vesselLimit = VESSEL_LIMIT[ownerTier];
+  // Admin accounts (ADMIN_EMAILS) bypass the cap entirely — internal-only
+  // exemption to unblock testing, deliberately not a new tier. A real
+  // dealer/broker tier with its own higher cap is a separate decision for
+  // later, not something this should be mistaken for.
+  const capExempt = isAdminEmail(ownerDisplayEmail);
   const { count: vesselCount, error: countError } = await service
     .from("vessels")
     .select("id", { count: "exact", head: true })
@@ -141,7 +147,7 @@ export async function createVessel(
   if (countError) {
     return { error: `Unable to check vessel count: ${countError.message}` };
   }
-  if ((vesselCount ?? 0) >= vesselLimit) {
+  if (!capExempt && (vesselCount ?? 0) >= vesselLimit) {
     return { error: `You've reached the ${vesselLimit}-vessel limit on your current plan.` };
   }
 

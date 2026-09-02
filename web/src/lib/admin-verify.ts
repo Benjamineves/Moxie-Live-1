@@ -4,6 +4,25 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 export type AdminUser = { id: string; email: string };
 
 /**
+ * The ADMIN_EMAILS allowlist alone, with no role check — same
+ * comma-separated, case-insensitive parsing requireAdmin() below uses.
+ * Deliberately looser than requireAdmin(): this is for low-stakes,
+ * internal-only exemptions (e.g. the vessel-cap bypass in
+ * dashboard/new/actions.ts and the SQL functions' is_admin_email(),
+ * which mirrors this same env var by hand since Postgres can't read
+ * process.env), not for gating anything that exposes customer data —
+ * that still needs the full, redundant requireAdmin() check.
+ */
+export function isAdminEmail(email: string | null | undefined): boolean {
+  if (!email) return false;
+  const allowlist = (process.env.ADMIN_EMAILS ?? "")
+    .split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+  return allowlist.includes(email.trim().toLowerCase());
+}
+
+/**
  * Resolves the signed-in session to an admin identity, or null. Two
  * independent checks, both required — fails closed if either is missing:
  *
@@ -28,11 +47,7 @@ export async function requireAdmin(): Promise<AdminUser | null> {
   const email = user?.email?.trim().toLowerCase();
   if (!email) return null;
 
-  const allowlist = (process.env.ADMIN_EMAILS ?? "")
-    .split(",")
-    .map((e) => e.trim().toLowerCase())
-    .filter(Boolean);
-  if (!allowlist.includes(email)) return null;
+  if (!isAdminEmail(email)) return null;
 
   const service = createSupabaseServiceClient();
   if (!service) return null;
