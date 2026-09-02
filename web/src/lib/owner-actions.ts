@@ -520,3 +520,111 @@ export async function cancelOwnershipTransfer(transferId: string): Promise<{ err
   if (error) return { error: error.message };
   return {};
 }
+
+const UPLOAD_BUCKETS = ["vessel-photos", "vessel-docs"] as const;
+
+/**
+ * Every file this vessel could have — photo, registration, insurance,
+ * correction-request attachments — lives under this one prefix in
+ * either bucket (see vessel-uploads.ts's path convention). Walking one
+ * level of subfolders (e.g. correction-requests/) catches everything
+ * without needing to know every possible filename in advance, same
+ * approach reset_test_vessel_files.mjs already uses for the same
+ * reason.
+ */
+async function collectVesselStoragePaths(
+  service: NonNullable<ReturnType<typeof createSupabaseServiceClient>>,
+  bucket: string,
+  prefix: string,
+): Promise<string[]> {
+  const { data: entries } = await service.storage.from(bucket).list(prefix, { limit: 1000 });
+  const paths: string[] = [];
+  for (const entry of entries ?? []) {
+    if (entry.id === null) {
+      // A folder (no object metadata) — one level deep is as far as
+      // this convention ever nests.
+      const { data: nested } = await service.storage.from(bucket).list(`${prefix}/${entry.name}`, { limit: 1000 });
+      for (const file of nested ?? []) {
+        if (file.id !== null) paths.push(`${prefix}/${entry.name}/${file.name}`);
+      }
+    } else {
+      paths.push(`${prefix}/${entry.name}`);
+    }
+  }
+  return paths;
+}
+
+/**
+ * Owner-initiated hard delete, strictly for vessels that never
+ * completed activation — decommission is the only removal path for an
+ * activated vessel, and stays admin-mediated. The real vessel: an
+ * owner fills in the intake form at a marina, gets to checkout, says
+ * "let me think about it," and never pays. They shouldn't be stuck
+ * with a dead entry, or have to pay just to be allowed to ask for its
+ * removal.
+ *
+ * Three independent layers confirm this can never reach an activated
+ * vessel: the UI trigger only renders when the vessel is already
+ * showing "needs activation"; this action re-checks qr_status before
+ * attempting anything (a friendlier, earlier error); and
+ * delete_unactivated_vessel itself re-verifies the same precondition
+ * again and is the actual enforcement point, same as every other
+ * mutating function this session (never trust the caller).
+ *
+ * The DB deletion runs first, atomically, via that function — that's
+ * the moment the vessel legally stops existing. Storage cleanup is a
+ * separate, best-effort step after: Postgres has no access to Supabase
+ * Storage's API, so it can't participate in that transaction. If a
+ * storage delete fails here, the vessel is still correctly gone from
+ * the database — a stray orphaned file is a minor, recoverable loose
+ * end, not a broken vessel record, so this never turns a storage
+ * hiccup into a user-facing failure.
+ */
+export async function deleteUnactivatedVessel(mxeId: string): Promise<{ error?: string }> {
+  const authClient = await createSupabaseServerClient();
+  if (!authClient) return { error: "Missing Supabase auth configuration." };
+
+  const { user, ownerIds } = await resolveOwnerIds(authClient);
+  if (!user) return { error: "You must be signed in." };
+
+  const service = createSupabaseServiceClient();
+  if (!service) return { error: "Missing Supabase service role configuration." };
+
+  const { data: vesselRow } = await service
+    .from("vessels")
+    .select("id, owner_id, mxe_id, qr_status")
+    .eq("mxe_id", mxeId.toUpperCase())
+    .maybeSingle();
+  const vessel = vesselRow as { id: string; owner_id: string; mxe_id: string; qr_status: string | null } | null;
+
+  if (!vessel || !ownerIds.includes(vessel.owner_id)) {
+    return { error: "Vessel not found." };
+  }
+  if (vessel.qr_status !== "pending_payment") {
+    return { error: "Only a vessel that hasn't been activated yet can be deleted. Use decommission instead." };
+  }
+
+  const { error } = await service.rpc("delete_unactivated_vessel", {
+    p_vessel_id: vessel.id,
+    p_owner_id: vessel.owner_id,
+  });
+  if (error) return { error: error.message };
+
+  // Best-effort from here — the vessel is already gone in the database
+  // regardless of what happens below.
+  try {
+    for (const bucket of UPLOAD_BUCKETS) {
+      const paths = await collectVesselStoragePaths(service, bucket, `${vessel.owner_id}/${vessel.mxe_id}`);
+      if (paths.length > 0) {
+        const { error: removeError } = await service.storage.from(bucket).remove(paths);
+        if (removeError) {
+          console.error(`[delete-vessel] Failed to remove ${paths.length} file(s) from ${bucket} for ${vessel.mxe_id}:`, removeError);
+        }
+      }
+    }
+  } catch (err) {
+    console.error(`[delete-vessel] Storage cleanup failed for ${vessel.mxe_id}:`, err);
+  }
+
+  return {};
+}

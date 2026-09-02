@@ -14,6 +14,7 @@ import { RegistrationEdit } from "@/components/vessel-edit/RegistrationEdit";
 import { RequestIdentityCorrection } from "@/components/vessel-edit/RequestIdentityCorrection";
 import { RequestDecommission } from "@/components/vessel-edit/RequestDecommission";
 import { TransferOwnershipPanel, type ActiveTransfer } from "@/components/vessel-edit/TransferOwnershipPanel";
+import { DeleteUnactivatedVesselButton } from "@/components/vessel-edit/DeleteUnactivatedVesselButton";
 import { DocumentsEdit } from "@/components/vessel-edit/DocumentsEdit";
 import { InsuranceEdit } from "@/components/vessel-edit/InsuranceEdit";
 import { SafetyEdit } from "@/components/vessel-edit/SafetyEdit";
@@ -176,6 +177,9 @@ export function VesselOwnerProfile({
           >
             Finish activating this vessel →
           </Link>
+          <div className="mt-3">
+            <DeleteUnactivatedVesselButton mxeId={tier.mxe_id} vesselName={tier.vessel_name} redirectTo="/dashboard" />
+          </div>
         </div>
       ) : null}
 

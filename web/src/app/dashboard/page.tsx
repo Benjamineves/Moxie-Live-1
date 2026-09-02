@@ -4,6 +4,7 @@ import { PixelM } from "@/components/PixelM";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { requireAdmin } from "@/lib/admin-verify";
+import { DeleteUnactivatedVesselButton } from "@/components/vessel-edit/DeleteUnactivatedVesselButton";
 import type { VesselRecord } from "@/types/vessel";
 
 async function signOutAction() {
@@ -264,6 +265,9 @@ export default async function DashboardPage({ searchParams }: Props) {
                         >
                           Finish activating →
                         </Link>
+                        <div className="mt-2">
+                          <DeleteUnactivatedVesselButton mxeId={vessel.mxe_id} vesselName={vessel.vessel_name} />
+                        </div>
                       </>
                     ) : (
                       <div className="mt-4 flex flex-wrap gap-3">
