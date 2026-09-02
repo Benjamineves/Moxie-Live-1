@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, useTransition, type FormEvent } from 
 import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { createTransferFeeIntent } from "./actions";
+import { TRANSFER_FEE_AMOUNT_USD } from "@/lib/tier-config";
 
 type Props = {
   transferId: string;
@@ -13,11 +14,13 @@ type Props = {
   publishableKey: string;
 };
 
-// Placeholder amounts — same "don't block on pricing" treatment as the
-// badge fee and plan subscriptions; needs to match whatever
-// STRIPE_PRICE_ID_TRANSFER_BASIC/_FULL are configured to in Stripe
-// (lib/tier-config.ts PRICE_REFERENCE documents the same amounts).
-const TRANSFER_FEE_PRICE: Record<"basic" | "full", string> = { basic: "$49", full: "$25" };
+// Prices read from lib/tier-config.ts, the single numeric source — needs
+// to match whatever STRIPE_PRICE_ID_TRANSFER_BASIC/_FULL are configured
+// to in Stripe.
+const TRANSFER_FEE_PRICE: Record<"basic" | "full", string> = {
+  basic: `$${TRANSFER_FEE_AMOUNT_USD.basic}`,
+  full: `$${TRANSFER_FEE_AMOUNT_USD.full}`,
+};
 
 let stripePromise: Promise<StripeJs | null> | null = null;
 function getStripeJs(publishableKey: string) {

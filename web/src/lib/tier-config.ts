@@ -29,31 +29,45 @@ export const BASIC_DOCUMENT_LIMIT = 3;
 export const FULL_STORAGE_CAP_BYTES = 500 * 1024 * 1024;
 
 /**
- * Dollar amounts below are documentation only — every actual charge
- * comes from the Stripe Price object the named env var points to.
- * Update the comment here when a price changes in Stripe so the two
- * stay readable together; changing the comment alone changes nothing.
+ * Dollar amounts below are the single numeric source every price display
+ * in the app reads from (badge-fee checkout, the bundled signup
+ * checkout, the plan picker, the transfer-fee checkout) — none of those
+ * should hardcode their own copy of a number that lives here. They are
+ * still documentation only in the sense that the actual charge always
+ * comes from the Stripe Price object the matching env var points to;
+ * update BOTH the number here and the Stripe Price together when a price
+ * changes, or the display and the real charge will disagree again.
  */
+export const BADGE_FEE_AMOUNT_USD = 29;
+export const SUBSCRIPTION_AMOUNT_USD: Record<SubscriptionTier, number> = {
+  basic: 59,
+  full: 149,
+};
+export const TRANSFER_FEE_AMOUNT_USD: Record<SubscriptionTier, number> = {
+  basic: 49,
+  full: 25,
+};
+
 export const PRICE_REFERENCE = {
   badgeFee: {
     envVar: "STRIPE_PRICE_ID_BADGE",
-    amount: "$29 one-time, per vessel",
+    amount: `$${BADGE_FEE_AMOUNT_USD} one-time, per vessel`,
   },
   basicSubscription: {
     envVar: "STRIPE_PRICE_ID_BASIC_SUBSCRIPTION",
-    amount: "$59/year",
+    amount: `$${SUBSCRIPTION_AMOUNT_USD.basic}/year`,
   },
   fullSubscription: {
     envVar: "STRIPE_PRICE_ID_FULL",
-    amount: "$149/year",
+    amount: `$${SUBSCRIPTION_AMOUNT_USD.full}/year`,
   },
   transferFeeBasicSeller: {
     envVar: "STRIPE_PRICE_ID_TRANSFER_BASIC",
-    amount: "$49",
+    amount: `$${TRANSFER_FEE_AMOUNT_USD.basic}`,
   },
   transferFeeFullSeller: {
     envVar: "STRIPE_PRICE_ID_TRANSFER_FULL",
-    amount: "$25",
+    amount: `$${TRANSFER_FEE_AMOUNT_USD.full}`,
   },
 } as const;
 

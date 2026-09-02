@@ -4,13 +4,12 @@ import { useCallback, useState, useTransition, type FormEvent } from "react";
 import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { createPlanSubscriptionIntent } from "./actions";
-import type { SubscriptionTier } from "@/lib/tier-config";
+import { SUBSCRIPTION_AMOUNT_USD, type SubscriptionTier } from "@/lib/tier-config";
 
-// Placeholder amounts — build spec treats exact pricing as a business
-// decision to plug in later; these just need to match whatever
-// STRIPE_PRICE_ID_BASIC_SUBSCRIPTION / STRIPE_PRICE_ID_FULL are configured
-// to in Stripe (lib/tier-config.ts PRICE_REFERENCE documents the same
-// amounts).
+// Prices read from lib/tier-config.ts, the single numeric source — needs
+// to match whatever STRIPE_PRICE_ID_BASIC_SUBSCRIPTION /
+// STRIPE_PRICE_ID_FULL are configured to in Stripe. Only feature copy
+// lives here.
 const PLAN_OPTIONS: {
   tier: SubscriptionTier;
   label: string;
@@ -20,13 +19,13 @@ const PLAN_OPTIONS: {
   {
     tier: "basic",
     label: "Basic",
-    price: 59,
+    price: SUBSCRIPTION_AMOUNT_USD.basic,
     features: ["2 vessels", "3 documents per vessel", "Trusted Contact sharing"],
   },
   {
     tier: "full",
     label: "Full Access",
-    price: 149,
+    price: SUBSCRIPTION_AMOUNT_USD.full,
     features: [
       "5 vessels",
       "Unlimited documents (500MB storage)",

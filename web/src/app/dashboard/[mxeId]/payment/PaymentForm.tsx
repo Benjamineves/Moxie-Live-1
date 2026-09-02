@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, useTransition, type FormEvent } from 
 import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { createBadgeFeeIntent } from "./actions";
+import { BADGE_FEE_AMOUNT_USD } from "@/lib/tier-config";
 
 type Props = {
   mxeId: string;
@@ -12,11 +13,11 @@ type Props = {
   publishableKey: string;
 };
 
-// Placeholder amount — build spec §9 item 9 treats exact pricing as a
-// business decision to plug in later; this just needs to match whatever
-// STRIPE_PRICE_ID_BADGE is configured to in Stripe.
+// Placeholder amount, read from lib/tier-config.ts rather than hardcoded
+// here — needs to match whatever STRIPE_PRICE_ID_BADGE is configured to
+// in Stripe.
 const BADGE_FEE_COPY = {
-  price: "$49",
+  price: `$${BADGE_FEE_AMOUNT_USD}`,
   cadence: "one-time",
   features: [
     "Weatherproof QR badge, printed & shipped",
