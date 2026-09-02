@@ -30,6 +30,7 @@ export function UpgradeToFullForm({ publishableKey }: { publishableKey: string }
   const [status, setStatus] = useState<"idle" | "pending" | "ready" | "error">("idle");
   const [amount, setAmount] = useState<{ cents: number; currency: string } | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [customerSessionClientSecret, setCustomerSessionClientSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -54,6 +55,7 @@ export function UpgradeToFullForm({ publishableKey }: { publishableKey: string }
           return;
         }
         setClientSecret(result.clientSecret);
+        setCustomerSessionClientSecret(result.customerSessionClientSecret);
         setStatus("ready");
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not start the upgrade. Please try again.");
@@ -130,7 +132,13 @@ export function UpgradeToFullForm({ publishableKey }: { publishableKey: string }
             </div>
             <div className="mt-6">
               {clientSecret ? (
-                <Elements key={clientSecret} stripe={stripe} options={{ clientSecret }}>
+                <Elements
+                  key={clientSecret}
+                  stripe={stripe}
+                  options={
+                    customerSessionClientSecret ? { clientSecret, customerSessionClientSecret } : { clientSecret }
+                  }
+                >
                   <CheckoutInner />
                 </Elements>
               ) : null}
@@ -142,6 +150,16 @@ export function UpgradeToFullForm({ publishableKey }: { publishableKey: string }
   );
 }
 
+/**
+ * If the Customer Session came through, PaymentElement shows the saved
+ * default payment method pre-selected (one-click confirm) with the
+ * option to pick a different saved card or add a new one — separate
+ * from whatever card the badge fee or other charges used. If there's no
+ * saved card at all (or the session failed to create — see the action's
+ * own try/catch around it), PaymentElement falls back to its normal
+ * "enter a new card" form on its own; no separate empty-state handling
+ * needed here.
+ */
 function CheckoutInner() {
   const stripe = useStripe();
   const elements = useElements();
@@ -178,8 +196,12 @@ function CheckoutInner() {
 
   return (
     <form onSubmit={onSubmit} className="rounded-xl border border-[var(--divider)] bg-[var(--white)] p-5 shadow-sm">
-      <p className="mb-4 font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
+      <p className="mb-1 font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
         Payment details
+      </p>
+      <p className="mb-4 font-[family-name:var(--font-dm)] text-[11px] text-[var(--text3)]">
+        Your card on file is selected below — switch to a different one if you&apos;d rather this charge land
+        elsewhere.
       </p>
       <PaymentElement />
       <p className="mt-4 flex items-center gap-2 font-[family-name:var(--font-dm)] text-[11px] leading-relaxed text-[var(--text3)]">
