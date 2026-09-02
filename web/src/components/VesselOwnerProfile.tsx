@@ -311,6 +311,7 @@ export function VesselOwnerProfile({
           doc_registration_url={tier.doc_registration_url}
           doc_insurance_url={tier.doc_insurance_url}
           doc_boater_card_url={tier.doc_boater_card_url}
+          ca_boater_card={tier.ca_boater_card}
           subscriptionTier={billing.subscriptionTier}
         />
 
@@ -347,7 +348,6 @@ export function VesselOwnerProfile({
             fire_extinguisher={tier.fire_extinguisher}
             flares={tier.flares}
             sound_device={tier.sound_device}
-            ca_boater_card={tier.ca_boater_card}
           />
         </div>
         <dl className="mt-4 rounded-xl border border-[var(--divider)] bg-[var(--white)] p-5 shadow-sm">
@@ -358,7 +358,6 @@ export function VesselOwnerProfile({
           <Row label="Fire extinguisher" value={tier.fire_extinguisher ?? null} />
           <Row label="Flares" value={tier.flares ?? null} />
           <Row label="Sound device" value={tier.sound_device ?? null} />
-          <Row label="CA boater card" value={tier.ca_boater_card ?? null} />
         </dl>
 
         <footer className="mt-16 border-t border-[var(--divider)] pt-8 text-center">

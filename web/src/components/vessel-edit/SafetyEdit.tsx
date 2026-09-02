@@ -11,10 +11,16 @@ type Fields = {
   fire_extinguisher: boolean;
   flares: boolean;
   sound_device: boolean;
-  ca_boater_card: boolean;
 };
 
-/** engine was removed — it's a locked, identity-defining field now (see owner-actions.ts); no self-serve edit path here. */
+/**
+ * engine was removed — it's a locked, identity-defining field now (see
+ * owner-actions.ts); no self-serve edit path here. ca_boater_card was
+ * also removed from here — it's a personal operator credential, not
+ * boat equipment, and now lives paired with its upload slot in
+ * DocumentsEdit instead of sitting in this physical-equipment
+ * checklist.
+ */
 export function SafetyEdit({
   mxeId,
   fuel_type,
@@ -23,7 +29,6 @@ export function SafetyEdit({
   fire_extinguisher,
   flares,
   sound_device,
-  ca_boater_card,
 }: {
   mxeId: string;
   fuel_type: string | null | undefined;
@@ -32,7 +37,6 @@ export function SafetyEdit({
   fire_extinguisher: boolean | null | undefined;
   flares: boolean | null | undefined;
   sound_device: boolean | null | undefined;
-  ca_boater_card: boolean | null | undefined;
 }) {
   const initial: Fields = {
     fuel_type: fuel_type ?? "",
@@ -41,7 +45,6 @@ export function SafetyEdit({
     fire_extinguisher: fire_extinguisher ?? false,
     flares: flares ?? false,
     sound_device: sound_device ?? false,
-    ca_boater_card: ca_boater_card ?? false,
   };
   const { editing, values, setValues, error, pending, open, cancel, save } = useSectionEdit(initial);
 
@@ -110,14 +113,6 @@ export function SafetyEdit({
           />
           Sound device
         </label>
-        <label className="flex items-center gap-2 font-[family-name:var(--font-dm)] text-sm text-[var(--text)]">
-          <input
-            type="checkbox"
-            checked={values.ca_boater_card}
-            onChange={(e) => setValues((p) => ({ ...p, ca_boater_card: e.target.checked }))}
-          />
-          CA boater card
-        </label>
       </div>
       {error ? <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">{error}</p> : null}
       <div className="flex gap-2.5">
@@ -135,7 +130,6 @@ export function SafetyEdit({
                 fire_extinguisher: values.fire_extinguisher,
                 flares: values.flares,
                 sound_device: values.sound_device,
-                ca_boater_card: values.ca_boater_card,
               }),
             )
           }
