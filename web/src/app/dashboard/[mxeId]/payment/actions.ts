@@ -186,15 +186,6 @@ export async function createSignupBundleIntent(mxeId: string, tier: Subscription
   if (owner.subscription_status === "active") {
     return { error: "Your account already has an active plan — this vessel only needs its badge fee. Refresh the page." };
   }
-  // Race guard against two tabs both starting the bundled checkout: the
-  // first request to reach here sets stripe_subscription_id right after
-  // creating the subscription (below), before this vessel's webhook-driven
-  // activation even happens. A second concurrent request that reads this
-  // row after that write bails here instead of creating a duplicate
-  // subscription — same pattern as createFullAccessUpgradeIntent's guard.
-  if (owner.stripe_subscription_id) {
-    return { error: "A subscription is already being set up for this account. Refresh the page and try again." };
-  }
 
   const stripe = getStripe();
 
@@ -209,6 +200,37 @@ export async function createSignupBundleIntent(mxeId: string, tier: Subscription
   }
 
   try {
+    // stripe_subscription_id is set immediately after creating a
+    // subscription (below), before payment even completes — so picking
+    // Full and then changing to Basic before paying leaves a real but
+    // still-unpaid ("incomplete") subscription behind. That's not the
+    // same case the guard below exists for (two tabs racing to create a
+    // subscription for the SAME pick): here, cancel the abandoned
+    // incomplete one and let this request proceed with the new tier,
+    // rather than treating a plan change as a collision. Only a
+    // genuinely active/paid subscription (or one still mid-flight from a
+    // concurrent request) blocks outright.
+    if (owner.stripe_subscription_id) {
+      try {
+        const existingSub = await stripe.subscriptions.retrieve(owner.stripe_subscription_id);
+        if (existingSub.status === "incomplete") {
+          await stripe.subscriptions.cancel(owner.stripe_subscription_id).catch(() => {});
+          await service.from("users").update({ stripe_subscription_id: null }).eq("id", owner.id);
+        } else if (existingSub.status === "incomplete_expired") {
+          // Stripe already auto-expired it (23h with no payment) — nothing
+          // to cancel, just clear the stale id.
+          await service.from("users").update({ stripe_subscription_id: null }).eq("id", owner.id);
+        } else {
+          return { error: "A subscription is already being set up for this account. Refresh the page and try again." };
+        }
+      } catch {
+        // Retrieval failed — id is stale (deleted, wrong Stripe mode,
+        // etc.). Clear it and proceed rather than blocking forever on a
+        // subscription that no longer exists.
+        await service.from("users").update({ stripe_subscription_id: null }).eq("id", owner.id);
+      }
+    }
+
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: owner.email ?? user.email ?? undefined,
