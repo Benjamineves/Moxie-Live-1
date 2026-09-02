@@ -7,6 +7,7 @@ const LINKS = [
   { href: "/admin/vessel-identity-log", label: "Identity change log" },
   { href: "/admin/vessel-correction-requests", label: "Correction requests" },
   { href: "/admin/vessel-decommission-requests", label: "Decommission requests" },
+  { href: "/admin/ownership-transfers", label: "Ownership transfers" },
 ] as const;
 
 /**

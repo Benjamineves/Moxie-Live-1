@@ -4,6 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { ScanSuccess } from "@/components/ScanSuccess";
 import { VesselPublicProfile, type PublicProfileProps } from "@/components/VesselPublicProfile";
 import { VesselOwnerProfile, type OwnerProfileTier } from "@/components/VesselOwnerProfile";
+import type { ActiveTransfer } from "@/components/vessel-edit/TransferOwnershipPanel";
 import { SharedVesselProfile } from "@/components/share/SharedVesselProfile";
 import { fetchVesselByMxeId, filterVesselForRole } from "@/lib/vessel-service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -138,6 +139,7 @@ export default async function VesselPage({ params, searchParams }: Props) {
     };
 
     let hasPendingDecommissionRequest = false;
+    let activeTransfer: ActiveTransfer | null = null;
     const service = createSupabaseServiceClient();
     if (service) {
       const { data: pendingRequest } = await service
@@ -147,6 +149,22 @@ export default async function VesselPage({ params, searchParams }: Props) {
         .eq("status", "pending")
         .maybeSingle();
       hasPendingDecommissionRequest = !!pendingRequest;
+
+      const { data: transferRow } = await service
+        .from("ownership_transfers")
+        .select("id, status, buyer_email, expires_at")
+        .eq("vessel_id", vessel.id)
+        .in("status", ["pending", "awaiting_payment"])
+        .maybeSingle();
+      if (transferRow) {
+        const t = transferRow as { id: string; status: string; buyer_email: string; expires_at: string };
+        activeTransfer = {
+          id: t.id,
+          status: t.status as "pending" | "awaiting_payment",
+          buyerEmail: t.buyer_email,
+          expiresAt: t.expires_at,
+        };
+      }
     }
 
     return (
@@ -156,6 +174,7 @@ export default async function VesselPage({ params, searchParams }: Props) {
           billing={billing}
           justUpgraded={sp.upgraded === "1"}
           hasPendingDecommissionRequest={hasPendingDecommissionRequest}
+          activeTransfer={activeTransfer}
         />
       </div>
     );

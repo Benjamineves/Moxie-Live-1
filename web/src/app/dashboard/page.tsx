@@ -23,6 +23,12 @@ type Props = {
 export default async function DashboardPage({ searchParams }: Props) {
   const sp = await searchParams;
   const justUpgraded = sp.upgraded === "1";
+  // Computed once, reused everywhere below — a Server Component's render
+  // body must stay pure (no bare Date.now() calls inline, though `new
+  // Date()` itself is fine — same pattern admin/page.tsx already uses),
+  // and this also keeps every "days left" figure on the page consistent
+  // with a single moment rather than drifting between two calls.
+  const now = new Date().getTime();
 
   const supabase = await createSupabaseServerClient();
   if (!supabase) {
@@ -64,6 +70,33 @@ export default async function DashboardPage({ searchParams }: Props) {
   const ownedVessels = ((vessels ?? []) as VesselRecord[]).filter((v) => v.mxe_id);
   const activeFleet = ownedVessels.filter((v) => v.lifecycle_status !== "decommissioned");
   const archivedVessels = ownedVessels.filter((v) => v.lifecycle_status === "decommissioned");
+
+  // Expiry reminders are in-app only (no email infrastructure exists in
+  // this app) — a banner here, checked whenever the seller loads their
+  // own dashboard, is the whole mechanism. 48h window is arbitrary but
+  // reasonable against the 7-day expiry. Scoped by ownerIds (not just
+  // user.id) for the same reason the vessels query above is — seller_id
+  // on a transfer is set from vessel.owner_id at initiation, which can
+  // be either id in the owner-by-email-mismatch case this app already
+  // handles everywhere else.
+  const { data: myTransferRows } = await service
+    .from("ownership_transfers")
+    .select("id, mxe_id, buyer_email, status, expires_at")
+    .in("seller_id", ownerIds)
+    .in("status", ["pending", "awaiting_payment"])
+    .order("expires_at", { ascending: true });
+  const REMINDER_WINDOW_MS = 48 * 60 * 60 * 1000;
+  const expiringTransfers = (
+    (myTransferRows ?? []) as { id: string; mxe_id: string; buyer_email: string; status: string; expires_at: string }[]
+  ).filter((t) => new Date(t.expires_at).getTime() - now < REMINDER_WINDOW_MS);
+
+  const { data: previouslyOwnedRows } = await service
+    .from("ownership_transfers")
+    .select("id, mxe_id, buyer_email, completed_at")
+    .in("seller_id", ownerIds)
+    .eq("status", "completed")
+    .order("completed_at", { ascending: false });
+  const previouslyOwned = (previouslyOwnedRows ?? []) as { id: string; mxe_id: string; buyer_email: string; completed_at: string }[];
 
   // Server-checked, not CSS-hidden — requireAdmin() re-verifies role +
   // the ADMIN_EMAILS allowlist independently of anything else on this
@@ -111,6 +144,35 @@ export default async function DashboardPage({ searchParams }: Props) {
             <p className="font-[family-name:var(--font-dm)] text-sm font-medium text-[var(--navy)]">
               You&apos;re on Full Access — every vessel on this account is covered.
             </p>
+          </div>
+        ) : null}
+
+        {expiringTransfers.length > 0 ? (
+          <div className="mb-6 flex flex-col gap-2">
+            {expiringTransfers.map((t) => {
+              const daysLeft = Math.ceil((new Date(t.expires_at).getTime() - now) / (24 * 60 * 60 * 1000));
+              return (
+                <div
+                  key={t.id}
+                  className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--red-fg)] bg-[var(--red-bg)] px-4 py-3"
+                >
+                  <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">
+                    Transfer of {t.mxe_id} to {t.buyer_email}{" "}
+                    {t.status === "pending"
+                      ? daysLeft > 0
+                        ? `expires in ${daysLeft} day${daysLeft === 1 ? "" : "s"} — not yet accepted.`
+                        : "expires today — not yet accepted."
+                      : "is awaiting your transfer fee payment."}
+                  </p>
+                  <Link
+                    href={`/${encodeURIComponent(t.mxe_id)}?role=owner`}
+                    className="shrink-0 font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.08em] text-[var(--red-fg)] underline"
+                  >
+                    Manage transfer →
+                  </Link>
+                </div>
+              );
+            })}
           </div>
         ) : null}
         <div className="mb-6 flex items-end justify-between gap-4">
@@ -251,6 +313,35 @@ export default async function DashboardPage({ searchParams }: Props) {
                   </div>
                   <Link
                     href={`/${encodeURIComponent(vessel.mxe_id)}?role=owner`}
+                    className="shrink-0 font-[family-name:var(--font-dm)] text-xs text-[var(--blue-fg)] underline"
+                  >
+                    View →
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
+
+        {previouslyOwned.length > 0 ? (
+          <section className="mt-10">
+            <p className="mb-4 font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
+              Previously owned
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {previouslyOwned.map((t) => (
+                <div
+                  key={t.id}
+                  className="flex items-center justify-between gap-3 rounded-xl border border-[var(--divider)] bg-[var(--cream2)] p-4"
+                >
+                  <div>
+                    <p className="font-[family-name:var(--font-dm)] text-xs text-[var(--text3)]">{t.mxe_id}</p>
+                    <p className="font-[family-name:var(--font-dm)] text-xs text-[var(--text3)]">
+                      Transferred {new Date(t.completed_at).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <Link
+                    href={`/dashboard/transfer/${encodeURIComponent(t.id)}/previously-owned`}
                     className="shrink-0 font-[family-name:var(--font-dm)] text-xs text-[var(--blue-fg)] underline"
                   >
                     View →

@@ -6,21 +6,39 @@ import { useRouter } from "next/navigation";
 const POLL_MS = 1500;
 const TIMEOUT_MS = 45_000;
 
+type Mode = "activate" | "upgrade" | "transfer";
+
+const IN_PROGRESS_COPY: Record<Mode, string> = {
+  activate: "Activating",
+  upgrade: "Upgrading to Full Access",
+  transfer: "Completing transfer",
+};
+
+const TIMED_OUT_HEADLINE: Record<Mode, string> = {
+  activate: "Still not active",
+  upgrade: "Still upgrading",
+  transfer: "Still completing",
+};
+
 /**
  * Re-runs the server component on an interval until it sees the relevant
- * field flip — qr_status to 'active' for first-time vessel activation, or
- * subscription_tier to 'full' for an account-level Full Access upgrade
- * (the page itself redirects once it does). Purely a polling nudge — no
- * client-side code here ever writes either field.
+ * field flip — qr_status to 'active' for first-time vessel activation,
+ * subscription_tier to 'full' for an account-level Full Access upgrade,
+ * or an ownership_transfers row reaching status='completed' for a
+ * transfer-fee payment (the page itself redirects once any of these
+ * happen). Purely a polling nudge — no client-side code here ever
+ * writes any of these fields.
  *
- * Shared by two unrelated routes: dashboard/[mxeId]/payment/processing
- * (badge-fee activation) and dashboard/upgrade/processing (account-level
- * subscription upgrade, build spec §9 item 16) — hence living in the
- * general components directory rather than under either route.
+ * Shared by three unrelated routes: dashboard/[mxeId]/payment/processing
+ * (badge-fee activation), dashboard/upgrade/processing (account-level
+ * subscription upgrade, build spec §9 item 16), and
+ * dashboard/transfer/[transferId]/payment/processing (Ownership
+ * Transfer) — hence living in the general components directory rather
+ * than under any one route.
  *
  * mxeId is optional because the account-level upgrade isn't about any
- * specific vessel — mode="upgrade" without an mxeId shows account-generic
- * copy instead of naming one.
+ * specific vessel — mode="upgrade"/"transfer" without an mxeId shows
+ * generic copy instead of naming one.
  *
  * Stops after TIMEOUT_MS instead of spinning forever: if the webhook never
  * arrives (misconfigured `stripe listen`, a mismatched STRIPE_WEBHOOK_SECRET,
@@ -33,7 +51,7 @@ export function ActivationPoller({
   mode = "activate",
 }: {
   mxeId?: string;
-  mode?: "activate" | "upgrade";
+  mode?: Mode;
 }) {
   const router = useRouter();
   const [timedOut, setTimedOut] = useState(false);
@@ -56,12 +74,10 @@ export function ActivationPoller({
           <span className="text-2xl text-[#e57373]">!</span>
         </div>
         <p className="font-[family-name:var(--font-display)] text-2xl font-light italic text-white">
-          {mode === "upgrade" ? "Still upgrading" : "Still not active"}
+          {TIMED_OUT_HEADLINE[mode]}
         </p>
         <p className="max-w-sm font-[family-name:var(--font-dm)] text-sm text-[rgba(255,255,255,.6)]">
-          {mode === "upgrade"
-            ? `${mxeId ? `${mxeId}'s` : "Your account's"} upgrade hasn't completed after 45 seconds. If your card was charged, the payment went through but confirmation hasn't reached us yet — this doesn't need to be retried blindly. Check your Stripe Dashboard before paying again.`
-            : `${mxeId} hasn't activated after 45 seconds. If your card was charged, the payment went through but confirmation hasn't reached us yet — this doesn't need to be retried blindly. Check your Stripe Dashboard before paying again.`}
+          {`${mxeId ? `${mxeId}'s` : "Your account's"} ${mode === "activate" ? "activation" : mode === "upgrade" ? "upgrade" : "transfer"} hasn't completed after 45 seconds. If your card was charged, the payment went through but confirmation hasn't reached us yet — this doesn't need to be retried blindly. Check your Stripe Dashboard before paying again.`}
         </p>
         <div className="mt-2 flex gap-3">
           <button
@@ -83,7 +99,7 @@ export function ActivationPoller({
     <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--navy-deep)] px-6 text-center">
       <div className="h-10 w-10 animate-spin rounded-full border-2 border-[rgba(255,255,255,.15)] border-t-[var(--aqua-bright)]" />
       <p className="font-[family-name:var(--font-display)] text-2xl font-light italic text-white">
-        {mode === "upgrade" ? "Upgrading to Full Access" : `Activating ${mxeId ?? "vessel"}`}
+        {mode === "activate" ? `${IN_PROGRESS_COPY[mode]} ${mxeId ?? "vessel"}` : IN_PROGRESS_COPY[mode]}
       </p>
       <p className="max-w-xs font-[family-name:var(--font-dm)] text-sm text-[rgba(255,255,255,.6)]">
         This usually takes a few seconds — your payment is confirmed, we&apos;re finishing setup.

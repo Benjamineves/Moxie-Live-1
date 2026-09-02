@@ -7,6 +7,8 @@ import { getStripe } from "@/lib/stripe/server";
 import { resolveOwnerIds, loadOwnedVessel } from "@/lib/vessel-ownership";
 import { normalizeStateCode } from "@/lib/us-states";
 import { isDecommissionReason, type DecommissionReason } from "@/lib/vessel-decommission";
+import { generateShareToken } from "@/lib/share-token";
+import { TRANSFER_EXPIRY_DAYS } from "@/lib/vessel-transfer";
 
 /**
  * Updates photo_url on an already-existing vessel — the counterpart to
@@ -396,4 +398,125 @@ export async function openBillingPortal(): Promise<{ error?: string }> {
   });
 
   redirect(session.url);
+}
+
+/**
+ * Seller-side half of Ownership Transfer: creates the pending request
+ * and returns a one-time link token — the same generateShareToken()/
+ * hashShareToken() pair vessel_shares already uses, only the hash is
+ * ever persisted. No charge happens here; the fee is only ever due once
+ * the buyer accepts (see dashboard/transfer/[transferId]/payment).
+ *
+ * initiated_by/initiated_via are set to the seller themselves here —
+ * this action is the v1, owner-session-only caller. A future escrow API
+ * would call the same underlying insert with a different actor; nothing
+ * about "must be the current owner" is baked into the schema or the
+ * atomic accept/complete/reverse functions, only into this function's
+ * own auth check.
+ */
+export async function initiateOwnershipTransfer(
+  mxeId: string,
+  buyerEmail: string,
+): Promise<{ token?: string; error?: string }> {
+  const normalizedBuyerEmail = buyerEmail.trim().toLowerCase();
+  if (!normalizedBuyerEmail || !normalizedBuyerEmail.includes("@")) {
+    return { error: "Enter a valid email address." };
+  }
+
+  const authClient = await createSupabaseServerClient();
+  if (!authClient) return { error: "Missing Supabase auth configuration." };
+
+  const { user, ownerIds } = await resolveOwnerIds(authClient);
+  if (!user) return { error: "You must be signed in." };
+
+  const service = createSupabaseServiceClient();
+  if (!service) return { error: "Missing Supabase service role configuration." };
+
+  const { data: vesselRow } = await service
+    .from("vessels")
+    .select("id, owner_id, mxe_id, qr_status, lifecycle_status, owner_email")
+    .eq("mxe_id", mxeId.toUpperCase())
+    .maybeSingle();
+  const vessel = vesselRow as
+    | { id: string; owner_id: string; mxe_id: string; qr_status: string | null; lifecycle_status: string | null; owner_email: string | null }
+    | null;
+
+  if (!vessel || !ownerIds.includes(vessel.owner_id)) {
+    return { error: "Vessel not found." };
+  }
+  if (vessel.qr_status !== "active") {
+    return { error: "This vessel needs to finish activating before it can be transferred." };
+  }
+  if (vessel.lifecycle_status === "decommissioned") {
+    return { error: "This vessel is decommissioned and can't be transferred." };
+  }
+  if (vessel.owner_email && vessel.owner_email.trim().toLowerCase() === normalizedBuyerEmail) {
+    return { error: "You can't transfer a vessel to yourself." };
+  }
+
+  const { data: existingActive } = await service
+    .from("ownership_transfers")
+    .select("id")
+    .eq("vessel_id", vessel.id)
+    .in("status", ["pending", "awaiting_payment"])
+    .maybeSingle();
+  if (existingActive) {
+    return { error: "A transfer for this vessel is already in progress. Cancel it first to start a new one." };
+  }
+
+  const { token, tokenHash } = generateShareToken();
+  const expiresAt = new Date(Date.now() + TRANSFER_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
+
+  const { error } = await service.from("ownership_transfers").insert({
+    vessel_id: vessel.id,
+    mxe_id: vessel.mxe_id,
+    seller_id: vessel.owner_id,
+    initiated_by: vessel.owner_id,
+    initiated_via: "owner",
+    buyer_email: normalizedBuyerEmail,
+    token_hash: tokenHash,
+    expires_at: expiresAt.toISOString(),
+  });
+  if (error) return { error: error.message };
+
+  return { token };
+}
+
+/**
+ * Seller can cancel any time before the transfer completes — while
+ * still 'pending' (buyer hasn't accepted) or 'awaiting_payment' (buyer
+ * accepted, seller hasn't paid yet). No charge has happened in either
+ * state, so there's nothing to refund.
+ */
+export async function cancelOwnershipTransfer(transferId: string): Promise<{ error?: string }> {
+  const authClient = await createSupabaseServerClient();
+  if (!authClient) return { error: "Missing Supabase auth configuration." };
+
+  const { user, ownerIds } = await resolveOwnerIds(authClient);
+  if (!user) return { error: "You must be signed in." };
+
+  const service = createSupabaseServiceClient();
+  if (!service) return { error: "Missing Supabase service role configuration." };
+
+  const { data: transferRow } = await service
+    .from("ownership_transfers")
+    .select("id, seller_id, status")
+    .eq("id", transferId)
+    .maybeSingle();
+  const transfer = transferRow as { id: string; seller_id: string; status: string } | null;
+
+  if (!transfer || !ownerIds.includes(transfer.seller_id)) {
+    return { error: "Transfer not found." };
+  }
+  if (transfer.status !== "pending" && transfer.status !== "awaiting_payment") {
+    return { error: `This transfer can't be canceled (status: ${transfer.status}).` };
+  }
+
+  const { error } = await service
+    .from("ownership_transfers")
+    .update({ status: "canceled", canceled_at: new Date().toISOString() })
+    .eq("id", transferId)
+    .in("status", ["pending", "awaiting_payment"]);
+  if (error) return { error: error.message };
+  return {};
 }

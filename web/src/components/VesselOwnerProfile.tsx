@@ -13,6 +13,7 @@ import { EmergencyEdit } from "@/components/vessel-edit/EmergencyEdit";
 import { RegistrationEdit } from "@/components/vessel-edit/RegistrationEdit";
 import { RequestIdentityCorrection } from "@/components/vessel-edit/RequestIdentityCorrection";
 import { RequestDecommission } from "@/components/vessel-edit/RequestDecommission";
+import { TransferOwnershipPanel, type ActiveTransfer } from "@/components/vessel-edit/TransferOwnershipPanel";
 import { DocumentsEdit } from "@/components/vessel-edit/DocumentsEdit";
 import { InsuranceEdit } from "@/components/vessel-edit/InsuranceEdit";
 import { SafetyEdit } from "@/components/vessel-edit/SafetyEdit";
@@ -78,11 +79,13 @@ export function VesselOwnerProfile({
   billing,
   justUpgraded = false,
   hasPendingDecommissionRequest = false,
+  activeTransfer = null,
 }: {
   tier: OwnerProfileTier;
   billing: BillingSummary;
   justUpgraded?: boolean;
   hasPendingDecommissionRequest?: boolean;
+  activeTransfer?: ActiveTransfer | null;
 }) {
   const publicProps: PublicProfileProps = {
     mxe_id: tier.mxe_id,
@@ -207,6 +210,9 @@ export function VesselOwnerProfile({
         {!isDecommissioned ? (
           <RequestDecommission mxeId={tier.mxe_id} hasPendingRequest={hasPendingDecommissionRequest} />
         ) : null}
+        {!isDecommissioned && !needsActivation ? (
+          <TransferOwnershipPanel mxeId={tier.mxe_id} activeTransfer={activeTransfer} />
+        ) : null}
       </div>
 
       <section className="mx-auto max-w-lg px-5 pb-10 md:px-8">
@@ -301,6 +307,7 @@ export function VesselOwnerProfile({
           doc_registration_url={tier.doc_registration_url}
           doc_insurance_url={tier.doc_insurance_url}
           doc_boater_card_url={tier.doc_boater_card_url}
+          subscriptionTier={billing.subscriptionTier}
         />
 
         <div className="mt-12 flex items-center justify-between">

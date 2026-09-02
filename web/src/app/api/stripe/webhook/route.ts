@@ -54,6 +54,8 @@ export async function POST(request: Request) {
         const intent = event.data.object as Stripe.PaymentIntent;
         if (intent.metadata?.payment_type === "badge_fee") {
           await activateFromBadgeFee(service, intent);
+        } else if (intent.metadata?.payment_type === "transfer_fee") {
+          await completeOwnershipTransferFromPayment(service, intent);
         }
         break;
       }
@@ -163,6 +165,54 @@ async function activateFromBadgeFee(service: ServiceClient, intent: Stripe.Payme
   }
 
   await activateVessel(service, vessel, mxeId, `payment_intent.succeeded ${intent.id}`);
+}
+
+/**
+ * Ownership Transfer fee — one-time, charged to the seller, only once
+ * the buyer has already accepted. This is the moment ownership actually
+ * moves: complete_ownership_transfer (20260908_ownership_transfer.sql)
+ * atomically flips vessels.owner_id, clears owner-specific fields,
+ * captures the seller's frozen snapshot, revokes vessel_shares, and
+ * resolves the transfer row — idempotent on its own (a webhook retry
+ * against an already-completed transfer is a no-op inside the
+ * function), same as activateVessel's qr_status guard above.
+ */
+async function completeOwnershipTransferFromPayment(service: ServiceClient, intent: Stripe.PaymentIntent) {
+  const transferId = intent.metadata?.transfer_id;
+  const vesselId = intent.metadata?.vessel_id;
+  if (!transferId) {
+    console.error(`[stripe-webhook] payment_intent.succeeded ${intent.id} has payment_type=transfer_fee but no metadata.transfer_id.`);
+    return;
+  }
+
+  // Same idempotency-guards-the-log-insert-only rule as activateFromBadgeFee:
+  // this must never gate the actual completion attempt below.
+  const { data: existingPayment } = await service
+    .from("vessel_payments")
+    .select("id")
+    .eq("stripe_payment_intent_id", intent.id)
+    .maybeSingle();
+
+  if (!existingPayment && vesselId) {
+    await service.from("vessel_payments").insert({
+      vessel_id: vesselId,
+      payment_type: "transfer_fee",
+      stripe_payment_intent_id: intent.id,
+      amount_cents: intent.amount,
+      status: "paid",
+      paid_at: new Date().toISOString(),
+    });
+  }
+
+  const { error } = await service.rpc("complete_ownership_transfer", {
+    p_transfer_id: transferId,
+    p_stripe_payment_intent_id: intent.id,
+  });
+  if (error) {
+    console.error(`[stripe-webhook] payment_intent.succeeded ${intent.id}: complete_ownership_transfer failed for transfer ${transferId}:`, error);
+  } else {
+    console.log(`[stripe-webhook] payment_intent.succeeded ${intent.id}: completed transfer ${transferId}.`);
+  }
 }
 
 /**

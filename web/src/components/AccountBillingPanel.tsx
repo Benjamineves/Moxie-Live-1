@@ -8,6 +8,7 @@ import type { BillingSummary } from "@/lib/billing-service";
 const PAYMENT_TYPE_LABELS: Record<string, string> = {
   badge_fee: "Badge fee",
   subscription: "Full Access",
+  transfer_fee: "Ownership transfer",
 };
 
 const STATUS_BADGE: Record<string, { label: string; className: string }> = {
