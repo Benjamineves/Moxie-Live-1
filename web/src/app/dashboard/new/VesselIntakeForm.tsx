@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { StorageTypePicker, isMarinaGroup, storageTypeLabel } from "@/components/StorageTypePicker";
 import { vesselTypes } from "@/lib/vessel-types";
@@ -62,6 +63,7 @@ export function VesselIntakeForm() {
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [generalError, setGeneralError] = useState<string | null>(null);
+  const [capReached, setCapReached] = useState(false);
   const [mxeId, setMxeId] = useState<string>("");
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress>({
@@ -213,6 +215,7 @@ export function VesselIntakeForm() {
 
   function onSubmit() {
     setGeneralError(null);
+    setCapReached(false);
     startTransition(async () => {
       const result = await createVessel(
         {
@@ -242,6 +245,7 @@ export function VesselIntakeForm() {
 
       if (!result.mxeId) {
         setGeneralError(result.error ?? "Failed to create vessel.");
+        setCapReached(result.code === "VESSEL_CAP_REACHED");
         return;
       }
       router.push(`/dashboard/${encodeURIComponent(result.mxeId)}/payment`);
@@ -458,7 +462,19 @@ export function VesselIntakeForm() {
         </div>
       ) : null}
 
-      {generalError ? <p className="mt-4 font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">{generalError}</p> : null}
+      {generalError ? (
+        <div className="mt-4">
+          <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">{generalError}</p>
+          {capReached ? (
+            <Link
+              href="/dashboard/upgrade"
+              className="mt-1.5 inline-flex items-center gap-1 font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--gold)] underline underline-offset-2"
+            >
+              Upgrade to Full Access →
+            </Link>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="mt-6 flex items-center justify-between gap-3">
         <button

@@ -111,9 +111,17 @@ export function AccountBillingPanel({ billing }: { billing: BillingSummary }) {
                 </div>
               ) : null}
 
-              <div className="py-4">
+              <div className="flex flex-col gap-2 py-4">
                 {hasManageableSubscription ? (
                   <>
+                    {billing.subscriptionTier === "basic" ? (
+                      <Link
+                        href="/dashboard/upgrade"
+                        className="block w-full bg-[var(--aqua-bright)] px-3 py-3 text-center font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--navy)]"
+                      >
+                        Upgrade to Full Access →
+                      </Link>
+                    ) : null}
                     <button
                       type="button"
                       onClick={onManageBilling}

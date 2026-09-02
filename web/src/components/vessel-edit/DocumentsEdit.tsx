@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { uploadVesselDocument, type DocType } from "@/lib/vessel-uploads";
 import { updateVesselDocument, updateVesselOwnerFields, checkStorageCapacity } from "@/lib/owner-actions";
 import { isDocumentLocked, type DocumentSlot } from "@/lib/vessel-transfer";
@@ -188,9 +189,12 @@ function LockedDocumentRow({ label }: { label: string }) {
           On file, locked on Basic
         </p>
       </div>
-      <span className="shrink-0 rounded-md border border-[var(--gold-line)] px-3 py-2 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--gold)]">
+      <Link
+        href="/dashboard/upgrade"
+        className="shrink-0 rounded-md border border-[var(--gold-line)] px-3 py-2 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--gold)] transition hover:bg-[var(--gold-dim)]"
+      >
         🔒 Unlock with Full Access
-      </span>
+      </Link>
     </div>
   );
 }

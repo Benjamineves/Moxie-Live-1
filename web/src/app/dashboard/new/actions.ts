@@ -64,7 +64,7 @@ export async function previewNextMxeId(): Promise<{ mxeId?: string; error?: stri
 export async function createVessel(
   input: CreateVesselInput,
   proposedMxeId?: string,
-): Promise<{ mxeId?: string; error?: string }> {
+): Promise<{ mxeId?: string; error?: string; code?: "VESSEL_CAP_REACHED" }> {
   const basicError = validate(input);
   if (basicError) return { error: basicError };
 
@@ -148,7 +148,12 @@ export async function createVessel(
     return { error: `Unable to check vessel count: ${countError.message}` };
   }
   if (!capExempt && (vesselCount ?? 0) >= vesselLimit) {
-    return { error: `You've reached the ${vesselLimit}-vessel limit on your current plan.` };
+    return {
+      error: `You've reached the ${vesselLimit}-vessel limit on your current plan.`,
+      // Only actionable for Basic — Full is already the highest tier
+      // today, so there's no in-app upgrade to point to for that case.
+      ...(ownerTier === "basic" ? { code: "VESSEL_CAP_REACHED" as const } : {}),
+    };
   }
 
   const isMarinaStorage = input.storage_type === "marina" || input.storage_type === "mooring";

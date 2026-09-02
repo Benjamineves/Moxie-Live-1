@@ -292,12 +292,18 @@ async function completeOwnershipTransferFromPayment(service: ServiceClient, inte
  * fee's job, unconditionally, regardless of tier. This only ever updates
  * the owner's account-level tier/status and logs the charge.
  *
- * amount_cents logged here is the subscription's own recurring price,
- * NOT invoice.amount_paid — on a bundled signup invoice (add_invoice_items
- * riding the badge fee alongside the plan), invoice.amount_paid is the
- * combined total, which would double-count the badge-fee portion here.
- * The badge fee is logged separately, into vessel_payments, by
- * completeSignupBundle above.
+ * amount_cents logged here depends on the invoice's billing_reason:
+ * 'subscription_create' (a brand-new subscription's first invoice) reads
+ * the subscription's own recurring price rather than invoice.amount_paid,
+ * because that first invoice may have a one-time badge fee riding along
+ * via add_invoice_items (the bundled signup checkout) — amount_paid would
+ * double-count it. Every other reason (a plain renewal, or a
+ * 'subscription_update' proration from the Basic-to-Full upgrade) has no
+ * such rider, so invoice.amount_paid is both simpler and more accurate
+ * there — for a proration invoice in particular, it's the only place the
+ * actual net prorated charge (credit for unused Basic time included) is
+ * available at all; the subscription's current recurring price alone
+ * would show the full new-tier price instead of what was really charged.
  */
 async function recordAccountSubscriptionInvoice(service: ServiceClient, invoice: Stripe.Invoice) {
   // Invoice.subscription was removed from the Stripe API (installed SDK:
@@ -325,7 +331,12 @@ async function recordAccountSubscriptionInvoice(service: ServiceClient, invoice:
   const planItem = subscription.items.data[0];
   const planPrice = planItem?.price;
   const tier = tierForPriceId(typeof planPrice === "string" ? planPrice : planPrice?.id);
-  const subscriptionOnlyAmountCents = typeof planPrice === "string" ? null : (planPrice?.unit_amount ?? null);
+  const subscriptionOnlyAmountCents =
+    invoice.billing_reason === "subscription_create"
+      ? typeof planPrice === "string"
+        ? null
+        : (planPrice?.unit_amount ?? null)
+      : invoice.amount_paid;
 
   if (!tier) {
     console.error(

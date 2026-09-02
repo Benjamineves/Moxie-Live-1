@@ -161,3 +161,136 @@ export async function createPlanSubscriptionIntent(tier: SubscriptionTier): Prom
     return { error: err instanceof Error ? err.message : "Could not start checkout. Please try again." };
   }
 }
+
+type UpgradeResult =
+  | { amountCents: number; currency: string; clientSecret: string | null }
+  | { error: string };
+
+/**
+ * Basic → Full mid-cycle upgrade, via Stripe's native proration
+ * (proration_behavior: 'create_prorations') on the SAME subscription and
+ * billing anchor — the account keeps renewing on its usual date, just at
+ * the Full price from now on, and this one invoice charges the
+ * difference: the remaining-period Full charge minus a credit for the
+ * unused Basic time. Recommended and confirmed over "full price, fresh
+ * year" (which claws back paid-for time — the same "feels punitive"
+ * problem flagged for the badge-fee bundling) and "wait until renewal"
+ * (which defeats the point of a contextual upgrade prompt that needs to
+ * unlock access now).
+ *
+ * Swapping a subscription item's price this way is safe to call even if
+ * the resulting invoice is never paid: Stripe holds the change in
+ * `pending_update` until payment succeeds rather than applying it
+ * immediately, so an abandoned upgrade never leaves the account
+ * half-upgraded. That's also why this needs no race guard like the
+ * bundled signup checkout's stripe_subscription_id dance — there's
+ * nothing here for two concurrent attempts to collide over.
+ *
+ * clientSecret can legitimately be null: if the prorated credit already
+ * covers the full new-period charge (amount_due = 0 — not expected in
+ * practice since Full is well above Basic at any elapsed fraction of a
+ * year, but Stripe finalizes a $0 invoice as paid immediately with no
+ * PaymentIntent to confirm), there's nothing for the client to confirm —
+ * the caller should treat a null clientSecret as "already done" and go
+ * straight to the processing/poller page.
+ */
+export async function upgradeToFullAccess(): Promise<UpgradeResult> {
+  const authClient = await createSupabaseServerClient();
+  if (!authClient) return { error: "Missing Supabase auth configuration." };
+
+  const {
+    data: { user },
+  } = await authClient.auth.getUser();
+  if (!user) return { error: "You must be signed in." };
+
+  const service = createSupabaseServiceClient();
+  if (!service) return { error: "Missing Supabase service role configuration." };
+
+  type OwnerRow = {
+    id: string;
+    subscription_tier: string | null;
+    subscription_status: string | null;
+    stripe_subscription_id: string | null;
+  };
+
+  const normalizedEmail = user.email?.trim().toLowerCase();
+  let owner: OwnerRow | null = null;
+
+  if (normalizedEmail) {
+    const { data: ownerRow } = await service
+      .from("users")
+      .select("id, subscription_tier, subscription_status, stripe_subscription_id")
+      .eq("email", normalizedEmail)
+      .maybeSingle();
+    owner = ownerRow as OwnerRow | null;
+  }
+  if (!owner) {
+    const { data: ownerRow } = await service
+      .from("users")
+      .select("id, subscription_tier, subscription_status, stripe_subscription_id")
+      .eq("id", user.id)
+      .maybeSingle();
+    owner = ownerRow as OwnerRow | null;
+  }
+
+  if (!owner) return { error: "Owner account not found." };
+  if (owner.subscription_tier === "full") return { error: "Already on Full Access." };
+  if (owner.subscription_status !== "active" && owner.subscription_status !== "past_due") {
+    return { error: "Your account doesn't have an active plan to upgrade — choose a plan instead." };
+  }
+  if (!owner.stripe_subscription_id) {
+    return { error: "No subscription found on your account to upgrade." };
+  }
+
+  const stripe = getStripe();
+
+  try {
+    const subscription = await stripe.subscriptions.retrieve(owner.stripe_subscription_id);
+    const item = subscription.items.data[0];
+    if (!item) return { error: "Could not find your subscription's plan item." };
+
+    const fullPriceId = process.env.STRIPE_PRICE_ID_FULL?.trim();
+    if (!fullPriceId) return { error: "Missing STRIPE_PRICE_ID_FULL." };
+
+    const updated = await stripe.subscriptions.update(owner.stripe_subscription_id, {
+      items: [{ id: item.id, price: fullPriceId }],
+      proration_behavior: "create_prorations",
+      payment_behavior: "default_incomplete",
+      payment_settings: { save_default_payment_method: "on_subscription" },
+      expand: ["latest_invoice", "latest_invoice.confirmation_secret"],
+      metadata: { owner_id: owner.id, tier: "full", upgrade_from: "basic" },
+    });
+
+    const invoice = updated.latest_invoice;
+    if (!invoice || typeof invoice === "string") {
+      console.error(`[upgrade] upgradeToFullAccess: subscription ${updated.id} (owner=${owner.id}) returned no expanded latest_invoice.`);
+      return { error: "Stripe did not return an invoice for the upgrade." };
+    }
+
+    const amountCents = invoice.amount_due;
+    const currency = invoice.currency;
+    // A $0-due invoice (credit fully covers the prorated charge) is
+    // finalized and paid by Stripe immediately with no PaymentIntent to
+    // confirm — clientSecret stays null in that case, which the caller
+    // treats as "nothing left to pay."
+    const clientSecret = invoice.confirmation_secret?.client_secret ?? null;
+
+    if (clientSecret) {
+      const paymentIntentId = clientSecret.split("_secret_")[0];
+      if (paymentIntentId) {
+        try {
+          await stripe.paymentIntents.update(paymentIntentId, {
+            metadata: { owner_id: owner.id, payment_type: "subscription" },
+          });
+        } catch (err) {
+          console.error(`[upgrade] Failed to tag PaymentIntent ${paymentIntentId} with metadata:`, err);
+        }
+      }
+    }
+
+    return { amountCents, currency, clientSecret };
+  } catch (err) {
+    console.error(`[upgrade] upgradeToFullAccess failed for owner ${owner.id}:`, err);
+    return { error: err instanceof Error ? err.message : "Could not start the upgrade. Please try again." };
+  }
+}
