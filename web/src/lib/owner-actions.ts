@@ -9,6 +9,8 @@ import { normalizeStateCode } from "@/lib/us-states";
 import { isDecommissionReason, type DecommissionReason } from "@/lib/vessel-decommission";
 import { generateShareToken } from "@/lib/share-token";
 import { TRANSFER_EXPIRY_DAYS } from "@/lib/vessel-transfer";
+import { FULL_STORAGE_CAP_BYTES } from "@/lib/tier-config";
+import { getAccountStorageUsageBytes } from "@/lib/storage-usage";
 
 /**
  * Updates photo_url on an already-existing vessel — the counterpart to
@@ -240,6 +242,47 @@ export async function updateVesselDocument(
   const { error } = await service.from("vessels").update({ [column]: url }).eq("id", vessel.id);
   if (error) return { error: error.message };
   return {};
+}
+
+/**
+ * Pre-upload check for the Full-tier 500MB account storage cap
+ * (FULL_STORAGE_CAP_BYTES, lib/tier-config.ts) — called from the client
+ * BEFORE the browser starts the actual Storage upload, since that upload
+ * goes straight to Supabase Storage and never passes through a server
+ * action of its own. Basic tier has no byte cap (it's capped by document
+ * count instead — BASIC_DOCUMENT_LIMIT), so this is a no-op there.
+ */
+export async function checkStorageCapacity(incomingBytes: number): Promise<{ ok: true } | { ok: false; error: string }> {
+  const authClient = await createSupabaseServerClient();
+  if (!authClient) return { ok: false, error: "Missing Supabase auth configuration." };
+
+  const { user, ownerIds } = await resolveOwnerIds(authClient);
+  if (!user) return { ok: false, error: "You must be signed in." };
+
+  const service = createSupabaseServiceClient();
+  if (!service) return { ok: false, error: "Missing Supabase service role configuration." };
+
+  const { data: ownerRow } = await service
+    .from("users")
+    .select("subscription_tier")
+    .in("id", ownerIds)
+    .eq("subscription_tier", "full")
+    .maybeSingle();
+
+  if (!ownerRow) return { ok: true };
+
+  const { data: vesselRows } = await service.from("vessels").select("mxe_id").in("owner_id", ownerIds);
+  const mxeIds = (vesselRows ?? []).map((v) => (v as { mxe_id: string }).mxe_id);
+
+  const currentBytes = await getAccountStorageUsageBytes(service, ownerIds, mxeIds);
+
+  if (currentBytes + incomingBytes > FULL_STORAGE_CAP_BYTES) {
+    const currentMb = (currentBytes / (1024 * 1024)).toFixed(0);
+    const capMb = (FULL_STORAGE_CAP_BYTES / (1024 * 1024)).toFixed(0);
+    return { ok: false, error: `This would put your account over its ${capMb}MB storage limit (currently using ${currentMb}MB).` };
+  }
+
+  return { ok: true };
 }
 
 const LOCKED_FIELDS = ["hin", "make", "model", "year", "length_ft", "draft_ft", "engine"] as const;

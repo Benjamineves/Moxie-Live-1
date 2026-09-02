@@ -186,7 +186,7 @@ export function VesselOwnerProfile({
       {justUpgraded ? (
         <div className="border-b border-[var(--divider)] bg-[var(--green-bg)] px-5 py-3 text-center">
           <p className="font-[family-name:var(--font-dm)] text-sm font-medium text-[var(--green-fg)]">
-            ✓ You&apos;re on Full Access — welcome to the upgrade.
+            ✓ You&apos;re on {billing.subscriptionTier === "full" ? "Full Access" : "Basic"} — welcome aboard.
           </p>
         </div>
       ) : null}
@@ -370,7 +370,7 @@ export function VesselOwnerProfile({
         </footer>
       </section>
 
-      <ShareSheet mxeId={tier.mxe_id} vesselName={tier.vessel_name} subscriptionTier={billing.subscriptionTier} />
+      <ShareSheet mxeId={tier.mxe_id} vesselName={tier.vessel_name} />
     </>
   );
 }

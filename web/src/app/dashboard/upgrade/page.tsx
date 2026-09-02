@@ -4,11 +4,11 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { UpgradeForm } from "./UpgradeForm";
 
 /**
- * Account-level Full Access upgrade — not scoped to any vessel (build spec
- * §9 item 16). Reached from AccountBillingPanel's "Upgrade to Full
- * Access" link and, optionally, an upsell after a vessel's badge-fee
- * payment. Covers every vessel the account owns, present and future, up
- * to the existing 5-vessel cap.
+ * Account-level plan picker — Basic or Full, not scoped to any vessel
+ * (build spec §9 item 16, generalized for the tier structure build).
+ * Reached from AccountBillingPanel when the account has no active plan.
+ * Covers every vessel the account owns, present and future, up to
+ * whichever tier's vessel cap applies.
  */
 export default async function UpgradePage() {
   const supabase = await createSupabaseServerClient();
@@ -28,30 +28,24 @@ export default async function UpgradePage() {
     redirect("/dashboard");
   }
 
-  type OwnerRow = { subscription_tier: string | null; subscription_status: string | null };
+  type OwnerRow = { subscription_status: string | null };
 
   const normalizedEmail = user.email?.trim().toLowerCase();
   let ownerRow: OwnerRow | null = null;
 
   if (normalizedEmail) {
-    const { data } = await service
-      .from("users")
-      .select("subscription_tier, subscription_status")
-      .eq("email", normalizedEmail)
-      .maybeSingle();
+    const { data } = await service.from("users").select("subscription_status").eq("email", normalizedEmail).maybeSingle();
     ownerRow = data as OwnerRow | null;
   }
   if (!ownerRow) {
-    const { data } = await service
-      .from("users")
-      .select("subscription_tier, subscription_status")
-      .eq("id", user.id)
-      .maybeSingle();
+    const { data } = await service.from("users").select("subscription_status").eq("id", user.id).maybeSingle();
     ownerRow = data as OwnerRow | null;
   }
 
-  // Nothing left to offer — already on active Full.
-  if (ownerRow?.subscription_tier === "full" && ownerRow?.subscription_status === "active") {
+  // Nothing left to pick — already on an active plan. Switching tiers
+  // (Basic <-> Full) goes through Manage Billing / the Stripe Billing
+  // Portal instead, not this picker.
+  if (ownerRow?.subscription_status === "active") {
     redirect("/dashboard");
   }
 

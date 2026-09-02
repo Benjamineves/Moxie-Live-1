@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { uploadVesselPhoto } from "@/lib/vessel-uploads";
-import { updateVesselPhoto } from "@/lib/owner-actions";
+import { updateVesselPhoto, checkStorageCapacity } from "@/lib/owner-actions";
 
 /**
  * Renders only when vessels.photo_url is already set — the replace
@@ -32,6 +32,8 @@ export function ReplacePhotoControl({ mxeId }: { mxeId: string }) {
     setError(null);
     setUploading(true);
     try {
+      const capacity = await checkStorageCapacity(file.size);
+      if (!capacity.ok) throw new Error(capacity.error);
       const publicUrl = await uploadVesselPhoto(file, mxeId);
       const result = await updateVesselPhoto(mxeId, publicUrl);
       if (result.error) throw new Error(result.error);

@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { PaymentForm } from "./PaymentForm";
+import { SignupBundleForm } from "./SignupBundleForm";
 
 type Props = {
   params: Promise<{ mxeId: string }>;
@@ -55,13 +56,21 @@ export default async function VesselPaymentPage({ params }: Props) {
     redirect("/dashboard");
   }
 
-  // This page is the badge fee only now — Full Access is an account-level
-  // upgrade (see /dashboard/upgrade), not something a specific vessel's
-  // payment step offers. Once a vessel is active, there's nothing left to
-  // do here regardless of tier.
+  // Full Access is still an account-level upgrade for an owner who's
+  // already subscribed (see /dashboard/upgrade) — this page only ever
+  // offers a plan pick alongside the badge fee for someone with no active
+  // plan yet. Once a vessel is active, there's nothing left to do here
+  // regardless of tier.
   if (vessel.qr_status === "active") {
     redirect(`/dashboard/${encodeURIComponent(vessel.mxe_id)}/qr`);
   }
+
+  const { data: ownerRow } = await service
+    .from("users")
+    .select("subscription_status")
+    .eq("id", vessel.owner_id)
+    .maybeSingle();
+  const hasActiveSubscription = (ownerRow as { subscription_status: string | null } | null)?.subscription_status === "active";
 
   const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim();
   if (!publishableKey) {
@@ -78,11 +87,24 @@ export default async function VesselPaymentPage({ params }: Props) {
     );
   }
 
+  const vesselTag = [vessel.year, vessel.make, vessel.model].filter(Boolean).join(" ");
+
+  if (!hasActiveSubscription) {
+    return (
+      <SignupBundleForm
+        mxeId={vessel.mxe_id}
+        vesselName={vessel.vessel_name}
+        vesselTag={vesselTag}
+        publishableKey={publishableKey}
+      />
+    );
+  }
+
   return (
     <PaymentForm
       mxeId={vessel.mxe_id}
       vesselName={vessel.vessel_name}
-      vesselTag={[vessel.year, vessel.make, vessel.model].filter(Boolean).join(" ")}
+      vesselTag={vesselTag}
       publishableKey={publishableKey}
     />
   );

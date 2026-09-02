@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { resolveOwnerIds, loadOwnedVessel } from "@/lib/vessel-ownership";
-import { getOwnerBillingSummary } from "@/lib/billing-service";
 import { generateShareToken } from "@/lib/share-token";
 import { isShareFieldFlags, SHARE_PRESETS, type SharePreset } from "@/lib/share-filter";
 
@@ -32,24 +31,11 @@ async function authorizeOwner(mxeId: string) {
   return { service, vessel };
 }
 
-/**
- * Spec §5, §4: Full Access only, enforced here — not just hidden in the
- * UI. Basic gets an explicit 403 with the payload the share sheet uses
- * to render the upsell panel, never a silent downgrade to a public link.
- */
 export async function POST(request: Request, context: { params: Promise<{ mxeId: string }> }) {
   const { mxeId } = await context.params;
   const auth = await authorizeOwner(mxeId);
   if ("error" in auth) return auth.error;
   const { service, vessel } = auth;
-
-  const billing = await getOwnerBillingSummary(vessel.owner_id);
-  if (billing?.subscriptionTier !== "full") {
-    return NextResponse.json(
-      { error: "Trusted Contact sharing is a Full Access feature.", code: "UPGRADE_REQUIRED", upsell: true },
-      { status: 403 },
-    );
-  }
 
   let body: {
     label?: string;

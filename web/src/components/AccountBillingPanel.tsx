@@ -7,7 +7,7 @@ import type { BillingSummary } from "@/lib/billing-service";
 
 const PAYMENT_TYPE_LABELS: Record<string, string> = {
   badge_fee: "Badge fee",
-  subscription: "Full Access",
+  subscription: "Plan subscription",
   transfer_fee: "Ownership transfer",
 };
 
@@ -41,6 +41,13 @@ export function AccountBillingPanel({ billing }: { billing: BillingSummary }) {
   }
 
   const badge = STATUS_BADGE[billing.subscriptionStatus ?? "none"] ?? STATUS_BADGE.none;
+  // A real Stripe subscription exists in either of these states — 'active'
+  // or 'past_due' (payment failing but not yet canceled) — so Manage
+  // Billing (the Stripe Portal) is the right surface for both. 'none' and
+  // 'canceled' have no subscription to manage; those get the plan picker
+  // instead. Deliberately not gated on tier any more — Basic is a real
+  // subscription now too, not a free fallback.
+  const hasManageableSubscription = billing.subscriptionStatus === "active" || billing.subscriptionStatus === "past_due";
 
   return (
     <>
@@ -72,9 +79,9 @@ export function AccountBillingPanel({ billing }: { billing: BillingSummary }) {
                   <p className="font-[family-name:var(--font-display)] text-lg italic text-white">
                     {billing.subscriptionTier === "full" ? "Full Access" : "Basic"}
                   </p>
-                  {billing.subscriptionTier === "full" ? (
+                  {hasManageableSubscription ? (
                     <p className="mt-0.5 font-[family-name:var(--font-dm)] text-[11px] text-[rgba(255,255,255,.4)]">
-                      Renews annually · billed monthly
+                      Renews annually
                     </p>
                   ) : null}
                 </div>
@@ -105,7 +112,7 @@ export function AccountBillingPanel({ billing }: { billing: BillingSummary }) {
               ) : null}
 
               <div className="py-4">
-                {billing.subscriptionTier === "full" ? (
+                {hasManageableSubscription ? (
                   <>
                     <button
                       type="button"
@@ -124,7 +131,7 @@ export function AccountBillingPanel({ billing }: { billing: BillingSummary }) {
                     href="/dashboard/upgrade"
                     className="block w-full bg-[var(--aqua-bright)] px-3 py-3 text-center font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--navy)]"
                   >
-                    Upgrade to Full Access →
+                    Choose your plan →
                   </Link>
                 )}
               </div>

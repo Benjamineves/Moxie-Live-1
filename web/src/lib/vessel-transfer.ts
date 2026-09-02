@@ -3,6 +3,8 @@
  * owner-side flow and the admin queue.
  */
 
+import { BASIC_DOCUMENT_LIMIT } from "@/lib/tier-config";
+
 export const TRANSFER_EXPIRY_DAYS = 7;
 
 export type TransferStatus = "pending" | "awaiting_payment" | "completed" | "expired" | "canceled" | "reversed";
@@ -17,10 +19,9 @@ export const TRANSFER_STATUS_LABELS: Record<TransferStatus, string> = {
 };
 
 /**
- * Single named configuration constant for the Basic-tier document
- * limit, per explicit instruction: don't hardcode a bare number into
- * logic, so this can change later without touching any of the code
- * that reads it.
+ * BASIC_DOCUMENT_LIMIT itself now lives in lib/tier-config.ts (the
+ * single config location for all tier numbers) and is re-exported here
+ * so existing imports from this module keep working.
  *
  * What it counts: doc_registration_url and doc_insurance_url — the two
  * document slots that exist on a vessel today. What's exempt, always,
@@ -33,7 +34,7 @@ export const TRANSFER_STATUS_LABELS: Record<TransferStatus, string> = {
  * second — a deterministic, stable choice so the same document doesn't
  * flip locked/unlocked between page loads.
  */
-export const BASIC_DOCUMENT_LIMIT = 1;
+export { BASIC_DOCUMENT_LIMIT };
 
 export type DocumentSlot = { docType: "registration" | "insurance"; url: string | null };
 

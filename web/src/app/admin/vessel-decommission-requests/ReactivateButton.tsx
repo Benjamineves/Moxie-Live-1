@@ -51,7 +51,7 @@ export function ReactivateButton({ vesselId, mxeId }: { vesselId: string; mxeId:
       >
         <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
           <span className="font-medium text-[var(--navy)]">{mxeId}</span> rejoins the owner&apos;s active fleet and
-          counts against their 5-vessel cap again. Blocked automatically if it would push them over.
+          counts against their plan&apos;s vessel cap again. Blocked automatically if it would push them over.
         </p>
       </ConfirmDialog>
     </>

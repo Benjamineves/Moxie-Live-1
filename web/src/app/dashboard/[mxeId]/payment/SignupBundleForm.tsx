@@ -3,14 +3,21 @@
 import { useCallback, useState, useTransition, type FormEvent } from "react";
 import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
-import { createPlanSubscriptionIntent } from "./actions";
+import { createSignupBundleIntent } from "./actions";
 import type { SubscriptionTier } from "@/lib/tier-config";
+
+type Props = {
+  mxeId: string;
+  vesselName: string;
+  vesselTag: string;
+  publishableKey: string;
+};
 
 // Placeholder amounts — build spec treats exact pricing as a business
 // decision to plug in later; these just need to match whatever
-// STRIPE_PRICE_ID_BASIC_SUBSCRIPTION / STRIPE_PRICE_ID_FULL are configured
-// to in Stripe (lib/tier-config.ts PRICE_REFERENCE documents the same
-// amounts).
+// STRIPE_PRICE_ID_BASIC_SUBSCRIPTION / STRIPE_PRICE_ID_FULL /
+// STRIPE_PRICE_ID_BADGE are configured to in Stripe (lib/tier-config.ts
+// PRICE_REFERENCE documents the same three amounts).
 const PLAN_OPTIONS: {
   tier: SubscriptionTier;
   label: string;
@@ -27,15 +34,11 @@ const PLAN_OPTIONS: {
     tier: "full",
     label: "Full Access",
     price: 149,
-    features: [
-      "5 vessels",
-      "Unlimited documents (500MB storage)",
-      "Trusted Contact sharing",
-      "Email reminders before insurance/registration lapse",
-      "Priority badge production",
-    ],
+    features: ["5 vessels", "Unlimited documents (500MB storage)", "Trusted Contact sharing", "Priority badge production"],
   },
 ];
+
+const BADGE_FEE_AMOUNT = 29;
 
 let stripePromise: Promise<StripeJs | null> | null = null;
 function getStripeJs(publishableKey: string) {
@@ -43,29 +46,32 @@ function getStripeJs(publishableKey: string) {
   return stripePromise;
 }
 
-export function UpgradeForm({ publishableKey }: { publishableKey: string }) {
+export function SignupBundleForm({ mxeId, vesselName, vesselTag, publishableKey }: Props) {
   const [selectedTier, setSelectedTier] = useState<SubscriptionTier | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  const choosePlan = useCallback((tier: SubscriptionTier) => {
-    setSelectedTier(tier);
-    setClientSecret(null);
-    setError(null);
-    startTransition(async () => {
-      try {
-        const result = await createPlanSubscriptionIntent(tier);
-        if ("error" in result) {
-          setError(result.error);
-          return;
+  const choosePlan = useCallback(
+    (tier: SubscriptionTier) => {
+      setSelectedTier(tier);
+      setClientSecret(null);
+      setError(null);
+      startTransition(async () => {
+        try {
+          const result = await createSignupBundleIntent(mxeId, tier);
+          if ("error" in result) {
+            setError(result.error);
+            return;
+          }
+          setClientSecret(result.clientSecret);
+        } catch (err) {
+          setError(err instanceof Error ? err.message : "Could not start checkout. Please try again.");
         }
-        setClientSecret(result.clientSecret);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Could not start checkout. Please try again.");
-      }
-    });
-  }, []);
+      });
+    },
+    [mxeId],
+  );
 
   function changePlan() {
     setSelectedTier(null);
@@ -75,21 +81,23 @@ export function UpgradeForm({ publishableKey }: { publishableKey: string }) {
 
   const stripe = getStripeJs(publishableKey);
   const plan = PLAN_OPTIONS.find((p) => p.tier === selectedTier);
+  const total = plan ? plan.price + BADGE_FEE_AMOUNT : null;
 
   return (
     <div className="min-h-screen bg-[var(--cream)] px-4 py-8">
       <main className="mx-auto w-full max-w-xl">
         <header className="mb-6">
           <p className="font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
-            Account &amp; Billing · Choose your plan
+            Final step · Choose your plan
           </p>
           <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-light text-[var(--navy)]">
-            Pick your <em className="text-[var(--gold)] not-italic">plan.</em>
+            One boat, <em className="text-[var(--gold)] not-italic">one identity.</em>
           </h1>
           <p className="mt-2 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
-            One subscription for your whole account — every vessel you register from here on is covered
-            automatically, no separate plan per boat. Vessel badge fees are still paid per vessel, separately.
+            Every Moxie account runs on a plan — pick the one that fits, and {vesselName}&apos;s badge and profile go
+            live the moment this clears.
           </p>
+          <p className="mt-1 font-[family-name:var(--font-dm)] text-xs text-[var(--text3)]">{vesselTag}</p>
         </header>
 
         {!selectedTier ? (
@@ -120,6 +128,10 @@ export function UpgradeForm({ publishableKey }: { publishableKey: string }) {
                 </ul>
               </button>
             ))}
+            <p className="mt-1 font-[family-name:var(--font-dm)] text-[11px] italic leading-relaxed text-[var(--text3)]">
+              Plus a one-time ${BADGE_FEE_AMOUNT} badge fee for {vesselName}, added to your total below — every
+              vessel needs its own badge.
+            </p>
           </div>
         ) : (
           <div className="rounded-xl border border-[var(--gold)] bg-[var(--white)] p-5 shadow-[0_0_0_3px_var(--gold-dim)]">
@@ -129,6 +141,22 @@ export function UpgradeForm({ publishableKey }: { publishableKey: string }) {
               </span>
               <span className="font-[family-name:var(--font-dm)] text-sm font-medium text-[var(--navy)]">
                 ${plan?.price}/yr
+              </span>
+            </div>
+            <div className="mt-1.5 flex items-center justify-between gap-4 border-t border-[var(--divider)] pt-1.5">
+              <span className="font-[family-name:var(--font-dm)] text-xs text-[var(--text3)]">
+                Badge fee — {vesselName}
+              </span>
+              <span className="font-[family-name:var(--font-dm)] text-xs text-[var(--text3)]">
+                ${BADGE_FEE_AMOUNT}
+              </span>
+            </div>
+            <div className="mt-2.5 flex items-center justify-between gap-4 border-t border-[var(--divider)] pt-2.5">
+              <span className="font-[family-name:var(--font-dm)] text-sm font-semibold text-[var(--navy)]">
+                Total due today
+              </span>
+              <span className="font-[family-name:var(--font-dm)] text-lg font-semibold text-[var(--navy)]">
+                ${total}
               </span>
             </div>
             <button
@@ -161,7 +189,7 @@ export function UpgradeForm({ publishableKey }: { publishableKey: string }) {
             ) : null}
             {clientSecret ? (
               <Elements key={clientSecret} stripe={stripe} options={{ clientSecret }}>
-                <CheckoutInner planLabel={plan?.label ?? "plan"} />
+                <CheckoutInner mxeId={mxeId} vesselName={vesselName} />
               </Elements>
             ) : error ? null : (
               <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--text3)]">
@@ -175,7 +203,7 @@ export function UpgradeForm({ publishableKey }: { publishableKey: string }) {
   );
 }
 
-function CheckoutInner({ planLabel }: { planLabel: string }) {
+function CheckoutInner({ mxeId, vesselName }: { mxeId: string; vesselName: string }) {
   const stripe = useStripe();
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
@@ -187,7 +215,7 @@ function CheckoutInner({ planLabel }: { planLabel: string }) {
     setSubmitting(true);
     setError(null);
 
-    const processingUrl = `${window.location.origin}/dashboard/upgrade/processing`;
+    const processingUrl = `${window.location.origin}/dashboard/${encodeURIComponent(mxeId)}/payment/processing`;
 
     const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
       elements,
@@ -224,7 +252,7 @@ function CheckoutInner({ planLabel }: { planLabel: string }) {
         disabled={!stripe || submitting}
         className="mt-6 w-full rounded-lg bg-[var(--aqua-bright)] px-6 py-3.5 font-[family-name:var(--font-dm)] text-sm font-bold uppercase tracking-[0.12em] text-[var(--navy-deep)] disabled:opacity-50"
       >
-        {submitting ? "Processing…" : `Subscribe to ${planLabel} →`}
+        {submitting ? "Processing…" : `Activate ${vesselName} →`}
       </button>
     </form>
   );

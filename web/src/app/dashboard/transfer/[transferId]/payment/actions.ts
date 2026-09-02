@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { getStripe } from "@/lib/stripe/server";
 import { resolveOwnerIds } from "@/lib/vessel-ownership";
+import type { SubscriptionTier } from "@/lib/tier-config";
 
 type IntentResult = { clientSecret: string } | { error: string };
 
@@ -43,10 +44,16 @@ export async function createTransferFeeIntent(transferId: string): Promise<Inten
 
   const { data: ownerRow } = await service
     .from("users")
-    .select("id, email, stripe_customer_id")
+    .select("id, email, stripe_customer_id, subscription_tier")
     .eq("id", transfer.seller_id)
     .maybeSingle();
-  const owner = ownerRow as { id: string; email: string; stripe_customer_id: string | null } | null;
+  const owner = ownerRow as
+    | { id: string; email: string; stripe_customer_id: string | null; subscription_tier: string | null }
+    | null;
+  // Transfer fee is $49/Basic, $25/Full — determined by the SELLER's tier
+  // at the moment the fee is charged, not the buyer's (the buyer hasn't
+  // taken ownership yet).
+  const sellerTier: SubscriptionTier = owner?.subscription_tier === "full" ? "full" : "basic";
 
   const stripe = getStripe();
 
@@ -71,8 +78,9 @@ export async function createTransferFeeIntent(transferId: string): Promise<Inten
   }
 
   try {
-    const priceId = process.env.STRIPE_PRICE_ID_TRANSFER?.trim();
-    if (!priceId) return { error: "Missing STRIPE_PRICE_ID_TRANSFER." };
+    const priceEnvVar = sellerTier === "full" ? "STRIPE_PRICE_ID_TRANSFER_FULL" : "STRIPE_PRICE_ID_TRANSFER_BASIC";
+    const priceId = process.env[priceEnvVar]?.trim();
+    if (!priceId) return { error: `Missing ${priceEnvVar}.` };
 
     const price = await stripe.prices.retrieve(priceId);
     if (!price.unit_amount) return { error: "Transfer fee price has no unit amount configured." };

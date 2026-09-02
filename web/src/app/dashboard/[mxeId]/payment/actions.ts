@@ -3,6 +3,8 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { getStripe } from "@/lib/stripe/server";
+import { resolveOwnerIds } from "@/lib/vessel-ownership";
+import type { SubscriptionTier } from "@/lib/tier-config";
 
 type IntentResult = { clientSecret: string } | { error: string };
 
@@ -122,6 +124,156 @@ export async function createBadgeFeeIntent(mxeId: string): Promise<IntentResult>
     return { clientSecret: paymentIntent.client_secret };
   } catch (err) {
     console.error(`[payment] createBadgeFeeIntent failed for ${vessel.mxe_id}:`, err);
+    return { error: err instanceof Error ? err.message : "Could not start checkout. Please try again." };
+  }
+}
+
+/**
+ * The bundled first-vessel checkout: plan choice + badge fee, one invoice,
+ * one <PaymentElement> confirmation. Only ever used when the owner has no
+ * active subscription yet (page.tsx branches on subscription_status !==
+ * 'active') — every vessel after the first is badge-fee-only via
+ * createBadgeFeeIntent above, since the account's plan already covers it.
+ *
+ * Mechanics: add_invoice_items attaches the one-time badge Price to the
+ * subscription's FIRST invoice only — it never recurs on renewal, so this
+ * produces exactly one Stripe Invoice with two line items (the recurring
+ * plan + the one-time badge) and exactly one PaymentIntent behind it, same
+ * as any other subscription's default_incomplete first invoice. No second
+ * confirmation step needed.
+ */
+export async function createSignupBundleIntent(mxeId: string, tier: SubscriptionTier): Promise<IntentResult> {
+  const authClient = await createSupabaseServerClient();
+  if (!authClient) return { error: "Missing Supabase auth configuration." };
+
+  const { user, ownerIds } = await resolveOwnerIds(authClient);
+  if (!user) return { error: "You must be signed in." };
+
+  const service = createSupabaseServiceClient();
+  if (!service) return { error: "Missing Supabase service role configuration." };
+
+  const { data: vesselRow } = await service
+    .from("vessels")
+    .select("id, mxe_id, owner_id, qr_status")
+    .eq("mxe_id", mxeId.toUpperCase())
+    .maybeSingle();
+
+  const vessel = vesselRow as { id: string; mxe_id: string; owner_id: string; qr_status: string | null } | null;
+
+  if (!vessel || !ownerIds.includes(vessel.owner_id)) {
+    return { error: "Vessel not found." };
+  }
+  if (vessel.qr_status === "active") {
+    return { error: "This vessel is already active." };
+  }
+
+  const { data: ownerRow } = await service
+    .from("users")
+    .select("id, email, stripe_customer_id, subscription_status, stripe_subscription_id")
+    .eq("id", vessel.owner_id)
+    .maybeSingle();
+  const owner = ownerRow as
+    | {
+        id: string;
+        email: string;
+        stripe_customer_id: string | null;
+        subscription_status: string | null;
+        stripe_subscription_id: string | null;
+      }
+    | null;
+  if (!owner) return { error: "Owner account not found." };
+
+  if (owner.subscription_status === "active") {
+    return { error: "Your account already has an active plan — this vessel only needs its badge fee. Refresh the page." };
+  }
+  // Race guard against two tabs both starting the bundled checkout: the
+  // first request to reach here sets stripe_subscription_id right after
+  // creating the subscription (below), before this vessel's webhook-driven
+  // activation even happens. A second concurrent request that reads this
+  // row after that write bails here instead of creating a duplicate
+  // subscription — same pattern as createFullAccessUpgradeIntent's guard.
+  if (owner.stripe_subscription_id) {
+    return { error: "A subscription is already being set up for this account. Refresh the page and try again." };
+  }
+
+  const stripe = getStripe();
+
+  let customerId = owner.stripe_customer_id;
+  if (customerId) {
+    try {
+      const existing = await stripe.customers.retrieve(customerId);
+      if (existing.deleted) customerId = null;
+    } catch {
+      customerId = null;
+    }
+  }
+
+  try {
+    if (!customerId) {
+      const customer = await stripe.customers.create({
+        email: owner.email ?? user.email ?? undefined,
+        metadata: { user_id: owner.id },
+      });
+      customerId = customer.id;
+      await service.from("users").update({ stripe_customer_id: customerId }).eq("id", owner.id);
+    }
+
+    const planEnvVar = tier === "full" ? "STRIPE_PRICE_ID_FULL" : "STRIPE_PRICE_ID_BASIC_SUBSCRIPTION";
+    const planPriceId = process.env[planEnvVar]?.trim();
+    if (!planPriceId) return { error: `Missing ${planEnvVar}.` };
+
+    const badgePriceId = process.env.STRIPE_PRICE_ID_BADGE?.trim();
+    if (!badgePriceId) return { error: "Missing STRIPE_PRICE_ID_BADGE." };
+
+    const badgePrice = await stripe.prices.retrieve(badgePriceId);
+    if (!badgePrice.unit_amount) return { error: "Badge price has no unit amount configured." };
+
+    const subscription = await stripe.subscriptions.create({
+      customer: customerId,
+      items: [{ price: planPriceId }],
+      add_invoice_items: [{ price: badgePriceId }],
+      payment_behavior: "default_incomplete",
+      payment_settings: { save_default_payment_method: "on_subscription" },
+      expand: ["latest_invoice", "latest_invoice.confirmation_secret"],
+      metadata: { owner_id: owner.id, tier, vessel_id: vessel.id, mxe_id: vessel.mxe_id },
+    });
+
+    const invoice = subscription.latest_invoice;
+    const clientSecret =
+      invoice && typeof invoice !== "string" ? (invoice.confirmation_secret?.client_secret ?? null) : null;
+
+    if (!clientSecret) {
+      console.error(
+        `[payment] signup-bundle subscription ${subscription.id} (owner=${owner.id}, vessel=${vessel.mxe_id}) returned no confirmation_secret.client_secret. ` +
+          `latest_invoice=${typeof invoice === "string" ? invoice : (invoice?.id ?? "null")}.`,
+      );
+      return { error: "Stripe did not return a payment client secret for the subscription." };
+    }
+
+    // Set immediately, ahead of the webhook — see the race-guard comment
+    // above for why this can't wait for invoice.paid.
+    await service.from("users").update({ stripe_subscription_id: subscription.id }).eq("id", owner.id);
+
+    const paymentIntentId = clientSecret.split("_secret_")[0];
+    if (paymentIntentId) {
+      try {
+        await stripe.paymentIntents.update(paymentIntentId, {
+          metadata: {
+            mxe_id: vessel.mxe_id,
+            vessel_id: vessel.id,
+            owner_id: owner.id,
+            payment_type: "signup_bundle",
+            badge_fee_amount_cents: String(badgePrice.unit_amount),
+          },
+        });
+      } catch (err) {
+        console.error(`[payment] Failed to tag PaymentIntent ${paymentIntentId} with metadata:`, err);
+      }
+    }
+
+    return { clientSecret };
+  } catch (err) {
+    console.error(`[payment] createSignupBundleIntent failed for ${vessel.mxe_id}:`, err);
     return { error: err instanceof Error ? err.message : "Could not start checkout. Please try again." };
   }
 }

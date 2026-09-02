@@ -47,6 +47,15 @@ export default async function TransferPaymentPage({ params }: Props) {
     redirect("/dashboard");
   }
 
+  // Transfer fee is $49/Basic, $25/Full — the SELLER's tier, same as
+  // createTransferFeeIntent's own price selection (payment/actions.ts).
+  const { data: sellerRow } = await service
+    .from("users")
+    .select("subscription_tier")
+    .eq("id", transfer.seller_id)
+    .maybeSingle();
+  const sellerTier: "basic" | "full" = (sellerRow as { subscription_tier: string | null } | null)?.subscription_tier === "full" ? "full" : "basic";
+
   const publishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY?.trim();
   if (!publishableKey) {
     return (
@@ -67,6 +76,7 @@ export default async function TransferPaymentPage({ params }: Props) {
       transferId={transfer.id}
       mxeId={transfer.mxe_id}
       buyerEmail={transfer.buyer_email}
+      sellerTier={sellerTier}
       publishableKey={publishableKey}
     />
   );

@@ -10,7 +10,7 @@ type Mode = "activate" | "upgrade" | "transfer";
 
 const IN_PROGRESS_COPY: Record<Mode, string> = {
   activate: "Activating",
-  upgrade: "Upgrading to Full Access",
+  upgrade: "Setting up your plan",
   transfer: "Completing transfer",
 };
 
@@ -23,11 +23,11 @@ const TIMED_OUT_HEADLINE: Record<Mode, string> = {
 /**
  * Re-runs the server component on an interval until it sees the relevant
  * field flip — qr_status to 'active' for first-time vessel activation,
- * subscription_tier to 'full' for an account-level Full Access upgrade,
- * or an ownership_transfers row reaching status='completed' for a
- * transfer-fee payment (the page itself redirects once any of these
- * happen). Purely a polling nudge — no client-side code here ever
- * writes any of these fields.
+ * subscription_status to 'active' for an account-level plan subscription
+ * (Basic or Full), or an ownership_transfers row reaching
+ * status='completed' for a transfer-fee payment (the page itself
+ * redirects once any of these happen). Purely a polling nudge — no
+ * client-side code here ever writes any of these fields.
  *
  * Shared by three unrelated routes: dashboard/[mxeId]/payment/processing
  * (badge-fee activation), dashboard/upgrade/processing (account-level

@@ -3,20 +3,30 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { getStripe } from "@/lib/stripe/server";
+import type { SubscriptionTier } from "@/lib/tier-config";
 
 type IntentResult = { clientSecret: string } | { error: string };
 
 /**
- * Creates the client secret for the account's Full Access subscription.
- * Account-level, not tied to any vessel (build spec §9 item 16 — confirmed
- * live that the old version created a new Stripe subscription per vessel
- * an owner upgraded, instead of one plan covering the whole account).
+ * Creates the client secret for the account's plan subscription — Basic
+ * or Full, both real recurring Stripe Subscriptions now (tier structure
+ * build). Account-level, not tied to any vessel (build spec §9 item 16 —
+ * confirmed live that the old version created a new Stripe subscription
+ * per vessel an owner upgraded, instead of one plan covering the whole
+ * account).
  *
- * Guarded so this can only ever create one subscription per account: an
- * owner already on active Full gets an error here rather than a second
- * Stripe Subscription object, which is exactly the bug this replaces.
+ * This is the "pick or change your plan outside the bundled first-vessel
+ * checkout" path: an account with no active plan yet reaching this page
+ * directly, or one switching tiers. Switching FROM an already-active plan
+ * (e.g. Full back down to Basic) isn't handled here — that's a proration
+ * question best left to Stripe's own Billing Portal (openBillingPortal),
+ * already the designated "manage billing" surface for anyone with an
+ * active subscription. This action only ever creates a plan for an
+ * account that doesn't have one, mirroring the guard the old Full-only
+ * version already had, just generalized from "already Full" to "already
+ * has any active subscription."
  */
-export async function createFullAccessUpgradeIntent(): Promise<IntentResult> {
+export async function createPlanSubscriptionIntent(tier: SubscriptionTier): Promise<IntentResult> {
   const authClient = await createSupabaseServerClient();
   if (!authClient) return { error: "Missing Supabase auth configuration." };
 
@@ -32,7 +42,6 @@ export async function createFullAccessUpgradeIntent(): Promise<IntentResult> {
     id: string;
     email: string;
     stripe_customer_id: string | null;
-    subscription_tier: string | null;
     subscription_status: string | null;
   };
 
@@ -42,7 +51,7 @@ export async function createFullAccessUpgradeIntent(): Promise<IntentResult> {
   if (normalizedEmail) {
     const { data: ownerRow } = await service
       .from("users")
-      .select("id, email, stripe_customer_id, subscription_tier, subscription_status")
+      .select("id, email, stripe_customer_id, subscription_status")
       .eq("email", normalizedEmail)
       .maybeSingle();
     owner = ownerRow as OwnerRow | null;
@@ -51,7 +60,7 @@ export async function createFullAccessUpgradeIntent(): Promise<IntentResult> {
   if (!owner) {
     const { data: ownerRow } = await service
       .from("users")
-      .select("id, email, stripe_customer_id, subscription_tier, subscription_status")
+      .select("id, email, stripe_customer_id, subscription_status")
       .eq("id", user.id)
       .maybeSingle();
     owner = ownerRow as OwnerRow | null;
@@ -59,8 +68,8 @@ export async function createFullAccessUpgradeIntent(): Promise<IntentResult> {
 
   if (!owner) return { error: "Owner account not found." };
 
-  if (owner.subscription_tier === "full" && owner.subscription_status === "active") {
-    return { error: "Already on Full Access." };
+  if (owner.subscription_status === "active") {
+    return { error: "Your account already has an active plan. Use Manage Billing to change or cancel it." };
   }
 
   const stripe = getStripe();
@@ -99,8 +108,9 @@ export async function createFullAccessUpgradeIntent(): Promise<IntentResult> {
       await service.from("users").update({ stripe_customer_id: customerId }).eq("id", owner.id);
     }
 
-    const priceId = process.env.STRIPE_PRICE_ID_FULL?.trim();
-    if (!priceId) return { error: "Missing STRIPE_PRICE_ID_FULL." };
+    const priceEnvVar = tier === "full" ? "STRIPE_PRICE_ID_FULL" : "STRIPE_PRICE_ID_BASIC_SUBSCRIPTION";
+    const priceId = process.env[priceEnvVar]?.trim();
+    if (!priceId) return { error: `Missing ${priceEnvVar}.` };
 
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
@@ -110,7 +120,7 @@ export async function createFullAccessUpgradeIntent(): Promise<IntentResult> {
       // See dashboard/[mxeId]/payment/actions.ts's original comment on this
       // exact expand path — same Stripe API-version reasoning applies here.
       expand: ["latest_invoice", "latest_invoice.confirmation_secret"],
-      metadata: { owner_id: owner.id },
+      metadata: { owner_id: owner.id, tier },
     });
 
     const invoice = subscription.latest_invoice;
@@ -119,7 +129,7 @@ export async function createFullAccessUpgradeIntent(): Promise<IntentResult> {
 
     if (!clientSecret) {
       console.error(
-        `[upgrade] Full-tier subscription ${subscription.id} (owner=${owner.id}) returned no confirmation_secret.client_secret. ` +
+        `[upgrade] ${tier}-tier subscription ${subscription.id} (owner=${owner.id}) returned no confirmation_secret.client_secret. ` +
           `latest_invoice=${typeof invoice === "string" ? invoice : (invoice?.id ?? "null")}, ` +
           `has_confirmation_secret=${typeof invoice !== "string" && !!invoice?.confirmation_secret}`,
       );
@@ -147,7 +157,7 @@ export async function createFullAccessUpgradeIntent(): Promise<IntentResult> {
 
     return { clientSecret };
   } catch (err) {
-    console.error(`[upgrade] createFullAccessUpgradeIntent failed for owner ${owner.id}:`, err);
+    console.error(`[upgrade] createPlanSubscriptionIntent failed for owner ${owner.id}:`, err);
     return { error: err instanceof Error ? err.message : "Could not start checkout. Please try again." };
   }
 }

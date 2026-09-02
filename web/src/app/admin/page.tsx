@@ -23,8 +23,8 @@ function monthLabel(d: Date) {
  * the live tables — see the plan this was built from for the exact
  * definitions (in particular: "accounts" is scoped to role='owner',
  * excluding the admin's own row and any marina-operator rows, since
- * those don't hold vessels the way the "one account, up to 5 vessels"
- * framing means). No revenue/MRR anywhere — that needs Stripe data
+ * those don't hold vessels the way the "one account, up to a plan's
+ * vessel cap" framing means). No revenue/MRR anywhere — that needs Stripe data
  * this page doesn't have yet, and an unverified number is worse than
  * no number.
  */
@@ -166,7 +166,7 @@ export default async function AdminOverviewPage() {
                 {totalOwners}
               </p>
               <p className="mt-1 font-[family-name:var(--font-dm)] text-xs text-[var(--text3)]">
-                up to 5 vessels each
+                2 (Basic) or 5 (Full) vessels each
               </p>
             </div>
           </div>

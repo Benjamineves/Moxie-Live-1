@@ -84,7 +84,7 @@ export default async function VesselDecommissionRequestsPage({ searchParams }: P
             </h1>
             <p className="mt-2 max-w-2xl font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
               Owner requests to archive a vessel — a status change, never a deletion. Approving revokes every active
-              share link for that vessel and stops it counting against the owner&apos;s 5-vessel cap; the record,
+              share link for that vessel and stops it counting against the owner&apos;s plan vessel cap; the record,
               documents, and history all stay intact.
             </p>
           </div>

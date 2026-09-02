@@ -9,13 +9,15 @@ type Props = {
   transferId: string;
   mxeId: string;
   buyerEmail: string;
+  sellerTier: "basic" | "full";
   publishableKey: string;
 };
 
-// Placeholder amount — same "don't block on pricing" treatment as the
-// badge fee and Full Access; needs to match whatever
-// STRIPE_PRICE_ID_TRANSFER is configured to in Stripe.
-const TRANSFER_FEE_COPY = { price: "$149", cadence: "one-time" };
+// Placeholder amounts — same "don't block on pricing" treatment as the
+// badge fee and plan subscriptions; needs to match whatever
+// STRIPE_PRICE_ID_TRANSFER_BASIC/_FULL are configured to in Stripe
+// (lib/tier-config.ts PRICE_REFERENCE documents the same amounts).
+const TRANSFER_FEE_PRICE: Record<"basic" | "full", string> = { basic: "$49", full: "$25" };
 
 let stripePromise: Promise<StripeJs | null> | null = null;
 function getStripeJs(publishableKey: string) {
@@ -23,7 +25,7 @@ function getStripeJs(publishableKey: string) {
   return stripePromise;
 }
 
-export function TransferPaymentForm({ transferId, mxeId, buyerEmail, publishableKey }: Props) {
+export function TransferPaymentForm({ transferId, mxeId, buyerEmail, sellerTier, publishableKey }: Props) {
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -86,10 +88,10 @@ export function TransferPaymentForm({ transferId, mxeId, buyerEmail, publishable
             </span>
             <div className="text-right">
               <div className="font-[family-name:var(--font-dm)] text-xl font-semibold text-[var(--navy)]">
-                {TRANSFER_FEE_COPY.price}
+                {TRANSFER_FEE_PRICE[sellerTier]}
               </div>
               <div className="font-[family-name:var(--font-dm)] text-[10px] uppercase tracking-[0.08em] text-[var(--text3)]">
-                {TRANSFER_FEE_COPY.cadence}
+                one-time
               </div>
             </div>
           </div>

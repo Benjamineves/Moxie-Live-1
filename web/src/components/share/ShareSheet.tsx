@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { PRESET_FLAGS, type ShareFieldFlags, type SharePreset } from "@/lib/share-filter";
 
 type Mode = "trusted" | "public";
@@ -33,11 +32,9 @@ const DEFAULT_FLAGS: ShareFieldFlags = { location: true, contact: true, docs: fa
 export function ShareSheet({
   mxeId,
   vesselName,
-  subscriptionTier,
 }: {
   mxeId: string;
   vesselName: string;
-  subscriptionTier: "basic" | "full";
 }) {
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState<Mode>("trusted");
@@ -156,12 +153,7 @@ export function ShareSheet({
                   mode === "trusted" ? "border-[var(--aqua-bright)] bg-[rgba(23,195,178,.04)]" : "border-[var(--divider)]"
                 }`}
               >
-                {subscriptionTier === "basic" ? (
-                  <span className="absolute left-2.5 top-2.5 flex items-center gap-1 rounded-lg bg-[var(--navy)] px-2 py-0.5 font-[family-name:var(--font-dm)] text-[8px] font-bold uppercase tracking-[0.08em] text-[var(--gold)]">
-                    Full Access
-                  </span>
-                ) : null}
-                <p className={`mb-0.5 font-[family-name:var(--font-dm)] text-xs font-semibold text-[var(--navy)] ${subscriptionTier === "basic" ? "mt-3.5" : ""}`}>
+                <p className="mb-0.5 font-[family-name:var(--font-dm)] text-xs font-semibold text-[var(--navy)]">
                   Trusted Contact
                 </p>
                 <p className="font-[family-name:var(--font-dm)] text-[10px] leading-tight text-[var(--text3)]">
@@ -185,34 +177,7 @@ export function ShareSheet({
               </button>
             </div>
 
-            {mode === "trusted" && subscriptionTier === "basic" ? (
-              <div className="px-6 py-7 text-center">
-                <div className="mx-auto mb-4 flex h-[52px] w-[52px] items-center justify-center rounded-full bg-[var(--gold-dim)]">
-                  <svg viewBox="0 0 24 24" className="h-[22px] w-[22px] stroke-[var(--gold)]" fill="none" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="11" width="18" height="11" rx="2" />
-                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-                  </svg>
-                </div>
-                <p className="font-[family-name:var(--font-display)] text-xl font-light text-[var(--navy)]">
-                  A <em className="text-[var(--gold)] not-italic">Full Access</em> feature
-                </p>
-                <p className="mx-auto mt-2 max-w-[340px] font-[family-name:var(--font-dm)] text-[13px] font-light leading-relaxed text-[var(--text2)]">
-                  Trusted Contact sharing lets you send exactly the right details to exactly the right person — without
-                  handing over your login or your whole profile.
-                </p>
-                <Link
-                  href={`/dashboard/${encodeURIComponent(mxeId)}/payment`}
-                  className="mt-5 inline-flex items-center gap-2 bg-[var(--navy)] px-6 py-3 font-[family-name:var(--font-dm)] text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--gold)] transition hover:bg-[var(--navy2)]"
-                >
-                  Upgrade to Full Access
-                </Link>
-                <p className="mt-2.5 font-[family-name:var(--font-dm)] text-[10px] text-[var(--text3)]">
-                  Public profile sharing is still included on Basic — use the Public Link tab.
-                </p>
-              </div>
-            ) : null}
-
-            {mode === "trusted" && subscriptionTier === "full" ? (
+            {mode === "trusted" ? (
               <>
                 <div className="border-b border-[var(--divider)] px-5 pb-1 pt-3.5">
                   <label className="mb-2 block font-[family-name:var(--font-dm)] text-[11px] font-medium text-[var(--text2)]">

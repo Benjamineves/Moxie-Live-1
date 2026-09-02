@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import type { SubscriptionTier } from "@/lib/tier-config";
 
 export const runtime = "nodejs";
 
@@ -56,6 +57,8 @@ export async function POST(request: Request) {
           await activateFromBadgeFee(service, intent);
         } else if (intent.metadata?.payment_type === "transfer_fee") {
           await completeOwnershipTransferFromPayment(service, intent);
+        } else if (intent.metadata?.payment_type === "signup_bundle") {
+          await completeSignupBundle(service, intent);
         }
         break;
       }
@@ -168,6 +171,72 @@ async function activateFromBadgeFee(service: ServiceClient, intent: Stripe.Payme
 }
 
 /**
+ * Bundled first-vessel signup — one Stripe invoice/PaymentIntent covering
+ * both the recurring plan (created via subscriptions.create, handled
+ * separately by recordAccountSubscriptionInvoice below on invoice.paid)
+ * and this vessel's one-time badge fee (added via add_invoice_items,
+ * handled here). intent.amount is the COMBINED total — the badge-only
+ * portion for vessel_payments comes from metadata.badge_fee_amount_cents,
+ * tagged at creation (dashboard/[mxeId]/payment/actions.ts), not from
+ * intent.amount itself.
+ */
+async function completeSignupBundle(service: ServiceClient, intent: Stripe.PaymentIntent) {
+  const mxeId = intent.metadata?.mxe_id;
+  const badgeAmountRaw = intent.metadata?.badge_fee_amount_cents;
+  if (!mxeId || !badgeAmountRaw) {
+    console.error(
+      `[stripe-webhook] payment_intent.succeeded ${intent.id} has payment_type=signup_bundle but missing metadata.mxe_id or metadata.badge_fee_amount_cents.`,
+    );
+    return;
+  }
+  const badgeAmountCents = Number(badgeAmountRaw);
+  if (!Number.isFinite(badgeAmountCents)) {
+    console.error(`[stripe-webhook] payment_intent.succeeded ${intent.id}: badge_fee_amount_cents metadata is not a number: ${badgeAmountRaw}.`);
+    return;
+  }
+
+  const { data: vesselRow } = await service.from("vessels").select("id, qr_status").eq("mxe_id", mxeId).maybeSingle();
+  const vessel = vesselRow as { id: string; qr_status: string | null } | null;
+  if (!vessel) {
+    console.error(`[stripe-webhook] payment_intent.succeeded ${intent.id}: no vessel found for mxe_id=${mxeId}.`);
+    return;
+  }
+
+  // Same idempotency-guards-the-log-insert-only rule as activateFromBadgeFee.
+  const { data: existingPayment } = await service
+    .from("vessel_payments")
+    .select("id")
+    .eq("stripe_payment_intent_id", intent.id)
+    .maybeSingle();
+
+  if (!existingPayment) {
+    await service.from("vessel_payments").insert({
+      vessel_id: vessel.id,
+      payment_type: "badge_fee",
+      stripe_payment_intent_id: intent.id,
+      amount_cents: badgeAmountCents,
+      status: "paid",
+      paid_at: new Date().toISOString(),
+    });
+  }
+
+  await activateVessel(service, vessel, mxeId, `payment_intent.succeeded ${intent.id}`);
+}
+
+/**
+ * Which tier (if either) a Stripe Price id corresponds to — the single
+ * place both recordAccountSubscriptionInvoice and syncSubscriptionStatus
+ * ask this question, now that Basic is a real recurring price and no
+ * longer a safe hardcoded default.
+ */
+function tierForPriceId(priceId: string | null | undefined): SubscriptionTier | null {
+  if (!priceId) return null;
+  if (priceId === process.env.STRIPE_PRICE_ID_FULL?.trim()) return "full";
+  if (priceId === process.env.STRIPE_PRICE_ID_BASIC_SUBSCRIPTION?.trim()) return "basic";
+  return null;
+}
+
+/**
  * Ownership Transfer fee — one-time, charged to the seller, only once
  * the buyer has already accepted. This is the moment ownership actually
  * moves: complete_ownership_transfer (20260908_ownership_transfer.sql)
@@ -216,12 +285,19 @@ async function completeOwnershipTransferFromPayment(service: ServiceClient, inte
 }
 
 /**
- * Full Access subscription — account-level (build spec §9 item 16). One
- * subscription per account, covering every vessel that account owns.
- * Unlike the old per-vessel version, this never activates a vessel's
- * qr_status — that's the badge fee's job, unconditionally, regardless of
- * tier. This only ever updates the owner's account-level tier/status and
- * logs the charge.
+ * Account-level subscription — Basic or Full, both real recurring Stripe
+ * Subscriptions now (tier structure build). One subscription per account,
+ * covering every vessel that account owns. Unlike the old per-vessel
+ * version, this never activates a vessel's qr_status — that's the badge
+ * fee's job, unconditionally, regardless of tier. This only ever updates
+ * the owner's account-level tier/status and logs the charge.
+ *
+ * amount_cents logged here is the subscription's own recurring price,
+ * NOT invoice.amount_paid — on a bundled signup invoice (add_invoice_items
+ * riding the badge fee alongside the plan), invoice.amount_paid is the
+ * combined total, which would double-count the badge-fee portion here.
+ * The badge fee is logged separately, into vessel_payments, by
+ * completeSignupBundle above.
  */
 async function recordAccountSubscriptionInvoice(service: ServiceClient, invoice: Stripe.Invoice) {
   // Invoice.subscription was removed from the Stripe API (installed SDK:
@@ -241,6 +317,21 @@ async function recordAccountSubscriptionInvoice(service: ServiceClient, invoice:
 
   const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
   const customerId = typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id;
+
+  // items.data[0] is always the one recurring plan price — the badge fee
+  // rides along on the invoice via add_invoice_items, never as a
+  // subscription item, so there's exactly one item to read here regardless
+  // of whether this was a plain subscription or a bundled signup.
+  const planItem = subscription.items.data[0];
+  const planPrice = planItem?.price;
+  const tier = tierForPriceId(typeof planPrice === "string" ? planPrice : planPrice?.id);
+  const subscriptionOnlyAmountCents = typeof planPrice === "string" ? null : (planPrice?.unit_amount ?? null);
+
+  if (!tier) {
+    console.error(
+      `[stripe-webhook] invoice.paid ${invoice.id}: subscription ${subscription.id}'s price ${typeof planPrice === "string" ? planPrice : planPrice?.id} matches neither STRIPE_PRICE_ID_BASIC_SUBSCRIPTION nor STRIPE_PRICE_ID_FULL — leaving subscription_tier untouched.`,
+    );
+  }
 
   // stripe_customer_id, not subscription.metadata.owner_id — the customer
   // id is already the unique, indexed key every other billing lookup in
@@ -272,7 +363,7 @@ async function recordAccountSubscriptionInvoice(service: ServiceClient, invoice:
     await service.from("account_payments").insert({
       owner_id: owner.id,
       stripe_invoice_id: invoice.id,
-      amount_cents: invoice.amount_paid,
+      amount_cents: subscriptionOnlyAmountCents,
       status: "paid",
       paid_at: new Date().toISOString(),
     });
@@ -282,7 +373,7 @@ async function recordAccountSubscriptionInvoice(service: ServiceClient, invoice:
     .from("users")
     .update({
       subscription_status: "active",
-      subscription_tier: "full",
+      ...(tier ? { subscription_tier: tier } : {}),
       stripe_customer_id: customerId,
       stripe_subscription_id: subscription.id,
     })
@@ -322,9 +413,17 @@ async function syncSubscriptionStatus(service: ServiceClient, subscription: Stri
   } else if (subscription.status === "past_due") {
     await service.from("users").update({ subscription_status: "past_due" }).eq("stripe_customer_id", customerId);
   } else if (subscription.status === "active") {
+    const planItem = subscription.items.data[0];
+    const planPrice = planItem?.price;
+    const tier = tierForPriceId(typeof planPrice === "string" ? planPrice : planPrice?.id);
+    if (!tier) {
+      console.error(
+        `[stripe-webhook] customer.subscription.updated ${subscription.id}: price ${typeof planPrice === "string" ? planPrice : planPrice?.id} matches neither STRIPE_PRICE_ID_BASIC_SUBSCRIPTION nor STRIPE_PRICE_ID_FULL — leaving subscription_tier untouched.`,
+      );
+    }
     await service
       .from("users")
-      .update({ subscription_status: "active", subscription_tier: "full" })
+      .update({ subscription_status: "active", ...(tier ? { subscription_tier: tier } : {}) })
       .eq("stripe_customer_id", customerId);
   }
 }

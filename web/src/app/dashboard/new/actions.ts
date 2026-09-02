@@ -4,6 +4,7 @@ import { generateNextMxeId } from "@/lib/mxe-id";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { isValidStateCode, normalizeStateCode } from "@/lib/us-states";
+import { VESSEL_LIMIT, type SubscriptionTier } from "@/lib/tier-config";
 
 const STORAGE_TYPES = ["marina", "mooring", "trailer", "home", "yard", "other"] as const;
 export type StorageType = (typeof STORAGE_TYPES)[number];
@@ -88,13 +89,17 @@ export async function createVessel(
 
   const { data: existingOwnerByEmail } = await service
     .from("users")
-    .select("id,full_name,email")
+    .select("id,full_name,email,subscription_tier")
     .eq("email", ownerEmail)
     .maybeSingle();
 
   let ownerId = existingOwnerByEmail?.id ?? user.id;
   let ownerDisplayName = existingOwnerByEmail?.full_name?.trim() || ownerName;
   let ownerDisplayEmail = existingOwnerByEmail?.email?.trim().toLowerCase() || ownerEmail;
+  // New owner rows default to subscription_tier='basic' at the DB level
+  // (20260825_payment_storage_extensibility.sql) — same default applies
+  // here before the upsert below runs.
+  const ownerTier: SubscriptionTier = existingOwnerByEmail?.subscription_tier === "full" ? "full" : "basic";
 
   if (!existingOwnerByEmail) {
     const { error: ownerError } = await service.from("users").upsert(
@@ -126,7 +131,7 @@ export async function createVessel(
   // archived vessel apart from a real active one. This exact composite
   // filter is also what reactivate_vessel's cap check uses server-side
   // (20260906_vessel_decommission.sql) — the two must stay in sync.
-  const VESSEL_LIMIT = 5;
+  const vesselLimit = VESSEL_LIMIT[ownerTier];
   const { count: vesselCount, error: countError } = await service
     .from("vessels")
     .select("id", { count: "exact", head: true })
@@ -136,8 +141,8 @@ export async function createVessel(
   if (countError) {
     return { error: `Unable to check vessel count: ${countError.message}` };
   }
-  if ((vesselCount ?? 0) >= VESSEL_LIMIT) {
-    return { error: "You've reached the 5-vessel limit for one account." };
+  if ((vesselCount ?? 0) >= vesselLimit) {
+    return { error: `You've reached the ${vesselLimit}-vessel limit on your current plan.` };
   }
 
   const isMarinaStorage = input.storage_type === "marina" || input.storage_type === "mooring";

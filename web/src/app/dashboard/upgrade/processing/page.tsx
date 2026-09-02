@@ -4,11 +4,13 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { ActivationPoller } from "@/components/ActivationPoller";
 
 /**
- * Landing spot after Stripe confirms the Full Access subscription's first
- * invoice client-side. subscription_tier only ever flips via the webhook
- * (build spec §4), which can lag the redirect by a second or two — this
- * page waits it out, same pattern as the badge-fee processing page, just
- * account-scoped instead of vessel-scoped (build spec §9 item 16).
+ * Landing spot after Stripe confirms the plan subscription's first invoice
+ * client-side — Basic or Full. subscription_status only ever flips via the
+ * webhook (build spec §4), which can lag the redirect by a second or two —
+ * this page waits it out, same pattern as the badge-fee processing page,
+ * just account-scoped instead of vessel-scoped (build spec §9 item 16).
+ * Checks subscription_status rather than subscription_tier==='full' so a
+ * Basic subscriber's checkout resolves here too, not just Full's.
  */
 export default async function UpgradeProcessingPage() {
   const supabase = await createSupabaseServerClient();
@@ -29,22 +31,22 @@ export default async function UpgradeProcessingPage() {
   }
 
   const normalizedEmail = user.email?.trim().toLowerCase();
-  let subscriptionTier: string | null = null;
+  let subscriptionStatus: string | null = null;
 
   if (normalizedEmail) {
     const { data } = await service
       .from("users")
-      .select("subscription_tier")
+      .select("subscription_status")
       .eq("email", normalizedEmail)
       .maybeSingle();
-    subscriptionTier = (data as { subscription_tier: string | null } | null)?.subscription_tier ?? null;
+    subscriptionStatus = (data as { subscription_status: string | null } | null)?.subscription_status ?? null;
   }
-  if (subscriptionTier === null) {
-    const { data } = await service.from("users").select("subscription_tier").eq("id", user.id).maybeSingle();
-    subscriptionTier = (data as { subscription_tier: string | null } | null)?.subscription_tier ?? null;
+  if (subscriptionStatus === null) {
+    const { data } = await service.from("users").select("subscription_status").eq("id", user.id).maybeSingle();
+    subscriptionStatus = (data as { subscription_status: string | null } | null)?.subscription_status ?? null;
   }
 
-  if (subscriptionTier === "full") {
+  if (subscriptionStatus === "active") {
     redirect("/dashboard?upgraded=1");
   }
 

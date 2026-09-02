@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { uploadVesselDocument, type DocType } from "@/lib/vessel-uploads";
-import { updateVesselDocument, updateVesselOwnerFields } from "@/lib/owner-actions";
+import { updateVesselDocument, updateVesselOwnerFields, checkStorageCapacity } from "@/lib/owner-actions";
 import { isDocumentLocked, type DocumentSlot } from "@/lib/vessel-transfer";
 
 type DocRow = { docType: DocType; label: string; url: string | null };
@@ -34,6 +34,8 @@ function DocumentRow({ mxeId, docType, label, url }: DocRow & { mxeId: string })
     setError(null);
     setUploading(true);
     try {
+      const capacity = await checkStorageCapacity(file.size);
+      if (!capacity.ok) throw new Error(capacity.error);
       const path = await uploadVesselDocument(file, mxeId, docType);
       const result = await updateVesselDocument(mxeId, docType, path);
       if (result.error) throw new Error(result.error);
@@ -115,6 +117,8 @@ function BoaterCardRow({
     setError(null);
     setUploading(true);
     try {
+      const capacity = await checkStorageCapacity(file.size);
+      if (!capacity.ok) throw new Error(capacity.error);
       const path = await uploadVesselDocument(file, mxeId, "boater_card");
       const result = await updateVesselDocument(mxeId, "boater_card", path);
       if (result.error) throw new Error(result.error);
