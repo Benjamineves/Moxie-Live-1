@@ -36,6 +36,8 @@ export function getDemoVessel(mxeId: string): VesselRecord | null {
       lifecycle_status: "active",
       decommissioned_at: null,
       decommission_reason: null,
+      dormant_cause: null,
+      dormant_since: null,
       slip_number: "38",
       marina_phone: "(510) 555-0110",
       is_liveaboard: false,

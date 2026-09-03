@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { ScanSuccess } from "@/components/ScanSuccess";
@@ -12,6 +13,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { emailsMatch, getOwnerEmailByUserId } from "@/lib/owner-verify";
 import { getOwnerBillingSummary } from "@/lib/billing-service";
 import { resolveShareByToken } from "@/lib/share-resolve";
+import { getDormantInfo, DORMANT_PUBLIC_COPY } from "@/lib/vessel-dormancy";
 
 const MXE_RE = /^MXE-\d{5}$/i;
 
@@ -76,6 +78,31 @@ export default async function VesselPage({ params, searchParams }: Props) {
   const vessel = await fetchVesselByMxeId(mxeId);
   if (!vessel) {
     notFound();
+  }
+
+  // Dormant Vessel Identity (docs/moxie_digital_dormant_identity_spec.md):
+  // both lazy grace-period checks (past-due -> lapsed, downgrade grace ->
+  // locked fallback) for this vessel's owner, run opportunistically here
+  // since there's no scheduled job to run them on a timer. Guarded to
+  // qr_status='active' — an unborn (pending-payment) vessel was never
+  // counted as active in the first place, so there's nothing to
+  // reconcile. Re-reads lifecycle_status/dormant_cause afterward since
+  // this call can change them for the very vessel being rendered.
+  if (vessel.qr_status === "active") {
+    const reconcileService = createSupabaseServiceClient();
+    if (reconcileService) {
+      await reconcileService.rpc("reconcile_owner_dormancy", { p_owner_id: vessel.owner_id });
+      const { data: freshLifecycle } = await reconcileService
+        .from("vessels")
+        .select("lifecycle_status, dormant_cause")
+        .eq("id", vessel.id)
+        .maybeSingle();
+      if (freshLifecycle) {
+        const fresh = freshLifecycle as { lifecycle_status: string | null; dormant_cause: string | null };
+        vessel.lifecycle_status = fresh.lifecycle_status;
+        vessel.dormant_cause = fresh.dormant_cause;
+      }
+    }
   }
 
   const scan = sp.scan === "1" || sp.scan === "true";
@@ -180,33 +207,13 @@ export default async function VesselPage({ params, searchParams }: Props) {
     );
   }
 
-  // Decommissioned vessels get their own terminal state, checked before
-  // — and instead of — the qr_status gate below: someone may have
-  // scanned an already-decommissioned badge (still on the hull), or the
-  // vessel was decommissioned after it was activated. Don't expose owner
-  // contact or documents here — this returns before filterVesselForRole
-  // is ever called, so no tier object with that data even exists on this
-  // path.
-  if (vessel.lifecycle_status === "decommissioned") {
-    return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[var(--cream)] px-6 text-center">
-        <p className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--text3)]">
-          {vessel.mxe_id}
-        </p>
-        <h1 className="font-[family-name:var(--font-display)] text-3xl font-light italic text-[var(--navy)]">
-          No longer <em className="text-[var(--gold)] not-italic">active.</em>
-        </h1>
-        <p className="max-w-sm font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
-          This vessel is no longer part of Moxie&apos;s active fleet.
-        </p>
-      </div>
-    );
-  }
-
-  // Payment gate (build spec §5, P0-A acceptance tests): a vessel that
-  // hasn't cleared payment doesn't get a live public profile — the intake
-  // flow ends at qr_status='pending_payment', and only the Stripe webhook
-  // ever flips it. MXE-00004 is the fixture that exercises this.
+  // Payment gate (build spec §5, P0-A acceptance tests), checked FIRST
+  // among the state gates (dormant identity spec §7.2): a vessel that
+  // hasn't cleared payment doesn't get a live public profile at all — the
+  // intake flow ends at qr_status='pending_payment', and only the Stripe
+  // webhook ever flips it. A pending-payment vessel is not dormant, it's
+  // unborn — it can never reach the dormant dispatch below. MXE-00004 is
+  // the fixture that exercises this.
   if (vessel.qr_status !== "active") {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[var(--cream)] px-6 text-center">
@@ -219,6 +226,61 @@ export default async function VesselPage({ params, searchParams }: Props) {
         <p className="max-w-sm font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
           This vessel&apos;s registration hasn&apos;t been completed yet — there&apos;s no live profile to show.
         </p>
+      </div>
+    );
+  }
+
+  // Dormant Vessel Identity: one shared dispatch for all three causes
+  // (lapsed, locked, decommissioned) — getDormantInfo() is the single
+  // place that turns lifecycle_status/dormant_cause into one answer.
+  // Retained identity fields (§3) still render here so the scan stays
+  // informative; nothing in the suspended list (documents, sharing,
+  // owner contact) is ever reachable on this path — this returns before
+  // filterVesselForRole is called, so no tier object with that data even
+  // exists here.
+  const dormant = getDormantInfo(vessel);
+  if (dormant.isDormant && dormant.cause) {
+    const copy = DORMANT_PUBLIC_COPY[dormant.cause];
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-[var(--cream)] px-6 text-center">
+        {vessel.photo_url?.startsWith("http") ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={vessel.photo_url}
+            alt={vessel.vessel_name}
+            className="h-32 w-32 rounded-full object-cover opacity-80 grayscale"
+          />
+        ) : null}
+        <p className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--text3)]">
+          {vessel.mxe_id}
+        </p>
+        <h1 className="font-[family-name:var(--font-display)] text-3xl font-light italic text-[var(--navy)]">
+          {vessel.vessel_name}
+        </h1>
+        <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--text3)]">
+          {[vessel.year, vessel.make, vessel.model].filter(Boolean).join(" ")}
+        </p>
+        <div className="mt-2 max-w-sm rounded-xl border border-[var(--divider)] bg-[var(--white)] p-5">
+          <p className="font-[family-name:var(--font-display)] text-xl font-light italic text-[var(--navy)]">
+            {copy.headline}
+          </p>
+          <p className="mt-2 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">{copy.body}</p>
+          {dormant.cause === "decommissioned" ? (
+            <a
+              href="mailto:hello@moxieyachting.com"
+              className="mt-4 inline-flex rounded-lg bg-[var(--navy)] px-5 py-2.5 font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--gold)]"
+            >
+              {copy.ctaLabel}
+            </a>
+          ) : (
+            <Link
+              href={`/login?next=${encodeURIComponent(`/${vessel.mxe_id}?role=owner`)}`}
+              className="mt-4 inline-flex rounded-lg bg-[var(--navy)] px-5 py-2.5 font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--gold)]"
+            >
+              {copy.ctaLabel}
+            </Link>
+          )}
+        </div>
       </div>
     );
   }

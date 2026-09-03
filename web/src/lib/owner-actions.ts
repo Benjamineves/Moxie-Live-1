@@ -671,3 +671,28 @@ export async function deleteUnactivatedVessel(mxeId: string): Promise<{ error?: 
 
   return {};
 }
+
+/**
+ * Dismisses one in-app notification (lib/notify.ts's notifyOwner() /
+ * owner_notifications) — marks it read, doesn't delete it. Scoped to
+ * ownerIds so this can't mark another account's notification read by
+ * guessing an id.
+ */
+export async function dismissNotification(notificationId: string): Promise<{ error?: string }> {
+  const authClient = await createSupabaseServerClient();
+  if (!authClient) return { error: "Missing Supabase auth configuration." };
+
+  const { user, ownerIds } = await resolveOwnerIds(authClient);
+  if (!user) return { error: "You must be signed in." };
+
+  const service = createSupabaseServiceClient();
+  if (!service) return { error: "Missing Supabase service role configuration." };
+
+  const { error } = await service
+    .from("owner_notifications")
+    .update({ read_at: new Date().toISOString() })
+    .eq("id", notificationId)
+    .in("owner_id", ownerIds);
+  if (error) return { error: error.message };
+  return {};
+}

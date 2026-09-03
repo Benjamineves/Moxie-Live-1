@@ -39,6 +39,17 @@ export default async function AdminOverviewPage() {
     redirect("/dashboard");
   }
 
+  // Dormant Vessel Identity: without a scheduled job, an owner who
+  // lapses and never logs back in (and whose badge is never scanned)
+  // would otherwise sit at lifecycle_status='active' indefinitely —
+  // correct from their own session's point of view, but wrong for
+  // anything reading state in bulk here. Reconciles every account with
+  // an expired grace window before any count below is computed, so this
+  // page self-heals on every load instead of drifting between visits.
+  // Still not real-time — correct as of the last /admin load, not the
+  // instant a grace period actually expires.
+  await service.rpc("reconcile_all_dormancy");
+
   const now = new Date();
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
   const monthStart = startOfMonth(now);

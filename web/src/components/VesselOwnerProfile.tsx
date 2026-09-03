@@ -21,11 +21,13 @@ import { SafetyEdit } from "@/components/vessel-edit/SafetyEdit";
 import { ShareSheet } from "@/components/share/ShareSheet";
 import type { BillingSummary } from "@/lib/billing-service";
 import { DECOMMISSION_REASON_LABELS, type DecommissionReason } from "@/lib/vessel-decommission";
+import { getDormantInfo } from "@/lib/vessel-dormancy";
 
 export type OwnerProfileTier = PublicProfileProps & {
   qr_status?: string | null;
   lifecycle_status?: string | null;
   decommission_reason?: string | null;
+  dormant_cause?: string | null;
   slip_number?: string | null;
   marina_phone?: string | null;
   is_liveaboard?: boolean | null;
@@ -121,6 +123,13 @@ export function VesselOwnerProfile({
   // being closeable once and forgotten.
   const needsActivation = tier.qr_status != null && tier.qr_status !== "active";
   const isDecommissioned = tier.lifecycle_status === "decommissioned";
+  // Dormant Vessel Identity (docs/moxie_digital_dormant_identity_spec.md
+  // §3): document access, sharing, and editing all suspend while
+  // dormant — lock-don't-delete, same principle already established for
+  // Basic's document limit. isDecommissioned above stays its own flag
+  // (its banner/copy differs), but dormant.isDormant is true for it too,
+  // so the shared editing/sharing lock below covers all three causes.
+  const dormant = getDormantInfo({ lifecycle_status: tier.lifecycle_status ?? null, dormant_cause: tier.dormant_cause ?? null });
 
   return (
     <>
@@ -163,6 +172,46 @@ export function VesselOwnerProfile({
             record, documents, and history are all still here — contact us if you need it reactivated.
           </p>
         </div>
+      ) : dormant.cause === "lapsed" ? (
+        <div className="border-b border-[var(--red-fg)] bg-[var(--red-bg)] px-5 py-4 text-center">
+          <p className="font-[family-name:var(--font-dm)] text-sm font-semibold text-[var(--red-fg)]">
+            This vessel is dormant — your subscription has lapsed.
+          </p>
+          <p className="mt-1 font-[family-name:var(--font-dm)] text-xs text-[var(--red-fg)]">
+            Document access, sharing, and editing are paused. Nothing is deleted — resubscribe to restore this vessel
+            and the rest of your fleet.
+          </p>
+          <Link
+            href="/dashboard/upgrade"
+            className="mt-3 inline-flex rounded-lg bg-[var(--red-fg)] px-5 py-2.5 font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-white"
+          >
+            Choose a plan →
+          </Link>
+        </div>
+      ) : dormant.cause === "locked" ? (
+        <div className="border-b border-[var(--red-fg)] bg-[var(--red-bg)] px-5 py-4 text-center">
+          <p className="font-[family-name:var(--font-dm)] text-sm font-semibold text-[var(--red-fg)]">
+            This vessel is dormant — it&apos;s beyond your Basic plan&apos;s vessel limit.
+          </p>
+          <p className="mt-1 font-[family-name:var(--font-dm)] text-xs text-[var(--red-fg)]">
+            Document access, sharing, and editing are paused. Nothing is deleted — upgrade to Full to restore every
+            vessel, or choose which stay active on Basic.
+          </p>
+          <div className="mt-3 flex flex-wrap justify-center gap-2.5">
+            <Link
+              href="/dashboard/upgrade"
+              className="inline-flex rounded-lg bg-[var(--red-fg)] px-5 py-2.5 font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-white"
+            >
+              Upgrade to Full →
+            </Link>
+            <Link
+              href="/dashboard/manage-fleet"
+              className="inline-flex rounded-lg border border-[var(--red-fg)] px-5 py-2.5 font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--red-fg)]"
+            >
+              Choose active vessels →
+            </Link>
+          </div>
+        </div>
       ) : needsActivation ? (
         <div className="border-b border-[var(--red-fg)] bg-[var(--red-bg)] px-5 py-4 text-center">
           <p className="font-[family-name:var(--font-dm)] text-sm font-semibold text-[var(--red-fg)]">
@@ -193,9 +242,20 @@ export function VesselOwnerProfile({
 
       <VesselPublicProfile {...publicProps} hideFooter />
 
-      {!tier.photo_url ? <AddPhotoNudge mxeId={tier.mxe_id} vesselName={tier.vessel_name} /> : null}
+      {/*
+        Dormant lock (spec §3: "Vessel editing" suspended while dormant,
+        covering all three causes including decommissioned — a gap this
+        fix closes, since editing was previously left fully open for an
+        already-decommissioned vessel too). A CSS-level lock across the
+        whole editable block rather than threading a `disabled` prop
+        through nine separate Edit components individually — every
+        control in here is genuinely inert (pointer-events-none), not
+        just visually dimmed, and the banner above already explains why.
+      */}
+      <div className={dormant.isDormant ? "pointer-events-none opacity-60" : undefined} aria-disabled={dormant.isDormant}>
+        {!tier.photo_url ? <AddPhotoNudge mxeId={tier.mxe_id} vesselName={tier.vessel_name} /> : null}
 
-      <div className="mx-auto flex max-w-lg flex-col items-end gap-3 px-5 md:px-8">
+        <div className="mx-auto flex max-w-lg flex-col items-end gap-3 px-5 md:px-8">
         {tier.photo_url ? <ReplacePhotoControl mxeId={tier.mxe_id} /> : null}
         <VesselDetailsEdit mxeId={tier.mxe_id} vessel_name={tier.vessel_name} />
         <NotesEdit mxeId={tier.mxe_id} public_notes={tier.public_notes} />
@@ -369,8 +429,14 @@ export function VesselOwnerProfile({
           </p>
         </footer>
       </section>
+      </div>
 
-      <ShareSheet mxeId={tier.mxe_id} vesselName={tier.vessel_name} />
+      {/* No new Trusted Contact shares while dormant (spec §3) — existing
+          ones are already revoked server-side (set_vessels_lapsed /
+          apply_overflow_fallback / apply_vessel_decommission). Not
+          rendering the button at all, rather than rendering it disabled,
+          since there's nothing left for it to do here. */}
+      {!dormant.isDormant ? <ShareSheet mxeId={tier.mxe_id} vesselName={tier.vessel_name} /> : null}
     </>
   );
 }

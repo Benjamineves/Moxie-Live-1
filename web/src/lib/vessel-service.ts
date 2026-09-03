@@ -109,6 +109,7 @@ export function filterVesselForRole(v: VesselRecord, role: ProfileRole): Record<
       // ever called for a decommissioned vessel's public view.
       lifecycle_status: v.lifecycle_status,
       decommission_reason: v.decommission_reason,
+      dormant_cause: v.dormant_cause,
       slip_number: v.slip_number,
       marina_phone: v.marina_phone,
       is_liveaboard: v.is_liveaboard,

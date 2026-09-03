@@ -75,3 +75,33 @@ export const TIER_LABELS: Record<SubscriptionTier, string> = {
   basic: "Basic",
   full: "Full Access",
 };
+
+/**
+ * Dormant Vessel Identity (docs/moxie_digital_dormant_identity_spec.md).
+ * Both grace periods are also mirrored in
+ * supabase/migrations/20260913_dormant_identity.sql as literal
+ * INTERVAL values (SQL can't read this file) — keep both in sync by
+ * hand, same trade-off already accepted for VESSEL_LIMIT.
+ */
+export const DORMANCY = {
+  /**
+   * Days after subscription_status first becomes 'past_due' before a
+   * vessel becomes dormant (cause: 'lapsed'). Stripe's own dunning has
+   * already run its course by the time a subscription reaches
+   * 'canceled'/'unpaid' — those trigger dormancy immediately, no
+   * additional grace. This is only for the window while still
+   * 'past_due': Stripe's default Smart Retry schedule makes its first
+   * several attempts within about a week, so 7 days covers a transient
+   * card problem without leaving a vessel with a genuinely dead card
+   * fully accessible for weeks.
+   */
+  PAST_DUE_GRACE_DAYS: 7,
+  /**
+   * Days after a Basic-tier account is found holding more active
+   * vessels than its cap allows before the automatic fallback (lock all
+   * but the most recently touched) applies. Spec §5: "nothing locks
+   * immediately" — the owner can choose which vessels stay active any
+   * time before or after this window closes.
+   */
+  DOWNGRADE_GRACE_DAYS: 14,
+} as const;

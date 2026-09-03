@@ -3,6 +3,8 @@ import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import type { SubscriptionTier } from "@/lib/tier-config";
+import { DORMANCY } from "@/lib/tier-config";
+import { notifyOwner } from "@/lib/notify";
 
 export const runtime = "nodejs";
 
@@ -396,6 +398,19 @@ async function recordAccountSubscriptionInvoice(service: ServiceClient, invoice:
  * just reflects whatever status Stripe ultimately reports. qr_status is
  * never touched here, in either direction: it is permanent once 'active'
  * (build spec §4).
+ *
+ * Also drives Dormant Vessel Identity
+ * (docs/moxie_digital_dormant_identity_spec.md): 'canceled'/'unpaid'
+ * means Stripe's own dunning is already exhausted, so every one of the
+ * owner's vessels goes dormant (cause='lapsed') immediately, no
+ * additional grace. 'past_due' only starts the grace-period clock
+ * (past_due_since) — set_vessels_lapsed isn't called yet; the lazy
+ * apply_past_due_dormancy_if_expired check (dashboard/public-page loads,
+ * plus reconcile_all_dormancy on /admin) applies it once
+ * DORMANCY.PAST_DUE_GRACE_DAYS has actually elapsed. 'active' restores
+ * any lapsed vessels and, either way, reconciles Basic-tier overflow —
+ * covers both "recovered from past_due" and "downgraded to Basic" with
+ * one call.
  */
 async function syncSubscriptionStatus(service: ServiceClient, subscription: Stripe.Subscription) {
   const customerId = typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id;
@@ -405,10 +420,11 @@ async function syncSubscriptionStatus(service: ServiceClient, subscription: Stri
     // other branch here — that must land regardless of what
     // stripe_subscription_id currently holds, so a stuck "full" tier is
     // never possible even if the ID column is somehow out of sync.
-    await service
+    const { data: updatedRows } = await service
       .from("users")
-      .update({ subscription_status: "canceled", subscription_tier: "basic" })
-      .eq("stripe_customer_id", customerId);
+      .update({ subscription_status: "canceled", subscription_tier: "basic", past_due_since: null })
+      .eq("stripe_customer_id", customerId)
+      .select("id");
 
     // Clearing the ID is a separate, best-effort statement, scoped to
     // exactly the subscription that just ended — keeps the column meaning
@@ -421,8 +437,42 @@ async function syncSubscriptionStatus(service: ServiceClient, subscription: Stri
       .update({ stripe_subscription_id: null })
       .eq("stripe_customer_id", customerId)
       .eq("stripe_subscription_id", subscription.id);
+
+    for (const row of (updatedRows ?? []) as { id: string }[]) {
+      const { error } = await service.rpc("set_vessels_lapsed", { p_owner_id: row.id });
+      if (error) console.error(`[stripe-webhook] set_vessels_lapsed failed for owner ${row.id}:`, error);
+      await notifyOwner(
+        row.id,
+        "vessel_lapsed",
+        "Your Moxie subscription has ended. Your vessels keep their permanent identity, but document access, sharing, and editing are paused until you resubscribe.",
+      );
+    }
   } else if (subscription.status === "past_due") {
-    await service.from("users").update({ subscription_status: "past_due" }).eq("stripe_customer_id", customerId);
+    const { data: updatedRows } = await service
+      .from("users")
+      .update({ subscription_status: "past_due" })
+      .eq("stripe_customer_id", customerId)
+      .select("id");
+
+    // Only stamp past_due_since the FIRST time this account goes
+    // past_due for the current failure — a repeat past_due delivery for
+    // the same ongoing issue (Stripe retries several times) must not
+    // reset the grace-period clock. is("past_due_since", null) guards
+    // that; this is a separate, narrower statement from the one above
+    // for exactly that reason.
+    await service
+      .from("users")
+      .update({ past_due_since: new Date().toISOString() })
+      .eq("stripe_customer_id", customerId)
+      .is("past_due_since", null);
+
+    for (const row of (updatedRows ?? []) as { id: string }[]) {
+      await notifyOwner(
+        row.id,
+        "subscription_past_due",
+        `Your last payment didn't go through. You have ${DORMANCY.PAST_DUE_GRACE_DAYS} days to update your payment method before your vessels' document access, sharing, and editing pause.`,
+      );
+    }
   } else if (subscription.status === "active") {
     const planItem = subscription.items.data[0];
     const planPrice = planItem?.price;
@@ -432,9 +482,15 @@ async function syncSubscriptionStatus(service: ServiceClient, subscription: Stri
         `[stripe-webhook] customer.subscription.updated ${subscription.id}: price ${typeof planPrice === "string" ? planPrice : planPrice?.id} matches neither STRIPE_PRICE_ID_BASIC_SUBSCRIPTION nor STRIPE_PRICE_ID_FULL — leaving subscription_tier untouched.`,
       );
     }
-    await service
+    const { data: updatedRows } = await service
       .from("users")
       .update({ subscription_status: "active", ...(tier ? { subscription_tier: tier } : {}) })
-      .eq("stripe_customer_id", customerId);
+      .eq("stripe_customer_id", customerId)
+      .select("id");
+
+    for (const row of (updatedRows ?? []) as { id: string }[]) {
+      const { error } = await service.rpc("clear_vessels_lapsed", { p_owner_id: row.id });
+      if (error) console.error(`[stripe-webhook] clear_vessels_lapsed failed for owner ${row.id}:`, error);
+    }
   }
 }

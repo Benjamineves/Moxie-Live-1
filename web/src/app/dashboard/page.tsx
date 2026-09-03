@@ -5,6 +5,8 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { requireAdmin } from "@/lib/admin-verify";
 import { DeleteUnactivatedVesselButton } from "@/components/vessel-edit/DeleteUnactivatedVesselButton";
+import { NotificationBanner } from "@/components/NotificationBanner";
+import { getDormantInfo } from "@/lib/vessel-dormancy";
 import type { VesselRecord } from "@/types/vessel";
 
 async function signOutAction() {
@@ -62,6 +64,15 @@ export default async function DashboardPage({ searchParams }: Props) {
     }
   }
 
+  // Dormant Vessel Identity: both lazy grace-period checks (past-due ->
+  // lapsed, downgrade grace -> locked fallback), run here since this is
+  // the owner's own dashboard load and there's no scheduled job to run
+  // them on a timer — same reconciliation the public [mxeId] page also
+  // triggers for whichever owner's vessel is being viewed.
+  for (const ownerId of ownerIds) {
+    await service.rpc("reconcile_owner_dormancy", { p_owner_id: ownerId });
+  }
+
   const { data: vessels, error } = await service
     .from("vessels")
     .select("*")
@@ -98,6 +109,19 @@ export default async function DashboardPage({ searchParams }: Props) {
     .eq("status", "completed")
     .order("completed_at", { ascending: false });
   const previouslyOwned = (previouslyOwnedRows ?? []) as { id: string; mxe_id: string; buyer_email: string; completed_at: string }[];
+
+  // Dormant Vessel Identity notifications — the one hook (lib/notify.ts
+  // notifyOwner()) writes here; this is the one place they're read back
+  // and rendered, as in-app banners, until an email provider exists.
+  const { data: notificationRows } = await service
+    .from("owner_notifications")
+    .select("id, type, message, created_at")
+    .in("owner_id", ownerIds)
+    .is("read_at", null)
+    .order("created_at", { ascending: false });
+  const notifications = (notificationRows ?? []) as { id: string; type: string; message: string; created_at: string }[];
+
+  const lockedVessels = ownedVessels.filter((v) => v.lifecycle_status === "dormant" && v.dormant_cause === "locked");
 
   // Server-checked, not CSS-hidden — requireAdmin() re-verifies role +
   // the ADMIN_EMAILS allowlist independently of anything else on this
@@ -145,6 +169,32 @@ export default async function DashboardPage({ searchParams }: Props) {
             <p className="font-[family-name:var(--font-dm)] text-sm font-medium text-[var(--navy)]">
               You&apos;re on Full Access — every vessel on this account is covered.
             </p>
+          </div>
+        ) : null}
+
+        <NotificationBanner notifications={notifications} />
+
+        {lockedVessels.length > 0 ? (
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--red-fg)] bg-[var(--red-bg)] px-4 py-3">
+            <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">
+              {lockedVessels.length} vessel{lockedVessels.length === 1 ? " is" : "s are"} dormant — beyond your
+              Basic plan&apos;s vessel limit. Nothing&apos;s deleted; choose which stay active, or upgrade to Full to
+              restore all of them.
+            </p>
+            <div className="flex shrink-0 gap-2.5">
+              <Link
+                href="/dashboard/manage-fleet"
+                className="font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.08em] text-[var(--red-fg)] underline"
+              >
+                Choose active vessels →
+              </Link>
+              <Link
+                href="/dashboard/upgrade"
+                className="font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.08em] text-[var(--red-fg)] underline"
+              >
+                Upgrade →
+              </Link>
+            </div>
           </div>
         ) : null}
 
@@ -222,11 +272,12 @@ export default async function DashboardPage({ searchParams }: Props) {
           <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {activeFleet.map((vessel) => {
               const needsActivation = vessel.qr_status !== "active";
+              const dormant = getDormantInfo(vessel);
               return (
                 <article
                   key={vessel.id}
                   className={`overflow-hidden rounded-2xl border bg-[var(--white)] shadow-sm ${
-                    needsActivation ? "border-[var(--red-fg)]" : "border-[var(--divider)]"
+                    needsActivation || dormant.isDormant ? "border-[var(--red-fg)]" : "border-[var(--divider)]"
                   }`}
                 >
                   <div className="aspect-[16/10] bg-[var(--cream2)]">
@@ -245,6 +296,10 @@ export default async function DashboardPage({ searchParams }: Props) {
                       {needsActivation ? (
                         <p className="inline-flex rounded-full bg-[var(--red-bg)] px-2.5 py-1 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--red-fg)]">
                           Needs activation
+                        </p>
+                      ) : dormant.isDormant ? (
+                        <p className="inline-flex rounded-full bg-[var(--red-bg)] px-2.5 py-1 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--red-fg)]">
+                          Dormant — {dormant.cause === "lapsed" ? "subscription lapsed" : "beyond plan limit"}
                         </p>
                       ) : null}
                     </div>
