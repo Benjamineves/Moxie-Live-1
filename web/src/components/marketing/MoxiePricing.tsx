@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { APP_ORIGIN } from "@/lib/site-domains";
 import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 import {
@@ -188,20 +188,20 @@ export function MoxiePricing({ isAuthenticated }: { isAuthenticated: boolean }) 
                 <tr>
                   <td className="pr-4 pt-6" />
                   <td className="px-4 pt-6">
-                    <Link
-                      href="/signup?next=%2Fdashboard"
+                    <a
+                      href={`${APP_ORIGIN}/signup?next=%2Fdashboard`}
                       className="inline-flex w-full items-center justify-center gap-2 border border-[var(--navy)] px-5 py-3 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--navy)] no-underline transition hover:bg-[var(--navy)] hover:text-[var(--gold)]"
                     >
                       Create your account →
-                    </Link>
+                    </a>
                   </td>
                   <td className="border-x border-[var(--gold-line)] bg-[var(--gold-dim)] px-4 pt-6">
-                    <Link
-                      href="/signup?next=%2Fdashboard"
+                    <a
+                      href={`${APP_ORIGIN}/signup?next=%2Fdashboard`}
                       className="inline-flex w-full items-center justify-center gap-2 bg-[var(--navy)] px-5 py-3 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--gold)] no-underline transition hover:bg-[var(--navy2)]"
                     >
                       Create your account →
-                    </Link>
+                    </a>
                   </td>
                   <td className="px-4 pt-6">
                     <a

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PixelM } from "@/components/PixelM";
+import { APP_ORIGIN } from "@/lib/site-domains";
 
 /** Shared marketing footer — see MarketingNav.tsx for why this is extracted. */
 export function MarketingFooter({ isAuthenticated }: { isAuthenticated: boolean }) {
@@ -21,18 +22,18 @@ export function MarketingFooter({ isAuthenticated }: { isAuthenticated: boolean 
         </Link>
         <span aria-hidden>·</span>
         {isAuthenticated ? (
-          <Link className="text-[var(--gold)] no-underline hover:underline" href="/dashboard">
+          <a className="text-[var(--gold)] no-underline hover:underline" href={`${APP_ORIGIN}/dashboard`}>
             Dashboard
-          </Link>
+          </a>
         ) : (
           <>
-            <Link className="text-[var(--gold)] no-underline hover:underline" href="/login">
+            <a className="text-[var(--gold)] no-underline hover:underline" href={`${APP_ORIGIN}/login`}>
               Log in
-            </Link>
+            </a>
             <span aria-hidden>·</span>
-            <Link className="text-[var(--gold)] no-underline hover:underline" href="/signup?next=%2Fdashboard">
+            <a className="text-[var(--gold)] no-underline hover:underline" href={`${APP_ORIGIN}/signup?next=%2Fdashboard`}>
               Sign up
-            </Link>
+            </a>
           </>
         )}
       </div>

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { APP_ORIGIN } from "@/lib/site-domains";
 
 function NavPixelM({ className }: { className?: string }) {
   return (
@@ -80,26 +81,26 @@ export function MarketingNav({ isAuthenticated }: { isAuthenticated: boolean }) 
           Contact
         </Link>
         {isAuthenticated ? (
-          <Link
-            href="/dashboard"
+          <a
+            href={`${APP_ORIGIN}/dashboard`}
             className="border border-[var(--navy)] bg-[var(--navy)] px-5 py-2 text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--gold)] no-underline transition hover:border-[var(--gold)] hover:bg-[var(--gold)] hover:!text-[var(--navy)]"
           >
             Dashboard
-          </Link>
+          </a>
         ) : (
           <div className="flex items-center gap-3">
-            <Link
-              href="/login"
+            <a
+              href={`${APP_ORIGIN}/login`}
               className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--text2)] no-underline transition hover:text-[var(--gold)]"
             >
               Log in
-            </Link>
-            <Link
-              href="/signup?next=%2Fdashboard"
+            </a>
+            <a
+              href={`${APP_ORIGIN}/signup?next=%2Fdashboard`}
               className="border border-[var(--navy)] bg-[var(--navy)] px-5 py-2 text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--gold)] no-underline transition hover:border-[var(--gold)] hover:bg-[var(--gold)] hover:!text-[var(--navy)]"
             >
               Sign up
-            </Link>
+            </a>
           </div>
         )}
       </div>

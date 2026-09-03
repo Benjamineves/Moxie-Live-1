@@ -56,6 +56,36 @@ Behavior:
 - **Session persistence.** Opening the installed app should land on the owner's vessel dashboard, already signed in. Long-lived sessions with secure refresh — the whole point is not re-authenticating every time. Confirm how this composes with the existing Supabase auth session handling rather than bolting on a parallel mechanism.
 - **Launch target** is the dashboard, not the marketing homepage.
 
+### 3a. Domain decision (2026-09-03)
+
+`moxieyacht.com` and `moxieyachting.com` are one Vercel deployment but **two
+separate browser origins** — there's no shared cookie domain between them, so
+a session established on one does not carry to the other. That's a real
+problem for "install and launch straight into the dashboard," so it needed a
+resolved answer before session persistence or the install prompt could be
+built:
+
+- **`moxieyacht.com` is canonical and session-aware** — auth, dashboard,
+  admin, MXE vessel scans (`/[mxeId]`), and the PWA all live here. This is
+  where the app is installed from.
+- **`moxieyachting.com` is marketing-only** — homepage, pricing, and other
+  informational pages. It never carries a session and is not
+  install-eligible (no manifest link, no service worker registration).
+- Any app-route request that lands on `moxieyachting.com` anyway
+  (`/login`, `/signup`, `/dashboard`, `/admin`, `/auth`, `/transfer`,
+  `/[mxeId]`, etc.) 301-redirects to the same path on `moxieyacht.com` in
+  middleware. The bare root (`/`) on `moxieyacht.com` redirects the other
+  way, to the `moxieyachting.com` homepage — the short domain exists for
+  badge scans, not as a second marketing entry point.
+- Marketing CTAs (sign up, log in, dashboard) link straight to
+  `moxieyacht.com` rather than relying on the redirect.
+
+This wasn't an arbitrary pick: `NEXT_PUBLIC_BASE_URL` (used for billing
+portal returns and share links) and the Stripe webhook were already pointed
+at `moxieyacht.com`, and the printed QR badges already encode
+`moxieyacht.com/{mxeId}` URLs. Making it canonical formalizes what was
+already true in practice.
+
 ---
 
 ## 4. Offline documents — and the constraint that shapes everything

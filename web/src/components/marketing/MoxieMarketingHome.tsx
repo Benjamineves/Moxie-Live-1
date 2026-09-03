@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { APP_ORIGIN } from "@/lib/site-domains";
 import { WaitlistForm } from "@/components/marketing/WaitlistForm";
 import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
@@ -34,12 +34,12 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
             depends on who they are.
           </p>
           <div className="flex flex-wrap items-center gap-3.5">
-            <Link
-              href="/signup?next=%2Fdashboard"
+            <a
+              href={`${APP_ORIGIN}/signup?next=%2Fdashboard`}
               className="inline-flex items-center gap-2.5 bg-[var(--aqua-bright)] px-8 py-4 font-[family-name:var(--font-dm)] text-[12px] font-semibold uppercase tracking-[0.18em] text-[var(--navy)] no-underline transition hover:gap-4 hover:bg-[var(--aqua-vapor)]"
             >
               Create your account →
-            </Link>
+            </a>
             <a
               href="#qr-hero"
               className="inline-flex items-center gap-2.5 border-b border-[rgba(255,255,255,0.2)] py-4 font-[family-name:var(--font-dm)] text-[12px] font-medium uppercase tracking-[0.18em] text-[rgba(255,255,255,0.7)] no-underline transition hover:border-[var(--gold)] hover:text-[var(--gold)]"
@@ -102,12 +102,12 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
               can scan it. What they see depends on who they are — your personal information is never exposed to the
               public.
             </p>
-            <Link
-              href="/signup?next=%2Fdashboard"
+            <a
+              href={`${APP_ORIGIN}/signup?next=%2Fdashboard`}
               className="inline-flex items-center gap-2.5 bg-[var(--aqua-bright)] px-8 py-4 font-[family-name:var(--font-dm)] text-[12px] font-semibold uppercase tracking-[0.18em] text-[var(--navy)] no-underline transition hover:bg-[var(--aqua-vapor)]"
             >
               Register your vessel →
-            </Link>
+            </a>
           </div>
           <div className="flex justify-center">
             <div className="w-[240px] rounded-[14px] border border-[rgba(201,168,76,0.2)] bg-[var(--navy)] px-6 pb-5 pt-6 text-center shadow-[0_24px_64px_rgba(0,0,0,0.4)]">
@@ -381,12 +381,12 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
                 </div>
               ))}
             </div>
-            <Link
-              href="/signup?next=%2Fdashboard"
+            <a
+              href={`${APP_ORIGIN}/signup?next=%2Fdashboard`}
               className="inline-flex items-center gap-2.5 bg-[var(--gold)] px-8 py-4 font-[family-name:var(--font-dm)] text-[12px] font-semibold uppercase tracking-[0.18em] text-[var(--navy)] no-underline transition hover:bg-[var(--gold-lt)]"
             >
               Create your profile →
-            </Link>
+            </a>
           </div>
         </div>
       </section>
@@ -403,12 +403,12 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
             Create an account and register your vessel — wherever it&apos;s docked, trailered, or moored. Your
             sticker ships once registration is complete.
           </p>
-          <Link
-            href="/signup?next=%2Fdashboard"
+          <a
+            href={`${APP_ORIGIN}/signup?next=%2Fdashboard`}
             className="inline-flex items-center gap-2.5 bg-[var(--aqua-bright)] px-8 py-4 font-[family-name:var(--font-dm)] text-[12px] font-semibold uppercase tracking-[0.18em] text-[var(--navy)] no-underline transition hover:gap-4 hover:bg-[var(--aqua-vapor)]"
           >
             Create your account →
-          </Link>
+          </a>
 
           <div className="my-12 h-px bg-[var(--divider)]" />
 
