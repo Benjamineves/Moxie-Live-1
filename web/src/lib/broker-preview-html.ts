@@ -20,9 +20,9 @@ export const BROKER_PREVIEW_HTML = `
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=DM+Sans:wght@300;400;500;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --navy:#0F2340; --navy2:#1B3557; --gold:#C9A84C; --gold-dim:rgba(201,168,76,.14);
-    --cream:#F5F2E9; --white:#fff; --aqua:#17A398; --aqua-bright:#17C3B2;
-    --text2:#5A6B80; --text3:#8D9AAB; --divider:#DFD9C9;
+    --navy:#0d1f35; --navy2:#132943; --gold:#C9A84C; --gold-dim:rgba(201,168,76,.14);
+    --cream:#f5f2ec; --white:#fff; --aqua:#1FA394; --aqua-bright:#17C3B2;
+    --text2:#3a5068; --text3:#6b8299; --divider:rgba(13,31,53,0.1);
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--cream);color:var(--navy);line-height:1.6;-webkit-font-smoothing:antialiased}

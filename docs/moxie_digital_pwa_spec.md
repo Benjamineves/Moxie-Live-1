@@ -31,7 +31,7 @@ The third one is the genuinely differentiated feature and the hardest to get rig
 
 ## 3. Install and session
 
-- **Web app manifest** with Moxie branding — name, short name, icons at required sizes, `display: standalone`, theme color navy `#0F2340`, background cream `#F5F2E9`.
+- **Web app manifest** with Moxie branding — name, short name, icons at required sizes, `display: standalone`, theme color navy `#0d1f35`, background cream `#f5f2ec`.
 - **Install prompt.** Android/Chrome fires a native install prompt that can be triggered programmatically. **iOS does not** — installation requires Safari → Share → Add to Home Screen, which the user must do manually. That friction is real and matters for the dock-side signup scenario: build a short, clear in-app instruction card for iOS users rather than assuming they'll figure it out.
 - **Session persistence.** Opening the installed app should land on the owner's vessel dashboard, already signed in. Long-lived sessions with secure refresh — the whole point is not re-authenticating every time. Confirm how this composes with the existing Supabase auth session handling rather than bolting on a parallel mechanism.
 - **Launch target** is the dashboard, not the marketing homepage.

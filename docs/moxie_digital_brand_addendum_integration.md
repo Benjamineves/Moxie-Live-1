@@ -18,9 +18,13 @@ Verified against `docs/design/moxie_digital_share_profile.html`: the design toke
 --aqua-vapor  #13F1D1  --aqua-abyss  #0B6E6A
 ```
 
-Two trivial deviations: `--gold-dim` is `.12` (guide says `0.15`), `--gold-line` is `.3` (guide says `0.35`). Not worth a change unless the live app differs more.
+**Live app audit — completed, zero deviations.** `web/src/app/globals.css` is the single source of design tokens (no separate Tailwind config; everything styles off these CSS custom properties) and every value matches the guide exactly. The app is in fact *more* correct than the design file: `--gold-dim` and `--gold-line` are `0.15`/`0.35` in the app (guide-correct) versus `.12`/`.3` in `moxie_digital_share_profile.html`. Fix the design file, not the app.
 
-**Needs verification:** whether the deployed Next.js app uses these same values. The design file is right; the app has never been checked against it. That's task one for Code.
+**Two ad-hoc aqua shades found in the app** — both in `SharedVesselProfile.tsx`, both outside the four-role system, both natural to fix during the §7 item 5 aqua audit rather than now:
+- Line 40 — header gradient from `--aqua-abyss` to a hardcoded `#0d3830`, an undocumented fifth shade. Also violates Part I's "no gradients except the gold radial glow."
+- Line 46 — badge text in hardcoded `#7fe8dc` on translucent aqua-bright. Another invented shade.
+
+**Correction to earlier artifacts.** Several documents produced outside the app carried an incorrect palette — navy `#0F2340`, cream `#F5F2E9`, an invented aqua `#17A398`, and non-guide text/divider colors. None of these came from the brand guide. Affected and now corrected: `moxie_digital_pwa_spec.md`, `moxie_digital_broker_preview.html`, and the revenue calculator. The PWA spec was the consequential one — a manifest `theme_color` becomes the actual chrome color on every installed device, so building from the uncorrected spec would have made a wrong navy real. The broker preview and calculator now use Lagoon `#1FA394`, which is also the correct *role* for both surfaces per the guide's context matrix (partner-facing pages and dashboard chart accents).
 
 ---
 
