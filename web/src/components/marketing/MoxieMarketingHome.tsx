@@ -1,99 +1,13 @@
 import Link from "next/link";
-import { PixelM } from "@/components/PixelM";
 import { WaitlistForm } from "@/components/marketing/WaitlistForm";
-
-function NavPixelM({ className }: { className?: string }) {
-  return (
-    <svg className={className} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden>
-      <rect x="0" y="0" width="25" height="10" rx="1" fill="#c9a84c" opacity=".55" />
-      <rect x="0" y="0" width="10" height="25" rx="1" fill="#c9a84c" opacity=".55" />
-      <rect x="75" y="0" width="25" height="10" rx="1" fill="#c9a84c" opacity=".55" />
-      <rect x="90" y="0" width="10" height="25" rx="1" fill="#c9a84c" opacity=".55" />
-      <rect x="0" y="90" width="25" height="10" rx="1" fill="#c9a84c" opacity=".55" />
-      <rect x="0" y="75" width="10" height="25" rx="1" fill="#c9a84c" opacity=".55" />
-      <rect x="15" y="25" width="10" height="10" fill="#c9a84c" />
-      <rect x="15" y="35" width="10" height="10" fill="#c9a84c" />
-      <rect x="15" y="45" width="10" height="10" fill="#c9a84c" />
-      <rect x="15" y="55" width="10" height="10" fill="#c9a84c" />
-      <rect x="15" y="65" width="10" height="10" fill="#c9a84c" />
-      <rect x="15" y="75" width="10" height="10" fill="#c9a84c" />
-      <rect x="25" y="35" width="10" height="10" fill="#c9a84c" />
-      <rect x="35" y="45" width="10" height="10" fill="#c9a84c" />
-      <rect x="45" y="35" width="10" height="10" fill="#c9a84c" />
-      <rect x="55" y="45" width="10" height="10" fill="#c9a84c" />
-      <rect x="65" y="35" width="10" height="10" fill="#c9a84c" />
-      <rect x="75" y="25" width="10" height="10" fill="#c9a84c" />
-      <rect x="75" y="35" width="10" height="10" fill="#c9a84c" />
-      <rect x="75" y="45" width="10" height="10" fill="#c9a84c" />
-      <rect x="75" y="55" width="10" height="10" fill="#c9a84c" />
-      <rect x="75" y="65" width="10" height="10" fill="#c9a84c" />
-      <rect x="75" y="75" width="10" height="10" fill="#c9a84c" />
-      <rect x="85" y="85" width="8" height="8" fill="#17C3B2" />
-    </svg>
-  );
-}
+import { MarketingNav } from "@/components/marketing/MarketingNav";
+import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 
 /** Marketing homepage — structure & content from `Guide2/moxie_homepage_v2.html` (technical spec). */
 export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boolean }) {
   return (
     <div className="overflow-x-hidden bg-[var(--cream)]">
-      <nav className="fixed left-0 right-0 top-0 z-[100] flex items-center justify-between border-b border-[var(--divider)] bg-[rgba(245,242,236,0.92)] px-6 py-5 backdrop-blur-md md:px-12">
-        <Link href="/" className="flex items-center gap-3 no-underline">
-          <NavPixelM className="h-7 w-7 shrink-0" />
-          <span className="font-[family-name:var(--font-display)] text-[22px] font-normal italic leading-none tracking-wide text-[var(--navy)]">
-            <span className="text-[var(--gold)]">M</span>oxie
-          </span>
-        </Link>
-        <div className="hidden items-center gap-8 md:flex">
-          <a
-            href="#qr-hero"
-            className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--text2)] no-underline transition hover:text-[var(--gold)]"
-          >
-            The QR
-          </a>
-          <a
-            href="#how"
-            className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--text2)] no-underline transition hover:text-[var(--gold)]"
-          >
-            How it works
-          </a>
-          <a
-            href="#who"
-            className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--text2)] no-underline transition hover:text-[var(--gold)]"
-          >
-            Who it&apos;s for
-          </a>
-          <a
-            href="#contact"
-            className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--text2)] no-underline transition hover:text-[var(--gold)]"
-          >
-            Contact
-          </a>
-          {isAuthenticated ? (
-            <Link
-              href="/dashboard"
-              className="border border-[var(--navy)] bg-[var(--navy)] px-5 py-2 text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--gold)] no-underline transition hover:border-[var(--gold)] hover:bg-[var(--gold)] hover:!text-[var(--navy)]"
-            >
-              Dashboard
-            </Link>
-          ) : (
-            <div className="flex items-center gap-3">
-              <Link
-                href="/login"
-                className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--text2)] no-underline transition hover:text-[var(--gold)]"
-              >
-                Log in
-              </Link>
-              <Link
-                href="/signup?next=%2Fdashboard"
-                className="border border-[var(--navy)] bg-[var(--navy)] px-5 py-2 text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--gold)] no-underline transition hover:border-[var(--gold)] hover:bg-[var(--gold)] hover:!text-[var(--navy)]"
-              >
-                Sign up
-              </Link>
-            </div>
-          )}
-        </div>
-      </nav>
+      <MarketingNav isAuthenticated={isAuthenticated} />
 
       <section className="relative flex min-h-screen flex-col justify-end overflow-hidden bg-[var(--navy)] pb-20 pt-28 md:pb-24">
         <div className="absolute left-0 right-0 top-0 z-20 h-[3px] bg-[var(--gold)]" />
@@ -525,35 +439,7 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
         </div>
       </section>
 
-      <footer className="border-t border-[rgba(201,168,76,0.15)] bg-[var(--navy-deep)] px-12 py-12 text-center">
-        <div className="mb-5 flex items-center justify-center gap-3">
-          <PixelM size={20} />
-          <span className="font-[family-name:var(--font-display)] text-lg italic text-white">
-            <span className="text-[var(--gold)]">M</span>oxie
-          </span>
-          <span className="inline-block h-2 w-2 bg-[var(--aqua-bright)]" aria-hidden />
-        </div>
-        <p className="text-[11px] leading-relaxed text-[rgba(255,255,255,0.35)]">
-          © 2026 Moxie Marine Technology · moxieyachting.com
-        </p>
-        <div className="mt-8 flex flex-wrap justify-center gap-4 font-[family-name:var(--font-dm)] text-[11px] text-[rgba(255,255,255,0.45)]">
-          {isAuthenticated ? (
-            <Link className="text-[var(--gold)] no-underline hover:underline" href="/dashboard">
-              Dashboard
-            </Link>
-          ) : (
-            <>
-              <Link className="text-[var(--gold)] no-underline hover:underline" href="/login">
-                Log in
-              </Link>
-              <span aria-hidden>·</span>
-              <Link className="text-[var(--gold)] no-underline hover:underline" href="/signup?next=%2Fdashboard">
-                Sign up
-              </Link>
-            </>
-          )}
-        </div>
-      </footer>
+      <MarketingFooter isAuthenticated={isAuthenticated} />
     </div>
   );
 }
