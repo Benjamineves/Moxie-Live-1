@@ -3,18 +3,27 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { UpgradeForm } from "./UpgradeForm";
 import { UpgradeToFullForm } from "./UpgradeToFullForm";
+import { PastDueBillingPrompt } from "./PastDueBillingPrompt";
 
 /**
  * Account-level plan picker, or Basic → Full upgrade confirm screen —
  * not scoped to any vessel (build spec §9 item 16, generalized for the
- * tier structure build). Reached from AccountBillingPanel:
- *  - No active/past_due subscription at all → the two-plan picker
+ * tier structure build). Reached from AccountBillingPanel and from a
+ * dormant vessel's "Choose a plan" banner:
+ *  - past_due (any tier) → PastDueBillingPrompt. This is a real
+ *    subscription that's just delinquent, not "pick a new plan" — the
+ *    fix is updating the payment method via the Billing Portal. Checked
+ *    FIRST, before the tier branches below: a past_due Full account used
+ *    to fall into "already on Full, nothing to do" and bounce straight
+ *    back to /dashboard with no way to actually fix the payment — found
+ *    live testing the dormant-vessel "Choose a plan" link.
+ *  - Active, already Full → nothing to do, back to /dashboard.
+ *  - Active on Basic → the upgrade confirm screen (UpgradeToFullForm) —
+ *    a real, contextual "upgrade to Full" path that didn't exist before
+ *    (Manage Billing/the Stripe Portal has no concept of our tiers, so
+ *    it couldn't offer this).
+ *  - Anything else (canceled/none/null) → the two-plan picker
  *    (UpgradeForm), same as picking a plan for the first time.
- *  - Active/past_due on Basic → the upgrade confirm screen
- *    (UpgradeToFullForm) — a real, contextual "upgrade to Full" path
- *    that didn't exist before (Manage Billing/the Stripe Portal has no
- *    concept of our tiers, so it couldn't offer this).
- *  - Active/past_due on Full already → nothing to do, back to /dashboard.
  * Switching FROM Full back down to Basic still isn't handled here —
  * that stays a Manage Billing / Stripe Portal action, a separate,
  * deliberate decision from "upgrade."
@@ -59,11 +68,18 @@ export default async function UpgradePage() {
     ownerRow = data as OwnerRow | null;
   }
 
-  const hasSubscription = ownerRow?.subscription_status === "active" || ownerRow?.subscription_status === "past_due";
+  // A delinquent subscription needs its payment method fixed, not a new
+  // plan pick — checked before the tier branches below regardless of
+  // which tier it's delinquent on.
+  if (ownerRow?.subscription_status === "past_due") {
+    return <PastDueBillingPrompt />;
+  }
 
-  // Already on Full — nothing left to do here. Downgrading is a Manage
-  // Billing / Stripe Portal action, not this page.
-  if (hasSubscription && ownerRow?.subscription_tier === "full") {
+  const isActive = ownerRow?.subscription_status === "active";
+
+  // Already on active Full — nothing left to do here. Downgrading is a
+  // Manage Billing / Stripe Portal action, not this page.
+  if (isActive && ownerRow?.subscription_tier === "full") {
     redirect("/dashboard");
   }
 
@@ -82,7 +98,7 @@ export default async function UpgradePage() {
     );
   }
 
-  if (hasSubscription && ownerRow?.subscription_tier === "basic") {
+  if (isActive && ownerRow?.subscription_tier === "basic") {
     return <UpgradeToFullForm publishableKey={publishableKey} />;
   }
 

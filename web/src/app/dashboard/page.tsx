@@ -177,9 +177,7 @@ export default async function DashboardPage({ searchParams }: Props) {
         {lockedVessels.length > 0 ? (
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-[var(--red-fg)] bg-[var(--red-bg)] px-4 py-3">
             <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">
-              {lockedVessels.length} vessel{lockedVessels.length === 1 ? " is" : "s are"} dormant — beyond your
-              Basic plan&apos;s vessel limit. Nothing&apos;s deleted; choose which stay active, or upgrade to Full to
-              restore all of them.
+              {`${lockedVessels.length} vessel${lockedVessels.length === 1 ? " is" : "s are"} dormant — beyond your Basic plan's vessel limit. Nothing's deleted; choose which stay active, or upgrade to Full to restore all of them.`}
             </p>
             <div className="flex shrink-0 gap-2.5">
               <Link
