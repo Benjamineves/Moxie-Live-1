@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Moxie — Revenue model</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<style>
+  html, body { margin:0; padding:0; background:#F5F2E9; }
+  * { box-sizing: border-box; }
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button { opacity: 0.35; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+
+const NAVY = "#0F2340";
+const NAVY2 = "#1B3557";
+const GOLD = "#C9A84C";
+const CREAM = "#F5F2E9";
+const AQUA = "#17A398";
+const TEXT2 = "#5A6B80";
+const TEXT3 = "#8D9AAB";
+const DIVIDER = "#DFD9C9";
+
+const usd = (n) =>
+  "$" + Math.round(n).toLocaleString("en-US");
+
+const usdPrecise = (n) =>
+  "$" + n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+function Field({ label, hint, children }) {
+  return (
+    <div style={{ marginBottom: 18 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 6 }}>
+        <label style={{ fontSize: 13, color: NAVY, fontWeight: 500 }}>{label}</label>
+        {hint && <span style={{ fontSize: 11, color: TEXT3 }}>{hint}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function NumIn({ value, onChange, min = 0, max = 1000000, step = 1, prefix, suffix }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        alignItems: "center",
+        border: `1px solid ${DIVIDER}`,
+        borderRadius: 3,
+        background: "#fff",
+        padding: "0 10px",
+      }}
+    >
+      {prefix && <span style={{ color: TEXT3, fontSize: 14, marginRight: 2 }}>{prefix}</span>}
+      <input
+        type="number"
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        onChange={(e) => {
+          const v = e.target.value === "" ? 0 : parseFloat(e.target.value);
+          onChange(isNaN(v) ? 0 : Math.max(min, Math.min(max, v)));
+        }}
+        style={{
+          width: "100%",
+          border: "none",
+          outline: "none",
+          padding: "9px 0",
+          fontSize: 15,
+          color: NAVY,
+          fontVariantNumeric: "tabular-nums",
+          background: "transparent",
+        }}
+      />
+      {suffix && <span style={{ color: TEXT3, fontSize: 13, marginLeft: 4 }}>{suffix}</span>}
+    </div>
+  );
+}
+
+function Slider({ value, onChange, min, max, step, display }) {
+  return (
+    <div>
+      <input
+        type="range"
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        onChange={(e) => onChange(parseFloat(e.target.value))}
+        style={{ width: "100%", accentColor: AQUA }}
+      />
+      <div style={{ fontSize: 15, color: NAVY, fontVariantNumeric: "tabular-nums", marginTop: 2 }}>
+        {display}
+      </div>
+    </div>
+  );
+}
+
+function Panel({ title, children, note }) {
+  return (
+    <div
+      style={{
+        background: "#fff",
+        border: `1px solid ${DIVIDER}`,
+        borderRadius: 4,
+        padding: "20px 22px",
+        marginBottom: 16,
+      }}
+    >
+      <div
+        style={{
+          fontFamily: "Georgia, 'Times New Roman', serif",
+          fontSize: 19,
+          color: NAVY,
+          marginBottom: 4,
+        }}
+      >
+        {title}
+      </div>
+      {note && (
+        <div style={{ fontSize: 12, color: TEXT3, marginBottom: 16, lineHeight: 1.5 }}>{note}</div>
+      )}
+      {!note && <div style={{ height: 14 }} />}
+      {children}
+    </div>
+  );
+}
+
+function Row({ label, value, sub, bold, accent }) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "baseline",
+        padding: "9px 0",
+        borderBottom: `1px solid ${CREAM}`,
+      }}
+    >
+      <div>
+        <div style={{ fontSize: bold ? 14 : 13, color: bold ? NAVY : TEXT2, fontWeight: bold ? 600 : 400 }}>
+          {label}
+        </div>
+        {sub && <div style={{ fontSize: 11, color: TEXT3, marginTop: 1 }}>{sub}</div>}
+      </div>
+      <div
+        style={{
+          fontSize: bold ? 18 : 15,
+          color: accent || NAVY,
+          fontWeight: bold ? 600 : 500,
+          fontVariantNumeric: "tabular-nums",
+          whiteSpace: "nowrap",
+          paddingLeft: 12,
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function MoxieRevenueCalculator() {
+  // Market reach
+  const [marinas, setMarinas] = useState(25);
+  const [boatsPerMarina, setBoatsPerMarina] = useState(250);
+  const [penetration, setPenetration] = useState(16);
+
+  // Customer mix
+  const [pctFull, setPctFull] = useState(35);
+  const [vesselsPerBasic, setVesselsPerBasic] = useState(1.1);
+  const [vesselsPerFull, setVesselsPerFull] = useState(1.6);
+  const [renewal, setRenewal] = useState(80);
+
+  // Pricing
+  const [priceBadge, setPriceBadge] = useState(29);
+  const [priceBasic, setPriceBasic] = useState(59);
+  const [priceFull, setPriceFull] = useState(149);
+  const [xferBasic, setXferBasic] = useState(49);
+  const [xferFull, setXferFull] = useState(25);
+
+  // Transaction volume
+  const [transferRate, setTransferRate] = useState(7);
+  const [growthRate, setGrowthRate] = useState(25);
+
+  // ---- Derived ----
+  const addressable = marinas * boatsPerMarina;
+  const vessels = Math.round(addressable * (penetration / 100));
+
+  const f = pctFull / 100;
+  const blendedVesselsPerUser = (1 - f) * vesselsPerBasic + f * vesselsPerFull;
+  const users = blendedVesselsPerUser > 0 ? vessels / blendedVesselsPerUser : 0;
+  const basicUsers = users * (1 - f);
+  const fullUsers = users * f;
+
+  const basicVessels = basicUsers * vesselsPerBasic;
+  const fullVessels = fullUsers * vesselsPerFull;
+
+  // Recurring
+  const arrBasic = basicUsers * priceBasic;
+  const arrFull = fullUsers * priceFull;
+  const arr = arrBasic + arrFull;
+
+  // One-time
+  const badgeRevY1 = vessels * priceBadge;
+  const transfersPerYear = vessels * (transferRate / 100);
+  const transfersBasic = transfersPerYear * (basicVessels / (vessels || 1));
+  const transfersFull = transfersPerYear * (fullVessels / (vessels || 1));
+  const transferRev = transfersBasic * xferBasic + transfersFull * xferFull;
+
+  const year1 = arr + badgeRevY1 + transferRev;
+
+  // Steady state: renewals + new vessels from growth
+  const newVesselsY2 = vessels * (growthRate / 100);
+  const retainedArr = arr * (renewal / 100);
+  const newArr = newVesselsY2 > 0 ? (newVesselsY2 / (blendedVesselsPerUser || 1)) * ((1 - f) * priceBasic + f * priceFull) : 0;
+  const steadyBadge = newVesselsY2 * priceBadge;
+  const steadyTransfer = transferRev * (renewal / 100);
+  const steadyState = retainedArr + newArr + steadyBadge + steadyTransfer;
+
+  const revPerVessel = vessels > 0 ? year1 / vessels : 0;
+  const arrPerVessel = vessels > 0 ? arr / vessels : 0;
+
+  const pctRecurring = year1 > 0 ? (arr / year1) * 100 : 0;
+
+  // Path to 1,000 vessels
+  const marinasFor1000 =
+    boatsPerMarina * (penetration / 100) > 0
+      ? Math.ceil(1000 / (boatsPerMarina * (penetration / 100)))
+      : 0;
+  const scale = vessels > 0 ? 1000 / vessels : 0;
+  const year1At1000 = year1 * scale;
+  const arrAt1000 = arr * scale;
+
+  // Scenario sweep
+  const scenarios = [8, 16, 25, 40].map((p) => {
+    const v = Math.round(addressable * (p / 100));
+    const u = blendedVesselsPerUser > 0 ? v / blendedVesselsPerUser : 0;
+    const a = u * (1 - f) * priceBasic + u * f * priceFull;
+    const b = v * priceBadge;
+    const t = v * (transferRate / 100) * ((1 - f) * xferBasic + f * xferFull);
+    return { p, v, a, total: a + b + t };
+  });
+
+  const maxScenario = Math.max(...scenarios.map((s) => s.total), 1);
+
+  return (
+    <div
+      style={{
+        background: CREAM,
+        minHeight: "100%",
+        padding: "28px 20px 40px",
+        fontFamily: "'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+      }}
+    >
+      <div style={{ maxWidth: 1120, margin: "0 auto" }}>
+        {/* Header */}
+        <div style={{ marginBottom: 24 }}>
+          <div
+            style={{
+              fontFamily: "Georgia, 'Times New Roman', serif",
+              fontSize: 34,
+              color: NAVY,
+              letterSpacing: "-0.01em",
+              marginBottom: 6,
+            }}
+          >
+            Revenue model
+          </div>
+          <div style={{ fontSize: 14, color: TEXT2, maxWidth: 620, lineHeight: 1.6 }}>
+            Every number below is editable. Badge fees are one-time, so year one and
+            steady state are different businesses — the split at the bottom of each
+            column is the thing worth watching.
+          </div>
+        </div>
+
+        {/* Headline band */}
+        <div
+          style={{
+            background: NAVY,
+            borderRadius: 4,
+            padding: "24px 26px",
+            marginBottom: 20,
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+            gap: 20,
+          }}
+        >
+          <div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,.5)", marginBottom: 6 }}>
+              Vessels registered
+            </div>
+            <div
+              style={{
+                fontFamily: "Georgia, serif",
+                fontSize: 38,
+                color: GOLD,
+                fontVariantNumeric: "tabular-nums",
+                lineHeight: 1,
+              }}
+            >
+              {vessels.toLocaleString()}
+            </div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", marginTop: 5 }}>
+              {Math.round(users).toLocaleString()} accounts · {penetration}% of {addressable.toLocaleString()} boats
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,.5)", marginBottom: 6 }}>
+              Year one revenue
+            </div>
+            <div
+              style={{
+                fontFamily: "Georgia, serif",
+                fontSize: 38,
+                color: "#fff",
+                fontVariantNumeric: "tabular-nums",
+                lineHeight: 1,
+              }}
+            >
+              {usd(year1)}
+            </div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", marginTop: 5 }}>
+              includes {usd(badgeRevY1)} of one-time badge fees
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,.5)", marginBottom: 6 }}>
+              Subscription ARR
+            </div>
+            <div
+              style={{
+                fontFamily: "Georgia, serif",
+                fontSize: 38,
+                color: AQUA,
+                fontVariantNumeric: "tabular-nums",
+                lineHeight: 1,
+              }}
+            >
+              {usd(arr)}
+            </div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", marginTop: 5 }}>
+              {Math.round(pctRecurring)}% of year one — the part that repeats
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,.5)", marginBottom: 6 }}>
+              Year two, steady state
+            </div>
+            <div
+              style={{
+                fontFamily: "Georgia, serif",
+                fontSize: 38,
+                color: "#fff",
+                fontVariantNumeric: "tabular-nums",
+                lineHeight: 1,
+              }}
+            >
+              {usd(steadyState)}
+            </div>
+            <div style={{ fontSize: 11, color: "rgba(255,255,255,.4)", marginTop: 5 }}>
+              {renewal}% renew · {growthRate}% new vessels
+            </div>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))",
+            gap: 16,
+            alignItems: "start",
+          }}
+        >
+          {/* LEFT: inputs */}
+          <div>
+            <Panel
+              title="Marina outreach"
+              note="Your funnel: how many marinas you work, how big they are, and what share of boats you convert."
+            >
+              <Field label="Marinas targeted">
+                <NumIn value={marinas} onChange={setMarinas} min={1} max={500} />
+              </Field>
+              <Field label="Average boats per marina">
+                <NumIn value={boatsPerMarina} onChange={setBoatsPerMarina} min={10} max={2000} />
+              </Field>
+              <Field label="Sign-up rate" hint={`${addressable.toLocaleString()} boats in range`}>
+                <Slider
+                  value={penetration}
+                  onChange={setPenetration}
+                  min={1}
+                  max={60}
+                  step={1}
+                  display={`${penetration}% → ${vessels.toLocaleString()} vessels`}
+                />
+              </Field>
+              <div
+                style={{
+                  background: CREAM,
+                  padding: "11px 13px",
+                  borderRadius: 3,
+                  fontSize: 12,
+                  color: TEXT2,
+                  lineHeight: 1.55,
+                }}
+              >
+                At this sign-up rate you'd need{" "}
+                <strong style={{ color: NAVY }}>{marinasFor1000} marinas</strong> of this size to
+                reach 1,000 vessels.
+              </div>
+            </Panel>
+
+            <Panel
+              title="Customer mix"
+              note="Vessels divided by accounts. Most owners have one boat; a few have several."
+            >
+              <Field label="Share on Full Access">
+                <Slider
+                  value={pctFull}
+                  onChange={setPctFull}
+                  min={0}
+                  max={100}
+                  step={1}
+                  display={`${pctFull}% Full · ${100 - pctFull}% Basic`}
+                />
+              </Field>
+              <Field label="Vessels per Basic account" hint="cap 2">
+                <NumIn value={vesselsPerBasic} onChange={setVesselsPerBasic} min={1} max={2} step={0.1} />
+              </Field>
+              <Field label="Vessels per Full account" hint="cap 5">
+                <NumIn value={vesselsPerFull} onChange={setVesselsPerFull} min={1} max={5} step={0.1} />
+              </Field>
+              <Field label="Annual renewal rate">
+                <Slider
+                  value={renewal}
+                  onChange={setRenewal}
+                  min={40}
+                  max={100}
+                  step={1}
+                  display={`${renewal}% renew · ${100 - renewal}% lapse`}
+                />
+              </Field>
+            </Panel>
+
+            <Panel title="Pricing" note="Current live values. Change any of them to test.">
+              <Field label="QR badge — one time, per vessel">
+                <NumIn value={priceBadge} onChange={setPriceBadge} min={0} max={500} prefix="$" />
+              </Field>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <Field label="Basic" hint="per year">
+                  <NumIn value={priceBasic} onChange={setPriceBasic} min={0} max={2000} prefix="$" />
+                </Field>
+                <Field label="Full Access" hint="per year">
+                  <NumIn value={priceFull} onChange={setPriceFull} min={0} max={2000} prefix="$" />
+                </Field>
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <Field label="Transfer — Basic">
+                  <NumIn value={xferBasic} onChange={setXferBasic} min={0} max={1000} prefix="$" />
+                </Field>
+                <Field label="Transfer — Full">
+                  <NumIn value={xferFull} onChange={setXferFull} min={0} max={1000} prefix="$" />
+                </Field>
+              </div>
+              <Field
+                label="Boats sold per year"
+                hint={`${Math.round(transfersPerYear).toLocaleString()} transfers`}
+              >
+                <Slider
+                  value={transferRate}
+                  onChange={setTransferRate}
+                  min={0}
+                  max={30}
+                  step={1}
+                  display={`${transferRate}% of registered vessels change hands`}
+                />
+              </Field>
+              <Field label="New vessel growth, year two">
+                <Slider
+                  value={growthRate}
+                  onChange={setGrowthRate}
+                  min={0}
+                  max={200}
+                  step={5}
+                  display={`+${growthRate}% → ${Math.round(newVesselsY2).toLocaleString()} new vessels`}
+                />
+              </Field>
+            </Panel>
+          </div>
+
+          {/* RIGHT: outputs */}
+          <div>
+            <Panel title="Where the money comes from" note="Year one, at the settings on the left.">
+              <Row
+                label="Basic subscriptions"
+                sub={`${Math.round(basicUsers).toLocaleString()} accounts × ${usd(priceBasic)}`}
+                value={usd(arrBasic)}
+              />
+              <Row
+                label="Full Access subscriptions"
+                sub={`${Math.round(fullUsers).toLocaleString()} accounts × ${usd(priceFull)}`}
+                value={usd(arrFull)}
+              />
+              <Row
+                label="QR badge fees"
+                sub={`${vessels.toLocaleString()} vessels × ${usd(priceBadge)} — one time only`}
+                value={usd(badgeRevY1)}
+                accent={GOLD}
+              />
+              <Row
+                label="Transfer fees"
+                sub={`${Math.round(transfersPerYear).toLocaleString()} sales`}
+                value={usd(transferRev)}
+              />
+              <Row label="Year one total" value={usd(year1)} bold />
+
+              <div style={{ marginTop: 18 }}>
+                <div style={{ fontSize: 11, color: TEXT3, marginBottom: 7 }}>
+                  Recurring vs one-time
+                </div>
+                <div style={{ display: "flex", height: 10, borderRadius: 5, overflow: "hidden" }}>
+                  <div style={{ width: `${pctRecurring}%`, background: AQUA }} />
+                  <div style={{ width: `${100 - pctRecurring}%`, background: GOLD }} />
+                </div>
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    fontSize: 11,
+                    color: TEXT2,
+                    marginTop: 6,
+                  }}
+                >
+                  <span>{Math.round(pctRecurring)}% subscriptions</span>
+                  <span>{Math.round(100 - pctRecurring)}% badges &amp; transfers</span>
+                </div>
+              </div>
+            </Panel>
+
+            <Panel title="Per-vessel economics" note="What one registered boat is worth to you.">
+              <Row label="Year one, per vessel" value={usdPrecise(revPerVessel)} />
+              <Row
+                label="Recurring, per vessel"
+                sub="the number that compounds"
+                value={usdPrecise(arrPerVessel)}
+                accent={AQUA}
+              />
+              <Row
+                label="Lifetime, per vessel"
+                sub={`at ${renewal}% renewal → ${(100 / (100 - renewal || 1)).toFixed(1)} yr average life`}
+                value={usd(priceBadge + arrPerVessel * (100 / (100 - renewal || 1)))}
+                bold
+              />
+            </Panel>
+
+            <Panel title="At 1,000 vessels" note="Your stated target, holding the mix and pricing constant.">
+              <Row label="Accounts" value={Math.round(1000 / (blendedVesselsPerUser || 1)).toLocaleString()} />
+              <Row label="Subscription ARR" value={usd(arrAt1000)} accent={AQUA} />
+              <Row label="Year one revenue" value={usd(year1At1000)} bold />
+              <div
+                style={{
+                  background: CREAM,
+                  padding: "11px 13px",
+                  borderRadius: 3,
+                  fontSize: 12,
+                  color: TEXT2,
+                  lineHeight: 1.55,
+                  marginTop: 14,
+                }}
+              >
+                {marinasFor1000} marinas at {boatsPerMarina} boats and a {penetration}% sign-up rate.
+                Emery Cove alone is ~300 slips.
+              </div>
+            </Panel>
+
+            <Panel title="If sign-up rate moves" note="Same marinas, same pricing — only conversion changes.">
+              {scenarios.map((s) => (
+                <div key={s.p} style={{ marginBottom: 12 }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      fontSize: 12,
+                      color: TEXT2,
+                      marginBottom: 4,
+                    }}
+                  >
+                    <span style={{ color: s.p === penetration ? NAVY : TEXT2, fontWeight: s.p === penetration ? 600 : 400 }}>
+                      {s.p}% · {s.v.toLocaleString()} vessels
+                    </span>
+                    <span style={{ fontVariantNumeric: "tabular-nums", color: NAVY }}>{usd(s.total)}</span>
+                  </div>
+                  <div style={{ height: 6, background: CREAM, borderRadius: 3, overflow: "hidden" }}>
+                    <div
+                      style={{
+                        width: `${(s.total / maxScenario) * 100}%`,
+                        height: "100%",
+                        background: s.p === penetration ? NAVY : NAVY2,
+                        opacity: s.p === penetration ? 1 : 0.35,
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </Panel>
+          </div>
+        </div>
+
+        <div
+          style={{
+            fontSize: 11,
+            color: TEXT3,
+            marginTop: 18,
+            lineHeight: 1.6,
+            maxWidth: 700,
+          }}
+        >
+          Steady state assumes renewals at your set rate plus new vessels at the growth rate,
+          with badge fees only on the new ones. Lifetime per vessel uses the simple 1/churn
+          approximation and ignores discounting.
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
+ReactDOM.createRoot(document.getElementById('root')).render(<MoxieRevenueCalculator />);
+</script>
+</body>
+</html>
