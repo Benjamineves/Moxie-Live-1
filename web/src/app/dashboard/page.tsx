@@ -6,6 +6,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { requireAdmin } from "@/lib/admin-verify";
 import { DeleteUnactivatedVesselButton } from "@/components/vessel-edit/DeleteUnactivatedVesselButton";
 import { NotificationBanner } from "@/components/NotificationBanner";
+import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { getDormantInfo } from "@/lib/vessel-dormancy";
 import type { VesselRecord } from "@/types/vessel";
 
@@ -224,6 +225,9 @@ export default async function DashboardPage({ searchParams }: Props) {
             })}
           </div>
         ) : null}
+
+        <InstallPrompt />
+
         <div className="mb-6 flex items-end justify-between gap-4">
           <div>
             <p className="font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
