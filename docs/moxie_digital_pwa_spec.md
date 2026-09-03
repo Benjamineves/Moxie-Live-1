@@ -23,9 +23,29 @@ The third one is the genuinely differentiated feature and the hardest to get rig
 
 ## 2. Scope
 
-**In:** web app manifest, service worker, install prompt, session persistence, offline document caching with explicit user control, sync-status UI, push notification permission flow (see §4 — it's load-bearing for more than notifications).
+**In:** web app manifest, service worker, install prompt, session persistence, offline document caching with explicit user control, sync-status UI, push notification permission flow (see §4 — it's load-bearing for more than notifications), and the in-app scanner (§4b).
 
-**Out for now:** native iOS/Android apps, App Store presence, background sync of edits made offline (read-only offline is the v1 target — see §8), camera-specific native integrations (the standard web file/camera input is sufficient).
+**Out for now:** native iOS/Android apps, App Store presence, background sync of edits made offline (read-only offline is the v1 target — see §8), camera-specific native integrations beyond the scanner.
+
+**Payment stays exactly as built.** This is a real advantage of the PWA route worth stating explicitly: a native App Store app selling digital subscriptions generally must route them through Apple's In-App Purchase system — meaning rebuilding the Stripe subscription logic a second time against Apple's APIs and giving Apple a cut of every subscription. A PWA is not distributed through the App Store, so none of that applies. The account-level Stripe billing already built works unchanged. Do not introduce any alternate payment path.
+
+---
+
+## 2b. The scanner — differentiator and patent implementation
+
+A phone scanning *another* vessel's QR sticker at the dock is something the desktop web experience structurally cannot do, and it's the clearest reason for the app to exist beyond convenience.
+
+**Architectural requirement, and this matters more than it looks:** the scanner must call the **same role-filtered API** the web vessel profile calls. Not a parallel, app-specific rendering path. One field-visibility map, multiple front-ends.
+
+Two reasons:
+1. **Correctness.** A duplicate rendering path is how the app and web end up silently disagreeing about who is allowed to see what — a privacy failure that would surface as "the app showed a stranger my phone number."
+2. **It is the patent's actual claim.** Role-differentiated rendering from a single source is the mechanism the provisional patent covers. A simplified "just show the public view" scanner loses the point.
+
+Behavior:
+- A logged-in owner scanning someone else's boat gets the **public** view of that vessel — they aren't its owner, and the existing filter already handles this correctly.
+- An owner scanning **their own** boat gets the owner view.
+- If Marina/Coast Guard roles are ever reactivated (currently paused), an authenticated marina user scanning a vessel at their marina gets the marina-tier view — through the identical filter, with no new rendering path.
+- Scanning a **dormant** vessel should surface the dormant-state page per the dormant identity spec, including its claim/reactivate invitation.
 
 ---
 
@@ -94,6 +114,25 @@ The broader point stands though: **Apple controls whether this keeps working.** 
 3. **iOS install instruction placement.** Where does the "Add to Home Screen" card appear — after first login, after a vessel is activated, or as a dismissible banner? It shouldn't nag.
 4. **Does the install prompt belong in the marina signup flow?** Standing on a dock, "add this to your home screen" is a natural last step of onboarding. Worth designing deliberately rather than leaving it to chance.
 5. **Notification permission timing.** Asking at first launch has poor accept rates; asking at a moment of demonstrated value is better. But eviction protection only works once granted — so waiting has a real cost. Decide the tradeoff.
+
+---
+
+## 8b. Prior art in the repo — check before designing anything
+
+An earlier app prototype (`moxie_app.jsx`) and a readiness doc (`moxie_app_build_readiness.md`) predate this spec. **Two things in them are worth reusing; several assumptions in them are now wrong.**
+
+**Worth reusing:**
+- The **five-tab shell** — Profile / Docs / Scan / Fleet / Account. Sound structure, mirrors the web dashboard's own organization, brand-accurate. No need to redesign navigation from scratch.
+- The **scanner concept**, now specified properly in §2b above.
+- `PixelM.tsx` already exists as a working React SVG component in production use (marketing nav/footer, dashboard header, `ScanSuccess`). The app icon starts from this, not from scratch — what's missing is the Application 01 icon treatment (navy gradient background, 55%-opacity corner cells, superellipse radius) and the exported size set.
+
+**Now outdated — do not build from these:**
+- The prototype assumes **magic-link auth**. The app actually uses password auth with a built password-reset flow. Match what exists.
+- It assumes a **marina-only location model**. Location is now structured state → storage type → city, covering every storage type.
+- It has **no tier awareness**. Tiers are now real and account-level: Basic $59/yr (2 vessels, 3 documents), Full $149/yr (5 vessels, unlimited documents, 500MB cap).
+- Its **payment guidance** centers on the Apple IAP / "reader app" question. Moot for a PWA — see §2.
+
+**Check and likely remove:** the readiness doc references `AppDownloadSheet` and `OnboardingAppPrompt` components that prompt users to "Download on the App Store." No such app exists. If these are live on the marketing site or in the signup funnel, they are advertising something unavailable — the same standard applied to the homepage banner and the broker preview page. Verify whether they render anywhere, and remove or repoint them at the PWA install flow.
 
 ---
 
