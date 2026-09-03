@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Moxie — No connection</title>
+<style>
+  :root{
+    --navy:#0d1f35; --gold:#c9a84c; --cream:#f5f2ec; --text2:#3a5068;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:14px; text-align:center; padding:32px;
+    background:var(--cream); color:var(--navy);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+  .mark{ width:56px; height:56px; }
+  h1{
+    font-family:Georgia,'Times New Roman',serif; font-weight:300; font-style:italic;
+    font-size:26px; margin:4px 0 0;
+  }
+  h1 em{ font-style:italic; color:var(--gold); }
+  p{ max-width:320px; font-size:14px; color:var(--text2); line-height:1.6; margin:0; }
+  button{
+    margin-top:10px; border:none; border-radius:10px; padding:12px 22px;
+    background:var(--navy); color:var(--gold); font-size:13px; font-weight:600;
+    letter-spacing:.04em; text-transform:uppercase; cursor:pointer;
+  }
+</style>
+</head>
+<body>
+  <svg class="mark" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect x="15" y="25" width="10" height="10" fill="#c9a84c"/>
+    <rect x="15" y="35" width="10" height="10" fill="#c9a84c"/>
+    <rect x="15" y="45" width="10" height="10" fill="#c9a84c"/>
+    <rect x="15" y="55" width="10" height="10" fill="#c9a84c"/>
+    <rect x="15" y="65" width="10" height="10" fill="#c9a84c"/>
+    <rect x="15" y="75" width="10" height="10" fill="#c9a84c"/>
+    <rect x="25" y="35" width="10" height="10" fill="#c9a84c"/>
+    <rect x="35" y="45" width="10" height="10" fill="#c9a84c"/>
+    <rect x="45" y="35" width="10" height="10" fill="#c9a84c"/>
+    <rect x="55" y="45" width="10" height="10" fill="#c9a84c"/>
+    <rect x="65" y="35" width="10" height="10" fill="#c9a84c"/>
+    <rect x="75" y="25" width="10" height="10" fill="#c9a84c"/>
+    <rect x="75" y="35" width="10" height="10" fill="#c9a84c"/>
+    <rect x="75" y="45" width="10" height="10" fill="#c9a84c"/>
+    <rect x="75" y="55" width="10" height="10" fill="#c9a84c"/>
+    <rect x="75" y="65" width="10" height="10" fill="#c9a84c"/>
+    <rect x="75" y="75" width="10" height="10" fill="#c9a84c"/>
+  </svg>
+  <h1>No <em>connection.</em></h1>
+  <p>Moxie needs a signal to load your account. Documents saved for offline access aren't part of this build yet — reconnect and try again.</p>
+  <button onclick="location.reload()">Try again</button>
+</body>
+</html>
