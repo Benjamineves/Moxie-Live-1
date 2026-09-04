@@ -10,7 +10,6 @@ import { getOfflineMeta, openOfflineDocument } from "@/lib/offline-vessel-store"
 import { useIsOnline } from "@/lib/use-is-online";
 import type { DocumentFileMeta, VesselDocumentMeta } from "@/lib/document-metadata";
 
-const DOC_TYPES: DocType[] = ["registration", "insurance", "boater_card"];
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
 function formatBytes(bytes: number) {
@@ -54,6 +53,158 @@ function describeDocument(meta: DocumentFileMeta | undefined): string {
 const ACTION_CLASS =
   "shrink-0 rounded-md border border-[var(--gold-line)] px-3 py-2 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--navy)] transition hover:bg-[var(--gold-dim)]";
 
+/** Uploads are constrained to image/* or application/pdf at the file input, so the stored extension is one or the other. */
+function isPdf(path: string) {
+  return path.split(".").pop()?.toLowerCase() === "pdf";
+}
+
+type ViewerTarget = { docType: DocType; label: string; path: string; meta: DocumentFileMeta | undefined };
+
+/**
+ * In-app document viewer (moxie_digital_pwa_spec.md §3b).
+ *
+ * Replaces what used to be a plain link to the document route. Handing
+ * the file to the platform's native viewer meant leaving the app, and
+ * exit behavior ranged from inconsistent to closing the whole app —
+ * across iPad PWA, desktop Safari, Android PWA and the desktop app. Same
+ * no-back-button problem as the public-profile header: standalone mode
+ * has nothing to come back with, so viewing has to stay in-app behind an
+ * explicit close control.
+ *
+ * The URL is resolved here rather than up front — the live route while
+ * online, a blob URL from the offline cache when not, which is the same
+ * resolution the row's own availability check uses. Resolving on open
+ * (rather than for every row on mount) is what makes revoking on close
+ * correct: the blob exists exactly as long as the modal showing it does.
+ */
+function DocumentViewerModal({
+  mxeId,
+  target,
+  isOnline,
+  onClose,
+}: {
+  mxeId: string;
+  target: ViewerTarget;
+  isOnline: boolean;
+  onClose: () => void;
+}) {
+  const [href, setHref] = useState<string | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    let created: string | null = null;
+
+    (async () => {
+      // Deliberate microtask deferral — this repo's lint config errors on
+      // a setState reachable synchronously from an effect body.
+      await Promise.resolve();
+      if (cancelled) return;
+
+      if (isOnline) {
+        setHref(`/api/vessels/${encodeURIComponent(mxeId)}/documents/${target.docType}`);
+        return;
+      }
+
+      const blob = await openOfflineDocument(mxeId, target.docType);
+      if (cancelled) {
+        // Closed mid-resolve — the blob still has to be released, since
+        // the cleanup below already ran without knowing about it.
+        if (blob) URL.revokeObjectURL(blob);
+        return;
+      }
+      if (!blob) {
+        setUnavailable(true);
+        return;
+      }
+      created = blob;
+      setHref(blob);
+    })();
+
+    return () => {
+      cancelled = true;
+      if (created) URL.revokeObjectURL(created);
+    };
+  }, [mxeId, target.docType, isOnline]);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [onClose]);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${target.label} — document viewer`}
+      // Backdrop click closes; the panel below stops the event reaching
+      // here, so a click inside the document never dismisses it.
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-[300] flex items-center justify-center bg-[rgba(13,31,53,0.6)] p-4"
+    >
+      <div className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-2xl bg-[var(--white)] shadow-xl">
+        <div className="flex items-start justify-between gap-4 border-b border-[var(--divider)] px-5 py-4">
+          <div className="min-w-0">
+            <p className="font-[family-name:var(--font-dm)] text-sm font-medium text-[var(--navy)]">{target.label}</p>
+            <p className="mt-0.5 truncate font-[family-name:var(--font-dm)] text-xs text-[var(--text3)]">
+              {describeDocument(target.meta)}
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close document viewer"
+            className="shrink-0 rounded-md border border-[var(--divider)] px-2.5 py-1.5 font-[family-name:var(--font-dm)] text-sm leading-none text-[var(--text2)] transition hover:bg-[var(--cream)]"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="flex h-[70vh] items-center justify-center overflow-auto bg-[var(--cream2)]">
+          {unavailable ? (
+            <p className="px-6 text-center font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
+              This document isn&apos;t saved on this device, and there&apos;s no connection to fetch it. Reconnect, or
+              save this vessel for offline access while you have signal.
+            </p>
+          ) : !href ? (
+            <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--text3)]">Opening…</p>
+          ) : isPdf(target.path) ? (
+            <iframe src={href} title={`${target.label} document`} className="h-full w-full border-0" />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={href} alt={target.label} className="max-h-full max-w-full object-contain" />
+          )}
+        </div>
+
+        {href ? (
+          <div className="border-t border-[var(--divider)] px-5 py-3">
+            {/*
+              The one deliberate way out of the app, opt-in rather than
+              default: iOS Safari renders only the first page of an
+              iframed PDF, so a multi-page registration needs a real
+              viewer to be read in full. Useful for images too — the
+              native viewer is where zooming actually works.
+            */}
+            <a
+              href={href}
+              target="_blank"
+              rel="noreferrer"
+              className="font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.08em] text-[var(--navy)] underline"
+            >
+              Open full document ↗
+            </a>
+          </div>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
 /**
  * One row per document slot — registration, insurance, boater card.
  * Previously two near-identical copies of this markup (the boater card's
@@ -67,7 +218,8 @@ function DocumentFileRow({
   label,
   url,
   meta,
-  offlineUrl,
+  canView,
+  onView,
   footer,
 }: {
   mxeId: string;
@@ -75,11 +227,11 @@ function DocumentFileRow({
   label: string;
   url: string | null;
   meta: DocumentFileMeta | undefined;
-  offlineUrl: string | undefined;
+  canView: boolean;
+  onView: (target: ViewerTarget) => void;
   footer?: ReactNode;
 }) {
   const router = useRouter();
-  const isOnline = useIsOnline();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -113,17 +265,6 @@ function DocumentFileRow({
     }
   }
 
-  // Online, View streams the live bytes from the owner-authenticated
-  // proxy route (api/vessels/[mxeId]/documents/[docType]) — always
-  // current, and the authoritative copy after a Replace. Offline, it
-  // falls back to whatever "save for offline" already cached for this
-  // vessel, which is the whole point of having cached it. Not the other
-  // way round: preferring the cache while online would happily show
-  // yesterday's document seconds after replacing it.
-  const viewHref = isOnline
-    ? `/api/vessels/${encodeURIComponent(mxeId)}/documents/${docType}`
-    : offlineUrl;
-
   return (
     <div className="border-b border-[var(--divider)] py-3 last:border-0">
       <div className="flex items-center justify-between gap-4">
@@ -134,12 +275,12 @@ function DocumentFileRow({
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
-          {url && viewHref ? (
-            <a href={viewHref} target="_blank" rel="noreferrer" className={ACTION_CLASS}>
+          {url && canView ? (
+            <button type="button" onClick={() => onView({ docType, label, path: url, meta })} className={ACTION_CLASS}>
               View
-            </a>
+            </button>
           ) : null}
-          {url && !viewHref ? (
+          {url && !canView ? (
             <span
               aria-disabled="true"
               className="shrink-0 rounded-md border border-[var(--divider)] px-3 py-2 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text3)]"
@@ -186,13 +327,15 @@ function BoaterCardRow({
   url,
   hasCard,
   meta,
-  offlineUrl,
+  canView,
+  onView,
 }: {
   mxeId: string;
   url: string | null;
   hasCard: boolean | null | undefined;
   meta: DocumentFileMeta | undefined;
-  offlineUrl: string | undefined;
+  canView: boolean;
+  onView: (target: ViewerTarget) => void;
 }) {
   const router = useRouter();
   const [savingCard, setSavingCard] = useState(false);
@@ -219,7 +362,8 @@ function BoaterCardRow({
       label="Boater Card"
       url={url}
       meta={meta}
-      offlineUrl={offlineUrl}
+      canView={canView}
+      onView={onView}
       footer={
         <>
           <label className="mt-2 flex items-center gap-2 font-[family-name:var(--font-dm)] text-xs text-[var(--text2)]">
@@ -288,39 +432,37 @@ export function DocumentsEdit({
   /** Upload date/size/original filename per document, resolved server-side (lib/document-metadata.ts). */
   documentMeta?: VesselDocumentMeta;
 }) {
-  // Blob URLs for whatever this vessel has cached via "save for
-  // offline", resolved once here rather than per row — same
-  // openOfflineDocument path /offline-vessel already reads, so there's
-  // one way to get at cached bytes, not two. Only touched when this
-  // vessel actually has offline metadata: openOfflineDocument would
-  // otherwise call caches.open() and create an empty cache for a vessel
-  // that was never saved.
-  const [offlineUrls, setOfflineUrls] = useState<Partial<Record<DocType, string>>>({});
+  const isOnline = useIsOnline();
+  const [viewing, setViewing] = useState<ViewerTarget | null>(null);
+
+  // Which documents this vessel has cached, purely to decide whether a
+  // row can offer View while offline. Read from the offline metadata
+  // rather than by opening the caches: getOfflineMeta is a synchronous
+  // localStorage read, and openOfflineDocument would create an empty
+  // Cache Storage entry for a vessel that was never saved. The actual
+  // bytes are resolved later, in the viewer, only for the one document
+  // being opened.
+  const [cachedDocs, setCachedDocs] = useState<DocType[]>([]);
 
   useEffect(() => {
     let cancelled = false;
-    const created: string[] = [];
     (async () => {
       // Deliberate microtask deferral — this repo's lint config errors on
       // a setState reachable synchronously from an effect body. Same
       // pattern as SaveOfflineControl.tsx and /offline-vessel.
       await Promise.resolve();
-      if (cancelled || !getOfflineMeta(mxeId)) return;
-      const urls: Partial<Record<DocType, string>> = {};
-      for (const docType of DOC_TYPES) {
-        const url = await openOfflineDocument(mxeId, docType);
-        if (url) {
-          urls[docType] = url;
-          created.push(url);
-        }
-      }
-      if (!cancelled) setOfflineUrls(urls);
+      if (cancelled) return;
+      setCachedDocs(getOfflineMeta(mxeId)?.docs ?? []);
     })();
     return () => {
       cancelled = true;
-      created.forEach((url) => URL.revokeObjectURL(url));
     };
   }, [mxeId]);
+
+  // Online, every populated row can open (the route streams the live
+  // bytes, which is also the authoritative copy right after a Replace).
+  // Offline, only what "save for offline" already cached.
+  const canView = (docType: DocType) => isOnline || cachedDocs.includes(docType);
 
   // Fixed order — registration counts first, insurance second — so
   // which document (if any) shows locked stays stable across reloads.
@@ -343,7 +485,8 @@ export function DocumentsEdit({
             label={labels[slot.docType]}
             url={slot.url}
             meta={documentMeta[slot.docType]}
-            offlineUrl={offlineUrls[slot.docType]}
+            canView={canView(slot.docType)}
+            onView={setViewing}
           />
         ),
       )}
@@ -352,8 +495,17 @@ export function DocumentsEdit({
         url={doc_boater_card_url ?? null}
         hasCard={ca_boater_card}
         meta={documentMeta.boater_card}
-        offlineUrl={offlineUrls.boater_card}
+        canView={canView("boater_card")}
+        onView={setViewing}
       />
+      {viewing ? (
+        <DocumentViewerModal
+          mxeId={mxeId}
+          target={viewing}
+          isOnline={isOnline}
+          onClose={() => setViewing(null)}
+        />
+      ) : null}
     </div>
   );
 }

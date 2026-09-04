@@ -106,6 +106,20 @@ kind of thing that gets silently reintroduced the next time someone adds a
 page or a terminal state, which is why it's recorded here rather than only
 in a chat log.
 
+**The same rule covers content, not just pages: anything that opens for
+viewing stays in-app, behind an explicit close control.** Handing a file to
+the platform's native viewer is a navigation out of the app wearing a
+different hat — and it was measurably worse than the in-page case, because
+what happens on the way back is entirely the platform's call. Opening a
+stored document by navigating to its URL was tested across iPad PWA,
+desktop Safari, Android PWA and the desktop app: exit behavior ranged from
+inconsistent to closing the whole app. Documents now open in a modal
+overlay (`DocumentsEdit.tsx`) closable by X, backdrop click, or Escape —
+images as `<img>`, PDFs as `<iframe>`, no PDF library. The one deliberate
+exception is opt-in and labeled as such: an "Open full document" link that
+does open a new tab, because iOS Safari renders only the first page of an
+iframed PDF and a multi-page registration has to be readable somehow.
+
 **How the destination resolves, when there's a choice:** authenticated →
 `/dashboard`; not authenticated → `MARKETING_ORIGIN` (`lib/site-domains.ts`).
 The logged-out case is the point, not a fallback — a stranger who scanned a
