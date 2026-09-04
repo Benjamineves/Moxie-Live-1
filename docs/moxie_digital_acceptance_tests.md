@@ -218,7 +218,7 @@ Kept for when this role is reactivated per the v2 scope decision — not part of
 ### Happy Path
 - `GET /api/vessels/MXE-00001/qr.pdf` with owner JWT returns a downloadable PDF **only when `qr_status='active'`**
 - PDF is 3" × 3" at 600 DPI resolution
-- QR code encodes the URL: `moxieyacht.com/MXE-00001?scan=1`
+- **The encoded badge URL includes `?scan=1`** — `{NEXT_PUBLIC_BASE_URL}/MXE-00001?scan=1`, built once in `dashboard/[mxeId]/qr/page.tsx`'s `targetUrl` and fed to every renderer (on-screen SVG, printable SVG, downloadable PNG) from that single value. Without the param, a scan lands directly on the plain public profile — P0-B's animation never fires. **Badges generated before this was added encode the bare URL** (`{NEXT_PUBLIC_BASE_URL}/MXE-00001`, no `?scan=1`) and will keep doing exactly that: land the scanner directly on the public profile with no animation. Still fully functional — just without the interstitial. There is no way to retroactively add the param to a badge already printed and on a hull; only newly generated badges get it.
 - QR code uses Level H error correction
 - Navy + Gold colorway: dark cells #071020, background #0d1f35
 - "MOXIE" text appears below QR grid in uppercase
@@ -234,6 +234,9 @@ Kept for when this role is reactivated per the v2 scope decision — not part of
 ### Edge Cases
 - QR code remains scannable when printed on weatherproof vinyl (test with Level H damage tolerance — cover 25% of QR and verify scan still works)
 - Long MXE IDs don't break QR density below scannable threshold (relevant if the MXE ID format question resolves toward a longer randomized string)
+- **QR version budget and the physical module-size math** — the print spec is measured against a fixed grid, not an abstract "it fits": badge is 3" square, the QR block is 62% of that (`BADGE_LAYOUT.qrSize` in `badge-layout.ts`) = 1.86", and at error-correction Level H, `{NEXT_PUBLIC_BASE_URL}/MXE-XXXXX?scan=1` encodes at **version 5** (37×37 modules). Including the 2-module quiet zone on each side, that's 41 grid units across the 1.86" block → **1.86in ÷ 41 ≈ 1.15mm per module**. Confirmed 2026-09-04 against a representative mxeId at both the non-www fallback (`https://moxieyacht.com`, 39 chars, version 5) and a `www.` prefix (`https://www.moxieyacht.com`, 43 chars, **still** version 5, but with only ~1 character of remaining headroom before version 6 at this URL length). Which one is actually live in `NEXT_PUBLIC_BASE_URL` was not independently confirmed at that time — the code fallback is non-www, but the Stripe webhook config needed `www.moxieyacht.com` at one point, so it may not match the fallback.
+  - `qr-render.ts` enforces `MAX_BADGE_QR_VERSION = 5` at render time (`assertBadgeQrVersionWithinBudget`, called from `dashboard/[mxeId]/qr/page.tsx` right after `targetUrl` is built) — a future change to `NEXT_PUBLIC_BASE_URL`, the MXE ID format, or anything else added to the encoded URL that pushes it to version 6+ throws instead of silently printing a denser badge. Given the ~1-character margin measured above, a `www.` base URL combined with any other lengthening is the most likely way this budget gets exceeded first.
+  - Anyone changing the badge's physical size (currently 3") or the base URL's shape must redo this math — it is not free-floating; it is bound to `BADGE_LAYOUT.qrSize` and `BADGE_PRINT_INCHES` in `badge-layout.ts`.
 
 ---
 

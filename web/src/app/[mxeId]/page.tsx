@@ -107,7 +107,32 @@ export default async function VesselPage({ params, searchParams }: Props) {
 
   const scan = sp.scan === "1" || sp.scan === "true";
   if (scan) {
-    return <ScanSuccess mxeId={vessel.mxe_id} />;
+    // Real badge scans always carry ?scan=1 (encoded into the printed
+    // badge by dashboard/[mxeId]/qr/page.tsx) — this is the PRIMARY
+    // case, and the visitor is very often unauthenticated. Unlike the
+    // role=owner branch below, this must never redirect to login: a
+    // public scanner with no session is expected, not an error state.
+    // Ownership only decides where the animation sends the visitor
+    // AFTER it plays — the animation itself always plays, and a
+    // positive owner match is required to land on ?role=owner; every
+    // other outcome (no session, session that doesn't match, lookup
+    // failure) silently falls back to ?role=public. Same
+    // getOwnerEmailByUserId/emailsMatch check the role=owner branch
+    // below uses — deliberately not a second implementation of it.
+    let destinationRole: "owner" | "public" = "public";
+    const scanSupabase = await createSupabaseServerClient();
+    if (scanSupabase) {
+      const {
+        data: { user: scanUser },
+      } = await scanSupabase.auth.getUser();
+      if (scanUser?.email) {
+        const scanOwnerEmail = await getOwnerEmailByUserId(vessel.owner_id);
+        if (scanOwnerEmail && emailsMatch(scanUser.email, scanOwnerEmail)) {
+          destinationRole = "owner";
+        }
+      }
+    }
+    return <ScanSuccess mxeId={vessel.mxe_id} destinationRole={destinationRole} />;
   }
 
   const roleParam = sp.role?.toLowerCase();

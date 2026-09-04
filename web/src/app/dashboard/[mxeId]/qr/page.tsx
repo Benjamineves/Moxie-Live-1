@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { buildBadgeSvg } from "@/lib/qr-render";
+import { buildBadgeSvg, assertBadgeQrVersionWithinBudget } from "@/lib/qr-render";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
@@ -64,7 +64,21 @@ export default async function VesselQrPage({ params, searchParams }: Props) {
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL?.trim() || "https://moxieyacht.com";
-  const targetUrl = `${baseUrl.replace(/\/$/, "")}/${encodeURIComponent(vessel.mxe_id)}`;
+  // ?scan=1 is what routes a real badge scan into ScanSuccess's
+  // animation ([mxeId]/page.tsx's scan branch) instead of landing
+  // silently on the plain public profile — the printed badge and the
+  // ?scan=1 acceptance-test assumption were written to different
+  // assumptions before this. One targetUrl feeds both buildBadgeSvg
+  // below (on-screen + print view) and QrDownload's PNG render, so
+  // there's nothing else to keep in sync.
+  const targetUrl = `${baseUrl.replace(/\/$/, "")}/${encodeURIComponent(vessel.mxe_id)}?scan=1`;
+  // Fails loudly at render time (this page has no static generation —
+  // mxeId and NEXT_PUBLIC_BASE_URL are both only known per-request, so
+  // there's no build-time point to check this at) rather than silently
+  // shipping a denser badge if a future change to either one pushes the
+  // encoded URL past version 5. See qr-render.ts for the print-spec math
+  // this budget is measured against.
+  assertBadgeQrVersionWithinBudget(targetUrl);
   // Full badge (wordmark, QR, divider, caption, Patent Pending) from the
   // single shared layout in lib/badge-layout.ts — see qr-render.ts's
   // buildBadgeSvg. Both this on-screen view and the printOnly view below

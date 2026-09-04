@@ -22,10 +22,33 @@ export function getQrModules(text: string) {
   const size = qr.modules.size;
   return {
     size,
+    version: qr.version,
     isDark: (row: number, col: number) => qr.modules.get(row, col) === 1,
     signalRow: size - 1,
     signalCol: size - 1,
   };
+}
+
+/**
+ * The badge print spec is measured against a version 5 (37x37 module)
+ * grid — 3in badge, 62% QR block, 41 units including the quiet zone,
+ * ~1.15mm modules (see docs/moxie_digital_acceptance_tests.md's
+ * QR-generation section for the full math). A version bump densifies
+ * every printed badge without anyone deciding that on purpose, and
+ * badges are physical and permanent — there's no "push a fix" once one
+ * is printed and stuck to a hull. This is the one place that constraint
+ * can actually be enforced, since it's the one place the final encoded
+ * URL (base URL + mxeId + params) is assembled.
+ */
+export const MAX_BADGE_QR_VERSION = 5;
+
+export function assertBadgeQrVersionWithinBudget(text: string): void {
+  const { version } = getQrModules(text);
+  if (version > MAX_BADGE_QR_VERSION) {
+    throw new Error(
+      `Badge QR for "${text}" encodes at version ${version}, exceeding the version ${MAX_BADGE_QR_VERSION} the badge print spec is designed for (docs/moxie_digital_acceptance_tests.md). This must be resolved deliberately — shorten the encoded URL, or re-derive the badge layout for a denser code — not shipped silently.`,
+    );
+  }
 }
 
 /**

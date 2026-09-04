@@ -7,7 +7,18 @@ import type { VesselPreview } from "@/types/vessel";
 
 const REDIRECT_MS = 2400;
 
-type Props = { mxeId: string };
+type Props = {
+  mxeId: string;
+  /**
+   * Resolved server-side by [mxeId]/page.tsx's scan branch, not fetched
+   * here — a client-side session check would race the redirect timer
+   * below. "owner" only when the visitor is positively confirmed as
+   * this vessel's owner; every other case (no session, session that
+   * doesn't match) is "public", silently — a public scanner with no
+   * session is the primary case, not an error state.
+   */
+  destinationRole: "owner" | "public";
+};
 
 type PreviewResponse = VesselPreview | { status: "pending_payment" | "decommissioned"; mxe_id: string };
 
@@ -18,7 +29,7 @@ function previewStatus(data: PreviewResponse): "pending_payment" | "decommission
   return null;
 }
 
-export function ScanSuccess({ mxeId }: Props) {
+export function ScanSuccess({ mxeId, destinationRole }: Props) {
   const router = useRouter();
   const [preview, setPreview] = useState<VesselPreview | null>(null);
   const [pending, setPending] = useState(false);
@@ -55,10 +66,10 @@ export function ScanSuccess({ mxeId }: Props) {
     // terminal state.
     if (pending || decommissioned) return;
     const t = window.setTimeout(() => {
-      router.replace(`/${encodeURIComponent(mxeId)}?role=public`);
+      router.replace(`/${encodeURIComponent(mxeId)}?role=${destinationRole}`);
     }, REDIRECT_MS);
     return () => window.clearTimeout(t);
-  }, [mxeId, router, pending, decommissioned]);
+  }, [mxeId, router, pending, decommissioned, destinationRole]);
 
   if (pending) {
     return (
