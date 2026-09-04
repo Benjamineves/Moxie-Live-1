@@ -16,6 +16,7 @@ import { getOwnerBillingSummary } from "@/lib/billing-service";
 import { resolveShareByToken } from "@/lib/share-resolve";
 import { getDormantInfo, DORMANT_PUBLIC_COPY } from "@/lib/vessel-dormancy";
 import { MARKETING_ORIGIN } from "@/lib/site-domains";
+import { loadVesselDocumentMeta, type VesselDocumentMeta } from "@/lib/document-metadata";
 
 const MXE_RE = /^MXE-\d{5}$/i;
 
@@ -202,8 +203,14 @@ export default async function VesselPage({ params, searchParams }: Props) {
     let hasPendingDecommissionRequest = false;
     let activeTransfer: ActiveTransfer | null = null;
     let singleVessel = false;
+    // Upload date + size for each stored document, read from Storage
+    // (see lib/document-metadata.ts). Resolved here rather than in the
+    // client component so it costs one listing inside the service block
+    // this branch already opens, instead of a round trip after paint.
+    let documentMeta: VesselDocumentMeta = {};
     const service = createSupabaseServiceClient();
     if (service) {
+      documentMeta = await loadVesselDocumentMeta(service, vessel);
       const { data: pendingRequest } = await service
         .from("vessel_decommission_requests")
         .select("id")
@@ -264,6 +271,7 @@ export default async function VesselPage({ params, searchParams }: Props) {
           hasPendingDecommissionRequest={hasPendingDecommissionRequest}
           activeTransfer={activeTransfer}
           singleVessel={singleVessel}
+          documentMeta={documentMeta}
         />
       </div>
     );

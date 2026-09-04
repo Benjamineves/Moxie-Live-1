@@ -5,6 +5,7 @@ import { SignOutButton } from "@/components/SignOutButton";
 import { SaveOfflineControl } from "@/components/pwa/SaveOfflineControl";
 import { isDocumentLocked, type DocumentSlot } from "@/lib/vessel-transfer";
 import type { OfflineDocType } from "@/lib/offline-vessel-store";
+import type { VesselDocumentMeta } from "@/lib/document-metadata";
 import { AccountBillingPanel } from "@/components/AccountBillingPanel";
 import { AddPhotoNudge } from "@/components/AddPhotoNudge";
 import { ReplacePhotoControl } from "@/components/ReplacePhotoControl";
@@ -88,6 +89,7 @@ export function VesselOwnerProfile({
   hasPendingDecommissionRequest = false,
   activeTransfer = null,
   singleVessel = false,
+  documentMeta = {},
 }: {
   tier: OwnerProfileTier;
   billing: BillingSummary;
@@ -96,6 +98,8 @@ export function VesselOwnerProfile({
   /** True when this is the owner's only active vessel — drives the automatic-caching default (build spec §8 decision 2). */
   singleVessel?: boolean;
   activeTransfer?: ActiveTransfer | null;
+  /** Upload date/size/original filename per document, resolved server-side in [mxeId]/page.tsx. */
+  documentMeta?: VesselDocumentMeta;
 }) {
   const publicProps: PublicProfileProps = {
     mxe_id: tier.mxe_id,
@@ -406,6 +410,7 @@ export function VesselOwnerProfile({
           doc_boater_card_url={tier.doc_boater_card_url}
           ca_boater_card={tier.ca_boater_card}
           subscriptionTier={billing.subscriptionTier}
+          documentMeta={documentMeta}
         />
 
         <div className="mt-12 flex items-center justify-between">

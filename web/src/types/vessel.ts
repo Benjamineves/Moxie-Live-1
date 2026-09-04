@@ -18,6 +18,15 @@ export type VesselRecord = {
   doc_registration_url: string | null;
   doc_insurance_url: string | null;
   doc_boater_card_url: string | null;
+  /**
+   * Original filenames as uploaded (20260918_document_original_filenames.sql).
+   * Display only, and null for anything uploaded before that column existed
+   * — the doc_*_url values above are deterministic paths, identical across
+   * every vessel, so their basename is never a valid display name.
+   */
+  doc_registration_filename: string | null;
+  doc_insurance_filename: string | null;
+  doc_boater_card_filename: string | null;
   public_notes: string | null;
   is_public?: boolean | null;
   storage_type: string | null;

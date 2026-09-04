@@ -20,6 +20,9 @@ export function getDemoVessel(mxeId: string): VesselRecord | null {
       doc_registration_url: null,
       doc_insurance_url: null,
       doc_boater_card_url: null,
+      doc_registration_filename: null,
+      doc_insurance_filename: null,
+      doc_boater_card_filename: null,
       public_notes:
         "2023 Nimbus T8 day cruiser. Single Mercury Verado 300HP outboard. Regularly maintained. House battery system upgraded 2024. Life jackets for 6 aboard.",
       is_public: true,

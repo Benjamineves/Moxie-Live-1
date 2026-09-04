@@ -45,8 +45,23 @@ export async function uploadVesselPhoto(file: File, mxeId: string): Promise<stri
   return data.publicUrl;
 }
 
-/** Document counterpart to uploadVesselPhoto — vessel-docs bucket is private, so the stored value is the path, not a public URL (matches VesselIntakeForm.tsx's doc upload). */
-export async function uploadVesselDocument(file: File, mxeId: string, docType: DocType): Promise<string> {
+/**
+ * Document counterpart to uploadVesselPhoto — vessel-docs bucket is private, so
+ * the stored value is the path, not a public URL (matches VesselIntakeForm.tsx's
+ * doc upload).
+ *
+ * Returns the original filename alongside the path because the path itself is
+ * deterministic ({userId}/{mxeId}/registration.pdf) and therefore carries no
+ * information — every vessel's registration document has the identical
+ * basename. The caller persists fileName into the matching doc_*_filename
+ * column (20260918_document_original_filenames.sql); it is the only point in
+ * the system where the name the owner actually chose still exists.
+ */
+export async function uploadVesselDocument(
+  file: File,
+  mxeId: string,
+  docType: DocType,
+): Promise<{ path: string; fileName: string }> {
   const supabase = createSupabaseBrowserClient();
   if (!supabase) throw new Error("Missing Supabase browser configuration.");
 
@@ -63,7 +78,7 @@ export async function uploadVesselDocument(file: File, mxeId: string, docType: D
     .upload(path, file, { upsert: true, contentType: file.type });
   if (uploadError) throw uploadError;
 
-  return path;
+  return { path, fileName: file.name };
 }
 
 /**

@@ -211,6 +211,18 @@ const DOC_COLUMN = {
 } as const;
 
 /**
+ * Original-filename companions to DOC_COLUMN
+ * (20260918_document_original_filenames.sql). Written together with the
+ * path, always — the path is deterministic and identical across vessels,
+ * so this is the only record of what the owner actually uploaded.
+ */
+const DOC_FILENAME_COLUMN = {
+  registration: "doc_registration_filename",
+  insurance: "doc_insurance_filename",
+  boater_card: "doc_boater_card_filename",
+} as const;
+
+/**
  * Replaces one of the three document URLs on an already-existing vessel.
  * The upload itself (bucket, path convention, upsert-in-place) happens
  * client-side before this is called — see lib/vessel-uploads.ts. No
@@ -225,6 +237,7 @@ export async function updateVesselDocument(
   mxeId: string,
   docType: keyof typeof DOC_COLUMN,
   url: string,
+  fileName?: string | null,
 ): Promise<{ error?: string }> {
   const authClient = await createSupabaseServerClient();
   if (!authClient) return { error: "Missing Supabase auth configuration." };
@@ -239,7 +252,15 @@ export async function updateVesselDocument(
   if (!vessel) return { error: "Vessel not found." };
 
   const column = DOC_COLUMN[docType];
-  const { error } = await service.from("vessels").update({ [column]: url }).eq("id", vessel.id);
+  // Replacing a document always rewrites its filename too, including to
+  // NULL when the caller has none to give — leaving the previous
+  // document's name attached to a new file's bytes would be worse than
+  // showing no name at all.
+  const update: Record<string, string | null> = {
+    [column]: url,
+    [DOC_FILENAME_COLUMN[docType]]: fileName?.trim() || null,
+  };
+  const { error } = await service.from("vessels").update(update).eq("id", vessel.id);
   if (error) return { error: error.message };
   return {};
 }

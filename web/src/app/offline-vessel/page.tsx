@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import {
   listOfflineVessels,
   openOfflineDocument,
@@ -9,50 +9,13 @@ import {
   type OfflineDocType,
   type OfflineVesselIdentity,
 } from "@/lib/offline-vessel-store";
+import { useIsOnline } from "@/lib/use-is-online";
 
 const DOC_LABELS: Record<OfflineDocType, string> = {
   registration: "Registration",
   insurance: "Insurance card",
   boater_card: "Boater card",
 };
-
-/**
- * moxie_digital_pwa_spec.md §3b: this page's exit to /dashboard is
- * gated on live connectivity, not just present/absent — /dashboard
- * isn't cacheable (dynamic, auth-gated, per-user data; caching it
- * risks serving one signed-in user's data to another), so the link is
- * only real when there's actually a network to carry it. Kept updating
- * live (not just checked once on load) via the online/offline events,
- * since a visitor sitting on this page waiting for signal to come back
- * is exactly the case this exists for. useSyncExternalStore rather than
- * a useEffect+setState pair — this repo's lint config errors on a
- * setState reachable synchronously from an effect body, and this is
- * precisely the browser-subscription shape useSyncExternalStore exists
- * for.
- */
-function subscribeOnlineStatus(callback: () => void) {
-  window.addEventListener("online", callback);
-  window.addEventListener("offline", callback);
-  return () => {
-    window.removeEventListener("online", callback);
-    window.removeEventListener("offline", callback);
-  };
-}
-function getOnlineSnapshot() {
-  return navigator.onLine;
-}
-function getOnlineServerSnapshot() {
-  // Never actually shown — offline-vessel has no server data dependency
-  // and this only matters for the hydration handshake. Defaulting to
-  // "offline" is the conservative choice: it means the very first paint
-  // never briefly shows an enabled dashboard link that the real
-  // navigator.onLine value (checked a tick later, on the client) might
-  // immediately have to disable again.
-  return false;
-}
-function useIsOnline() {
-  return useSyncExternalStore(subscribeOnlineStatus, getOnlineSnapshot, getOnlineServerSnapshot);
-}
 
 /**
  * The fully-offline viewer (build spec §4). No server data dependency —
