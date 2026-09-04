@@ -7,6 +7,7 @@ import { requireAdmin } from "@/lib/admin-verify";
 import { DeleteUnactivatedVesselButton } from "@/components/vessel-edit/DeleteUnactivatedVesselButton";
 import { NotificationBanner } from "@/components/NotificationBanner";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
+import { SignOutFormButton } from "@/components/SignOutFormButton";
 import { getDormantInfo } from "@/lib/vessel-dormancy";
 import type { VesselRecord } from "@/types/vessel";
 
@@ -152,14 +153,7 @@ export default async function DashboardPage({ searchParams }: Props) {
                 Admin
               </Link>
             ) : null}
-            <form action={signOutAction}>
-              <button
-                type="submit"
-                className="rounded-md border border-[var(--gold)] px-3 py-1.5 font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.12em] text-[var(--gold)]"
-              >
-                Sign out
-              </button>
-            </form>
+            <SignOutFormButton action={signOutAction} />
           </div>
         </div>
       </header>

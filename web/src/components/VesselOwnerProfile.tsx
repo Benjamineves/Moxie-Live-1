@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { VesselPublicProfile, type PublicProfileProps } from "@/components/VesselPublicProfile";
 import { SignOutButton } from "@/components/SignOutButton";
+import { SaveOfflineControl } from "@/components/pwa/SaveOfflineControl";
+import { isDocumentLocked, type DocumentSlot } from "@/lib/vessel-transfer";
+import type { OfflineDocType } from "@/lib/offline-vessel-store";
 import { AccountBillingPanel } from "@/components/AccountBillingPanel";
 import { AddPhotoNudge } from "@/components/AddPhotoNudge";
 import { ReplacePhotoControl } from "@/components/ReplacePhotoControl";
@@ -83,11 +86,14 @@ export function VesselOwnerProfile({
   justUpgraded = false,
   hasPendingDecommissionRequest = false,
   activeTransfer = null,
+  singleVessel = false,
 }: {
   tier: OwnerProfileTier;
   billing: BillingSummary;
   justUpgraded?: boolean;
   hasPendingDecommissionRequest?: boolean;
+  /** True when this is the owner's only active vessel — drives the automatic-caching default (build spec §8 decision 2). */
+  singleVessel?: boolean;
   activeTransfer?: ActiveTransfer | null;
 }) {
   const publicProps: PublicProfileProps = {
@@ -130,6 +136,23 @@ export function VesselOwnerProfile({
   // (its banner/copy differs), but dormant.isDormant is true for it too,
   // so the shared editing/sharing lock below covers all three causes.
   const dormant = getDormantInfo({ lifecycle_status: tier.lifecycle_status ?? null, dormant_cause: tier.dormant_cause ?? null });
+
+  // Which documents "save for offline" should fetch — same Basic-tier
+  // lock DocumentsEdit.tsx enforces (registration counted first,
+  // insurance second, boater_card always exempt), so offline access
+  // never covers a document that isn't viewable online either (build
+  // spec §6). The API route re-checks this itself server-side; this is
+  // just what the client asks for.
+  const docSlots: DocumentSlot[] = [
+    { docType: "registration", url: tier.doc_registration_url ?? null },
+    { docType: "insurance", url: tier.doc_insurance_url ?? null },
+  ];
+  const availableDocs: OfflineDocType[] = [
+    ...docSlots
+      .filter((slot, i) => slot.url && !isDocumentLocked(docSlots, i, billing.subscriptionTier))
+      .map((slot) => slot.docType as OfflineDocType),
+    ...(tier.doc_boater_card_url ? (["boater_card"] as OfflineDocType[]) : []),
+  ];
 
   return (
     <>
@@ -366,6 +389,28 @@ export function VesselOwnerProfile({
         <h3 className="mt-6 font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.14em] text-[var(--text3)]">
           Documents on file
         </h3>
+        <div className="mt-3">
+          <SaveOfflineControl
+            identity={{
+              mxeId: tier.mxe_id,
+              vesselName: tier.vessel_name,
+              make: tier.make,
+              model: tier.model,
+              year: tier.year,
+              hin: tier.hin ?? null,
+              regState: tier.reg_state ?? null,
+              regNumber: tier.reg_number ?? null,
+              ownerName: tier.owner_name ?? null,
+              ownerPhone: tier.owner_phone ?? null,
+              emgName: tier.emg_name ?? null,
+              emgPhone: tier.emg_phone ?? null,
+              photoUrl: tier.photo_url ?? null,
+              availableDocs,
+            }}
+            autoSave={singleVessel}
+            disabled={dormant.isDormant || needsActivation}
+          />
+        </div>
         <DocumentsEdit
           mxeId={tier.mxe_id}
           doc_registration_url={tier.doc_registration_url}

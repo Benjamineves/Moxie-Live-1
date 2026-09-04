@@ -167,6 +167,7 @@ export default async function VesselPage({ params, searchParams }: Props) {
 
     let hasPendingDecommissionRequest = false;
     let activeTransfer: ActiveTransfer | null = null;
+    let singleVessel = false;
     const service = createSupabaseServiceClient();
     if (service) {
       const { data: pendingRequest } = await service
@@ -192,6 +193,32 @@ export default async function VesselPage({ params, searchParams }: Props) {
           expiresAt: t.expires_at,
         };
       }
+
+      // Same owner-by-email-mismatch accommodation dashboard/page.tsx
+      // uses (see lib/admin-verify.ts's requireAdmin() comment) —
+      // singleVessel drives the automatic-caching default (build spec
+      // §8 decision 2), so it has to count against both possible ids,
+      // not just vessel.owner_id, or a mismatched account would always
+      // read as "single vessel."
+      const ownerIds = [vessel.owner_id];
+      const normalizedEmail = user?.email?.trim().toLowerCase();
+      if (normalizedEmail) {
+        const { data: ownerByEmailRow } = await service
+          .from("users")
+          .select("id")
+          .eq("email", normalizedEmail)
+          .maybeSingle();
+        const ownerByEmail = ownerByEmailRow as { id: string } | null;
+        if (ownerByEmail?.id && !ownerIds.includes(ownerByEmail.id)) {
+          ownerIds.push(ownerByEmail.id);
+        }
+      }
+      const { count: activeVesselCount } = await service
+        .from("vessels")
+        .select("id", { count: "exact", head: true })
+        .in("owner_id", ownerIds)
+        .neq("lifecycle_status", "decommissioned");
+      singleVessel = (activeVesselCount ?? 0) <= 1;
     }
 
     return (
@@ -202,6 +229,7 @@ export default async function VesselPage({ params, searchParams }: Props) {
           justUpgraded={sp.upgraded === "1"}
           hasPendingDecommissionRequest={hasPendingDecommissionRequest}
           activeTransfer={activeTransfer}
+          singleVessel={singleVessel}
         />
       </div>
     );

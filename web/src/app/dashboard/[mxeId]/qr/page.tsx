@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { buildBadgeSvg } from "@/lib/qr-render";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { QrDownload } from "./QrDownload";
 
 type Props = {
@@ -120,6 +121,12 @@ export default async function VesselQrPage({ params, searchParams }: Props) {
           >
             Printable label
           </Link>
+        </div>
+
+        {/* Build spec §8 decision 4: the natural close of the dock-side signup
+            flow, right after payment succeeds — not the intake form itself. */}
+        <div className="mt-6">
+          <InstallPrompt />
         </div>
       </main>
     </div>

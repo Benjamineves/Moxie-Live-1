@@ -1,20 +1,23 @@
-// Moxie PWA service worker — app-shell caching only (build-order step 3,
-// docs/moxie_digital_pwa_spec.md §9). Deliberately does NOT cache
-// documents, vessel data, share links, or billing — that's step 4, and
-// per §4 it needs the persistent-storage/explicit-opt-in design attached
-// to it. This worker only makes the app's own static framework assets
-// available offline and gives navigation a real fallback page instead of
-// the browser's native "no internet" error, so the app can still *open*
-// with no signal even though it can't yet show anything useful without one.
+// Moxie PWA service worker — app-shell caching (build-order step 3) plus
+// explicit per-vessel document/photo caching (step 4,
+// docs/moxie_digital_pwa_spec.md §4/§9). Still deliberately does NOT
+// cache vessel data, share links, or billing — only what "save for
+// offline" (offline-vessel-store.ts) explicitly wrote into a per-vessel
+// `moxie-vessel-<mxeId>` cache.
 //
 // Bump CACHE_VERSION whenever PRECACHE_URLS changes — activate() deletes
 // every other "moxie-shell-*" cache, so old versions never accumulate.
-const CACHE_VERSION = "moxie-shell-v1";
+// Per-vessel caches are versioned by mxeId, not by this constant, and are
+// cleared individually (removeOfflineVessel) or entirely on sign-out
+// (clearAllOfflineData) — activate() here never touches them.
+const CACHE_VERSION = "moxie-shell-v2";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const OFFLINE_URL = "/offline.html";
+const OFFLINE_VESSEL_PATH = "/offline-vessel";
 
 const PRECACHE_URLS = [
   OFFLINE_URL,
+  OFFLINE_VESSEL_PATH,
   "/manifest.json",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
@@ -74,9 +77,62 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Navigation (page loads): network-first. Every page in this app is
-  // dynamic and auth-gated -- caching rendered HTML risks serving a
-  // signed-out shell to a signed-in user or vice versa, so this never
+  // Per-vessel documents (build spec §4, this build's own proxy route —
+  // see api/vessels/[mxeId]/documents/[docType]/route.ts) — cache-first
+  // READ only. This handler never WRITES a cache entry on a miss; the
+  // only writer is the explicit "save for offline" flow in
+  // offline-vessel-store.ts. Silently caching on every visit here would
+  // undo §4b's "explicit, not silent" requirement — an owner who never
+  // taps "save for offline" should have nothing saved, even if they
+  // view the document online.
+  const docMatch = url.origin === self.location.origin && url.pathname.match(/^\/api\/vessels\/([A-Za-z0-9-]+)\/documents\/[a-z_]+$/i);
+  if (docMatch) {
+    const mxeId = docMatch[1].toUpperCase();
+    event.respondWith(
+      caches.open(`moxie-vessel-${mxeId}`).then(async (cache) => {
+        const cached = await cache.match(request);
+        return cached || fetch(request);
+      }),
+    );
+    return;
+  }
+
+  // Vessel photos — public Supabase Storage bucket, so cross-origin
+  // (see lib/vessel-uploads.ts's vessel-photos bucket). Matched by path
+  // shape rather than a hardcoded project host, and by the MXE ID
+  // segment the upload path always includes, so the same per-vessel
+  // cache identity.json/documents are stored under is checked here too.
+  // Same cache-first-READ-only rule as documents, same reason.
+  const photoMatch = url.pathname.match(/\/storage\/v1\/object\/public\/vessel-photos\/.*\/(MXE-\d{5})\//i);
+  if (photoMatch) {
+    const mxeId = photoMatch[1].toUpperCase();
+    event.respondWith(
+      caches.open(`moxie-vessel-${mxeId}`).then(async (cache) => {
+        const cached = await cache.match(request);
+        return cached || fetch(request);
+      }),
+    );
+    return;
+  }
+
+  // The offline-vessel viewer itself: cache-first, ignoring the ?mxeId
+  // query string — its shell has no server data dependency (it reads
+  // Cache Storage/localStorage client-side after mount, see
+  // app/offline-vessel/page.tsx), so the one precached response is
+  // correct for every mxeId, online or off.
+  if (url.origin === self.location.origin && url.pathname === OFFLINE_VESSEL_PATH) {
+    event.respondWith(
+      caches.open(STATIC_CACHE).then(async (cache) => {
+        const cached = await cache.match(OFFLINE_VESSEL_PATH);
+        return cached || fetch(request);
+      }),
+    );
+    return;
+  }
+
+  // Navigation (page loads): network-first. Every other page in this
+  // app is dynamic and auth-gated -- caching rendered HTML risks serving
+  // a signed-out shell to a signed-in user or vice versa, so this never
   // serves a cached page. It only falls back to a static offline page
   // when the network request fails outright (no signal).
   if (request.mode === "navigate") {
@@ -84,7 +140,6 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Everything else (API routes, RSC data, vessel/document/billing
-  // requests) — untouched, default network handling. Explicitly out of
-  // scope for this pass per §4/§9 step 4.
+  // Everything else (vessel data, share links, billing) — untouched,
+  // default network handling. Explicitly out of scope per §4.
 });

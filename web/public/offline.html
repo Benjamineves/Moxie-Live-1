@@ -28,6 +28,12 @@
     background:var(--navy); color:var(--gold); font-size:13px; font-weight:600;
     letter-spacing:.04em; text-transform:uppercase; cursor:pointer;
   }
+  a.saved{
+    display:block; margin-top:8px; padding:12px 18px; border-radius:10px;
+    border:1px solid rgba(201,168,76,.4); text-decoration:none;
+    color:var(--navy); font-size:14px; font-weight:500;
+  }
+  #saved-list{ width:100%; max-width:320px; }
 </style>
 </head>
 <body>
@@ -51,7 +57,36 @@
     <rect x="75" y="75" width="10" height="10" fill="#c9a84c"/>
   </svg>
   <h1>No <em>connection.</em></h1>
-  <p>Moxie needs a signal to load your account. Documents saved for offline access aren't part of this build yet — reconnect and try again.</p>
+  <p id="main-copy">Moxie needs a signal to load your account. Reconnect and try again — or open a vessel you've already saved for offline below.</p>
+  <div id="saved-list"></div>
   <button onclick="location.reload()">Try again</button>
+  <script>
+    // Plain script, no framework — this file is served as a static
+    // asset, not a Next page, so it has no bundler access. Reads the
+    // same localStorage key offline-vessel-store.ts writes
+    // (moxie-offline-vessels) directly; same origin, so it's readable
+    // here regardless of which page wrote it.
+    try {
+      var raw = window.localStorage.getItem("moxie-offline-vessels");
+      var vessels = raw ? Object.values(JSON.parse(raw)) : [];
+      var list = document.getElementById("saved-list");
+      if (vessels.length === 0) {
+        document.getElementById("main-copy").textContent =
+          "Moxie needs a signal to load your account. Nothing has been saved for offline access on this device yet.";
+      } else {
+        vessels.sort(function (a, b) { return (b.lastSyncedAt || "").localeCompare(a.lastSyncedAt || ""); });
+        vessels.forEach(function (v) {
+          var a = document.createElement("a");
+          a.className = "saved";
+          a.href = "/offline-vessel?mxeId=" + encodeURIComponent(v.mxeId);
+          a.textContent = (v.vesselName || v.mxeId) + " — view offline copy";
+          list.appendChild(a);
+        });
+      }
+    } catch (e) {
+      // localStorage unavailable (private browsing) — the generic
+      // "reconnect" copy above already covers this case.
+    }
+  </script>
 </body>
 </html>

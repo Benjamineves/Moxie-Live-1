@@ -137,13 +137,13 @@ The broader point stands though: **Apple controls whether this keeps working.** 
 
 ---
 
-## 8. Open questions
+## 8. Open questions — resolved (2026-09-04)
 
-1. **Offline write support.** V1 is read-only offline (view cached documents). Should an owner be able to *edit* offline with changes syncing later? That's meaningfully more complex — a mutation queue, conflict resolution — and probably not worth it for v1. Confirm read-only is acceptable.
-2. **Which vessels cache by default?** All of the owner's, or only ones they explicitly mark? Leaning explicit per §4b, but for a single-vessel owner (most of them) automatic may be friendlier. Possibly: automatic for one vessel, explicit beyond that.
-3. **iOS install instruction placement.** Where does the "Add to Home Screen" card appear — after first login, after a vessel is activated, or as a dismissible banner? It shouldn't nag.
-4. **Does the install prompt belong in the marina signup flow?** Standing on a dock, "add this to your home screen" is a natural last step of onboarding. Worth designing deliberately rather than leaving it to chance.
-5. **Notification permission timing.** Asking at first launch has poor accept rates; asking at a moment of demonstrated value is better. But eviction protection only works once granted — so waiting has a real cost. Decide the tradeoff.
+1. **Offline write support.** Resolved: read-only for v1. No mutation queue, no offline editing.
+2. **Which vessels cache by default?** Resolved: automatic for a single-vessel owner (the common case). Once an owner has more than one vessel, caching becomes explicit opt-in per vessel rather than automatic for all — "automatic" means the same save flow runs without a tap, not that it happens invisibly; the sync-status UI (§4c) still shows what's cached and when, same as the explicit case.
+3. **iOS install instruction placement.** Resolved: unchanged from what shipped in build-order step 1 — the dashboard banner (Android `beforeinstallprompt` trigger / iOS Share-sheet card).
+4. **Does the install prompt belong in the marina signup flow?** Resolved: yes, specifically — mounted on `/dashboard/[mxeId]/qr`, right after a new vessel's payment succeeds. Not in the intake form itself; the QR-reveal moment (badge is real, registration just completed) is the natural close, matching §1's "marina marketing value" note.
+5. **Notification permission timing.** Resolved: requested the first time an owner taps "save for offline" (or, for the automatic single-vessel case, the first time that flow runs) — not at first launch. Ties the ask to the moment its value (eviction protection) is concretely relevant, per §4a.
 
 ---
 
