@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { PixelM } from "@/components/PixelM";
+import { PixelMMark, INVERTED_MARK_COLOR } from "@/components/brand/PixelMMark";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { VesselIntakeForm } from "./VesselIntakeForm";
 
@@ -22,7 +22,7 @@ export default async function NewVesselPage() {
       <header className="sticky top-0 z-20 border-b border-[var(--divider)] bg-[var(--navy-deep)] px-4 py-3">
         <div className="mx-auto flex w-full max-w-3xl items-center justify-between gap-3">
           <Link href="/dashboard" className="flex items-center gap-2">
-            <PixelM size={28} className="shrink-0" />
+            <PixelMMark size={28} markColor={INVERTED_MARK_COLOR} className="shrink-0" />
             <span className="font-[family-name:var(--font-display)] text-xl font-light italic text-white">
               <span className="text-[var(--gold)]">M</span>oxie
             </span>

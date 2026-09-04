@@ -7,21 +7,18 @@
 //   corner radius 22.5% (iOS superellipse approximation)
 //   mark size    62% of icon canvas
 //
-// Cell geometry (the M shape, the 3 corner brackets, the signal pixel)
-// is taken from web/src/components/marketing/MarketingNav.tsx's
-// NavPixelM, NOT from web/src/components/PixelM.tsx. The two differ:
-// PixelM.tsx (the shared, widely-reused component) renders only the 17
-// M-cells + signal pixel, with no corner brackets at all. NavPixelM
-// (nav-bar only) additionally has 3 gold L-shaped corner brackets at
-// .55 opacity, occupying 3 of the icon's 4 corners -- the 4th corner is
-// the signal pixel. That's a closer match to the guide's "corner cells
-// at 55% opacity" than PixelM.tsx has. This script follows NavPixelM's
-// fuller definition, since the goal is reusing the already-validated
-// mark, not inventing new geometry -- PixelM.tsx just turns out to be
-// the simplified one of the two. Flagged for awareness; not fixing
-// PixelM.tsx itself here, since it's used in several live UI spots
-// (nav, footer, dashboard header, ScanSuccess) and changing its visual
-// weight there is a separate decision.
+// Geometry is imported in spirit from the canonical mark,
+// src/components/brand/PixelMMark.tsx -- same 100x100 mark-space, same
+// rects. Kept as literals here rather than importing the component
+// because this is a plain Node script with no JSX/TS pipeline; if the
+// component's coordinates change, change them here too. That is the one
+// duplication in the system and it is deliberate.
+//
+// INVERTED TREATMENT: the icon canvas is a navy gradient, so the mark
+// body is drawn in gold rather than the component's navy default --
+// navy-on-navy would be invisible. Brackets are gold and the aqua
+// signal pixel is retained, per the same inverted rule the on-navy React
+// call sites use.
 //
 // Run: node scripts/generate-pwa-icons.mjs
 // Requires `sharp` (already a transitive dependency via Next.js/next/image).
@@ -39,25 +36,26 @@ const AQUA = "#17C3B2";
 const NAVY_FROM = "#0D1F35";
 const NAVY_TO = "#0A1828";
 
-// 17 gold cells forming the M, in a 100x100 mark-space -- identical
-// coordinates to PixelM.tsx / NavPixelM.
+// The canonical M: two 5-cell columns plus the three cells forming the
+// centre vertex. 10x10 cells in a 100x100 mark-space.
 const M_CELLS = [
-  [15, 25], [15, 35], [15, 45], [15, 55], [15, 65], [15, 75],
-  [25, 35], [35, 45], [45, 35], [55, 45], [65, 35],
-  [75, 25], [75, 35], [75, 45], [75, 55], [75, 65], [75, 75],
+  [22, 21], [22, 33], [22, 45], [22, 57], [22, 69],
+  [68, 21], [68, 33], [68, 45], [68, 57], [68, 69],
+  [34, 33], [56, 33], [45, 45],
 ];
 const CELL = 10;
 
-// 3 corner brackets (top-left, top-right, bottom-left), each an L made
-// of two rects. Bottom-right is deliberately empty -- the signal pixel
-// goes there instead.
+// Four corner brackets, each an L of two thin rects. Unlike the previous
+// mark, all four corners are bracketed; the signal pixel sits inside the
+// bottom-right bracket rather than replacing it.
 const BRACKETS = [
-  { x: 0, y: 0, w: 25, h: 10 }, { x: 0, y: 0, w: 10, h: 25 },
-  { x: 75, y: 0, w: 25, h: 10 }, { x: 90, y: 0, w: 10, h: 25 },
-  { x: 0, y: 90, w: 25, h: 10 }, { x: 0, y: 75, w: 10, h: 25 },
+  { x: 14, y: 14, w: 10, h: 2.5 }, { x: 14, y: 14, w: 2.5, h: 10 },
+  { x: 76, y: 14, w: 10, h: 2.5 }, { x: 83.5, y: 14, w: 2.5, h: 10 },
+  { x: 14, y: 83.5, w: 10, h: 2.5 }, { x: 14, y: 76, w: 2.5, h: 10 },
+  { x: 76, y: 83.5, w: 10, h: 2.5 }, { x: 83.5, y: 76, w: 2.5, h: 10 },
 ];
 
-const SIGNAL = { x: 85, y: 85, w: 8, h: 8 };
+const SIGNAL = { x: 83.5, y: 83.5, w: 4, h: 4 };
 
 /**
  * CSS-angle-to-SVG-gradient-vector conversion: for
@@ -110,7 +108,7 @@ function iconSvg(size, detail) {
     detail !== "minimal"
       ? BRACKETS.map(
           (b) =>
-            `<rect x="${(offset + b.x * unit).toFixed(2)}" y="${(offset + b.y * unit).toFixed(2)}" width="${(b.w * unit).toFixed(2)}" height="${(b.h * unit).toFixed(2)}" rx="${unit.toFixed(2)}" fill="${GOLD}" opacity="0.55"/>`,
+            `<rect x="${(offset + b.x * unit).toFixed(2)}" y="${(offset + b.y * unit).toFixed(2)}" width="${(b.w * unit).toFixed(2)}" height="${(b.h * unit).toFixed(2)}" fill="${GOLD}"/>`,
         ).join("")
       : "";
 

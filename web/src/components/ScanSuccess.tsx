@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { PixelM } from "@/components/PixelM";
+import { PixelMMark, INVERTED_MARK_COLOR } from "@/components/brand/PixelMMark";
 import type { VesselPreview } from "@/types/vessel";
 
 const REDIRECT_MS = 2400;
@@ -84,7 +84,7 @@ export function ScanSuccess({ mxeId, destinationRole, exitHref }: Props) {
   if (pending) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[var(--navy-deep)] px-6 text-center">
-        <PixelM size={56} />
+        <PixelMMark size={56} markColor={INVERTED_MARK_COLOR} />
         <p className="mt-3 font-[family-name:var(--font-display)] text-2xl font-light italic text-white">
           Not yet active
         </p>
@@ -104,7 +104,7 @@ export function ScanSuccess({ mxeId, destinationRole, exitHref }: Props) {
   if (decommissioned) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[var(--navy-deep)] px-6 text-center">
-        <PixelM size={56} />
+        <PixelMMark size={56} markColor={INVERTED_MARK_COLOR} />
         <p className="mt-3 font-[family-name:var(--font-display)] text-2xl font-light italic text-white">
           No longer active
         </p>
@@ -154,7 +154,7 @@ export function ScanSuccess({ mxeId, destinationRole, exitHref }: Props) {
 
       <div className="relative z-10 flex flex-col items-center gap-2 px-6 text-center">
         <div className="scan-mark relative mb-7">
-          <PixelM size={64} />
+          <PixelMMark size={64} markColor={INVERTED_MARK_COLOR} />
           <span className="scan-signal absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-[#17C3B2]" />
         </div>
 
