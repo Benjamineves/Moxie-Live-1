@@ -86,6 +86,48 @@ at `moxieyacht.com`, and the printed QR badges already encode
 `moxieyacht.com/{mxeId}` URLs. Making it canonical formalizes what was
 already true in practice.
 
+### 3b. No back button in standalone mode (2026-09-04)
+
+`display: standalone` (§3) means no browser chrome once installed — no
+address bar, no back button, nothing outside the app's own UI. Several
+pages were built assuming browser-back as the implicit escape route, which
+is invisible in a normal browser tab (back is always right there) and a
+genuine dead end once installed. Confirmed live on iPad: from the owner
+dashboard → public view of a vessel, there was no way back — the public
+profile's header rendered the wordmark as a plain, unclickable `<p>` while
+the owner header's otherwise-identical wordmark was a real link.
+
+**The rule, going forward: every page needs an explicit in-page exit.
+Browser-back is not an acceptable escape route** — not "acceptable most of
+the time," not "fine for now." A page that only makes sense when the user
+can back out of it needs a real link or button that does the same job,
+resolved for whichever session state can land there. This is exactly the
+kind of thing that gets silently reintroduced the next time someone adds a
+page or a terminal state, which is why it's recorded here rather than only
+in a chat log.
+
+**How the destination resolves, when there's a choice:** authenticated →
+`/dashboard`; not authenticated → `MARKETING_ORIGIN` (`lib/site-domains.ts`).
+The logged-out case is the point, not a fallback — a stranger who scanned a
+badge on a dock has no dashboard, and sending them to `/dashboard` bounces
+them straight to `/login`. Sending them to the marketing site instead turns
+the end of the path into a discovery surface, the same way the dormant
+vessel page already handles it (a login link for a state a real owner could
+recover from, a `mailto:` for one they can't).
+
+**Fixed as of this note:** the shared `AppHeader` component (owner and
+public vessel-profile headers), `ScanSuccess`'s `pending`/`decommissioned`
+terminal states. **Known gap:** `/offline-vessel` — reached specifically
+when there's no connection, so its exit must be `/dashboard` and nothing
+cross-origin, but `/dashboard`'s actual rendered content isn't precached
+(it's dynamic, auth-gated, per-user data — deliberately excluded from
+caching, see §6) and isn't reachable as real dashboard content while
+genuinely offline. Resolving this properly means either a true offline
+dashboard shell (its own precached, client-only view, the same shape as
+`/offline-vessel` itself) or accepting that the exit link degrades to the
+existing `offline.html` fallback when there's no signal — a real design
+decision, not a default to assume silently.
+
 ---
 
 ## 4. Offline documents — and the constraint that shapes everything

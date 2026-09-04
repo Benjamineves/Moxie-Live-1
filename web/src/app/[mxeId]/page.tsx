@@ -3,6 +3,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { ScanSuccess } from "@/components/ScanSuccess";
+import { AppHeader } from "@/components/AppHeader";
 import { VesselPublicProfile, type PublicProfileProps } from "@/components/VesselPublicProfile";
 import { VesselOwnerProfile, type OwnerProfileTier } from "@/components/VesselOwnerProfile";
 import type { ActiveTransfer } from "@/components/vessel-edit/TransferOwnershipPanel";
@@ -14,6 +15,7 @@ import { emailsMatch, getOwnerEmailByUserId } from "@/lib/owner-verify";
 import { getOwnerBillingSummary } from "@/lib/billing-service";
 import { resolveShareByToken } from "@/lib/share-resolve";
 import { getDormantInfo, DORMANT_PUBLIC_COPY } from "@/lib/vessel-dormancy";
+import { MARKETING_ORIGIN } from "@/lib/site-domains";
 
 const MXE_RE = /^MXE-\d{5}$/i;
 
@@ -120,19 +122,26 @@ export default async function VesselPage({ params, searchParams }: Props) {
     // getOwnerEmailByUserId/emailsMatch check the role=owner branch
     // below uses — deliberately not a second implementation of it.
     let destinationRole: "owner" | "public" = "public";
+    // Same session-aware exit as the public header (moxie_digital_pwa_spec.md's
+    // "No back button" section) — pending/decommissioned are terminal
+    // states in ScanSuccess with no auto-redirect, so they need their own
+    // way out. Computed from the same auth.getUser() call as
+    // destinationRole above, not a second lookup.
+    let exitHref: string = MARKETING_ORIGIN;
     const scanSupabase = await createSupabaseServerClient();
     if (scanSupabase) {
       const {
         data: { user: scanUser },
       } = await scanSupabase.auth.getUser();
       if (scanUser?.email) {
+        exitHref = "/dashboard";
         const scanOwnerEmail = await getOwnerEmailByUserId(vessel.owner_id);
         if (scanOwnerEmail && emailsMatch(scanUser.email, scanOwnerEmail)) {
           destinationRole = "owner";
         }
       }
     }
-    return <ScanSuccess mxeId={vessel.mxe_id} destinationRole={destinationRole} />;
+    return <ScanSuccess mxeId={vessel.mxe_id} destinationRole={destinationRole} exitHref={exitHref} />;
   }
 
   const roleParam = sp.role?.toLowerCase();
@@ -340,18 +349,28 @@ export default async function VesselPage({ params, searchParams }: Props) {
 
   const tier = filterVesselForRole(vessel, "public") as PublicProfileProps;
 
+  // Session-aware header destination (moxie_digital_pwa_spec.md's "No
+  // back button" section) — the standalone PWA has no browser chrome to
+  // fall back on, so the wordmark must go somewhere real. Same
+  // createSupabaseServerClient/auth.getUser() pattern the scan branch
+  // above already uses; this is a plain read, not a redirect, so it's
+  // safe even for the very common case of an unauthenticated visitor
+  // (a stranger who scanned a dock badge has no dashboard to bounce to
+  // — sending them to the marketing origin instead turns the end of the
+  // path into a discovery surface rather than a dead end).
+  const headerSupabase = await createSupabaseServerClient();
+  let publicHeaderAuthenticated = false;
+  if (headerSupabase) {
+    const {
+      data: { user: headerUser },
+    } = await headerSupabase.auth.getUser();
+    publicHeaderAuthenticated = !!headerUser;
+  }
+  const wordmarkHref = publicHeaderAuthenticated ? "/dashboard" : MARKETING_ORIGIN;
+
   return (
     <div className="min-h-screen bg-[var(--cream)]">
-      <header className="sticky top-0 z-20 border-b border-[var(--divider)] bg-[var(--navy-deep)] px-5 py-4">
-        <div className="mx-auto flex max-w-lg items-center justify-between gap-3">
-          <p className="font-[family-name:var(--font-display)] text-lg font-light italic text-white">
-            <span className="text-[var(--gold)]">M</span>oxie
-          </p>
-          <span className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.2em] text-[rgba(255,255,255,.45)]">
-            Public
-          </span>
-        </div>
-      </header>
+      <AppHeader role="Public" wordmarkHref={wordmarkHref} />
       <VesselPublicProfile {...tier} />
     </div>
   );

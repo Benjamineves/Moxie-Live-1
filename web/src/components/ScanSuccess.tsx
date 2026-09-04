@@ -18,6 +18,16 @@ type Props = {
    * session is the primary case, not an error state.
    */
   destinationRole: "owner" | "public";
+  /**
+   * Also resolved server-side, same reasoning — the pending/decommissioned
+   * states below don't auto-redirect (there's nowhere useful to send an
+   * unbuilt or retired vessel's profile to), which used to leave them as
+   * genuine dead ends with no browser back button to fall back on in the
+   * standalone PWA. "/dashboard" if the visitor has a session,
+   * MARKETING_ORIGIN otherwise — these are typically hit by an
+   * unauthenticated scanner, so MARKETING_ORIGIN is the common case.
+   */
+  exitHref: string;
 };
 
 type PreviewResponse = VesselPreview | { status: "pending_payment" | "decommissioned"; mxe_id: string };
@@ -29,7 +39,7 @@ function previewStatus(data: PreviewResponse): "pending_payment" | "decommission
   return null;
 }
 
-export function ScanSuccess({ mxeId, destinationRole }: Props) {
+export function ScanSuccess({ mxeId, destinationRole, exitHref }: Props) {
   const router = useRouter();
   const [preview, setPreview] = useState<VesselPreview | null>(null);
   const [pending, setPending] = useState(false);
@@ -81,6 +91,12 @@ export function ScanSuccess({ mxeId, destinationRole }: Props) {
         <p className="max-w-xs font-[family-name:var(--font-dm)] text-sm text-[#6b8299]">
           {`${mxeId} hasn't completed registration yet — there's no profile to show.`}
         </p>
+        <a
+          href={exitHref}
+          className="mt-4 inline-flex rounded-lg bg-[#17C3B2] px-5 py-2.5 font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--navy-deep)]"
+        >
+          Continue →
+        </a>
       </div>
     );
   }
@@ -95,6 +111,12 @@ export function ScanSuccess({ mxeId, destinationRole }: Props) {
         <p className="max-w-xs font-[family-name:var(--font-dm)] text-sm text-[#6b8299]">
           {`${mxeId} is no longer part of Moxie's active fleet.`}
         </p>
+        <a
+          href={exitHref}
+          className="mt-4 inline-flex rounded-lg bg-[#17C3B2] px-5 py-2.5 font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--navy-deep)]"
+        >
+          Continue →
+        </a>
       </div>
     );
   }

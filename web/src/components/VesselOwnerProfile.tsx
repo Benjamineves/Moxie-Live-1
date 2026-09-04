@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppHeader } from "@/components/AppHeader";
 import { VesselPublicProfile, type PublicProfileProps } from "@/components/VesselPublicProfile";
 import { SignOutButton } from "@/components/SignOutButton";
 import { SaveOfflineControl } from "@/components/pwa/SaveOfflineControl";
@@ -157,29 +158,16 @@ export function VesselOwnerProfile({
   return (
     <>
       <BfcacheRefresh />
-      <header className="sticky top-0 z-20 border-b border-[var(--divider)] bg-[var(--navy-deep)] px-5 py-4">
-        <div className="mx-auto flex max-w-lg items-center justify-between gap-3">
-          <Link
-            href="/dashboard"
-            className="font-[family-name:var(--font-display)] text-lg font-light italic text-white"
-          >
-            <span className="text-[var(--gold)]">M</span>oxie
-          </Link>
-          <div className="flex items-center gap-4">
-            <span className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.2em] text-[rgba(255,255,255,.55)]">
-              Owner
-            </span>
-            <Link
-              href={`/dashboard/${encodeURIComponent(tier.mxe_id)}/shares`}
-              className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.2em] text-[rgba(255,255,255,.55)] transition hover:text-[var(--gold)]"
-            >
-              Shares
-            </Link>
-            <AccountBillingPanel billing={billing} />
-            <SignOutButton />
-          </div>
-        </div>
-      </header>
+      <AppHeader role="Owner" wordmarkHref="/dashboard">
+        <Link
+          href={`/dashboard/${encodeURIComponent(tier.mxe_id)}/shares`}
+          className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.2em] text-[rgba(255,255,255,.55)] transition hover:text-[var(--gold)]"
+        >
+          Shares
+        </Link>
+        <AccountBillingPanel billing={billing} />
+        <SignOutButton />
+      </AppHeader>
 
       {isDecommissioned ? (
         <div className="border-b border-[var(--divider)] bg-[var(--gray-bg)] px-5 py-4 text-center">
