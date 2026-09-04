@@ -115,18 +115,40 @@ the end of the path into a discovery surface, the same way the dormant
 vessel page already handles it (a login link for a state a real owner could
 recover from, a `mailto:` for one they can't).
 
-**Fixed as of this note:** the shared `AppHeader` component (owner and
-public vessel-profile headers), `ScanSuccess`'s `pending`/`decommissioned`
-terminal states. **Known gap:** `/offline-vessel` — reached specifically
-when there's no connection, so its exit must be `/dashboard` and nothing
-cross-origin, but `/dashboard`'s actual rendered content isn't precached
-(it's dynamic, auth-gated, per-user data — deliberately excluded from
-caching, see §6) and isn't reachable as real dashboard content while
-genuinely offline. Resolving this properly means either a true offline
-dashboard shell (its own precached, client-only view, the same shape as
-`/offline-vessel` itself) or accepting that the exit link degrades to the
-existing `offline.html` fallback when there's no signal — a real design
-decision, not a default to assume silently.
+**Fixed:** the shared `AppHeader` component (owner and public
+vessel-profile headers), `ScanSuccess`'s `pending`/`decommissioned`
+terminal states, and `/offline-vessel` (below).
+
+**`/offline-vessel`'s exit — resolved as a connectivity-gated link, not a
+new cached surface.** Its exit must be `/dashboard` and nothing
+cross-origin — a marketing-site link is useless with no network. But
+`/dashboard`'s actual rendered content still isn't precached: it's
+dynamic, auth-gated, per-user data, deliberately excluded from caching
+(§6) so a shared/borrowed device can never be served a signed-out shell
+or someone else's dashboard from the cache. That reasoning hasn't
+changed and isn't going to — it'll get asked about again, which is why
+it's restated here rather than only in the paragraph above.
+
+The two options that would have kept `/dashboard` itself untouched were
+both rejected: a second, purpose-built offline dashboard shell is real
+new surface to design and maintain for a case (viewing the *fleet list*
+with no signal) nobody asked for; quietly letting the link degrade to
+the `offline.html` fallback means a control labeled "Dashboard" doesn't
+do what it says the one time someone is actually offline enough to need
+it — worse than not offering the link at all.
+
+Instead, the link is **gated on live connectivity**, tracked via
+`navigator.onLine` plus the `online`/`offline` window events (not a
+one-time check on load — a visitor sitting on this exact page waiting
+for signal back is the case this exists for) in `offline-vessel/page.tsx`'s
+`useIsOnline()`. Online, it's a normal link to `/dashboard`. Offline, it
+renders disabled with copy saying it needs a connection, instead of
+either hiding entirely (which reads as "no way out exists," the original
+problem) or pretending to work. The escape hatch is honest about the one
+thing that was always true: every other route in this app needs the
+network too, and no cache trick changes that — so the fix is accurate
+signaling about when the door is open, not a new door that only looks
+open.
 
 ---
 

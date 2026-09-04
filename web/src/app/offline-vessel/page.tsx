@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import {
   listOfflineVessels,
   openOfflineDocument,
@@ -16,6 +17,44 @@ const DOC_LABELS: Record<OfflineDocType, string> = {
 };
 
 /**
+ * moxie_digital_pwa_spec.md §3b: this page's exit to /dashboard is
+ * gated on live connectivity, not just present/absent — /dashboard
+ * isn't cacheable (dynamic, auth-gated, per-user data; caching it
+ * risks serving one signed-in user's data to another), so the link is
+ * only real when there's actually a network to carry it. Kept updating
+ * live (not just checked once on load) via the online/offline events,
+ * since a visitor sitting on this page waiting for signal to come back
+ * is exactly the case this exists for. useSyncExternalStore rather than
+ * a useEffect+setState pair — this repo's lint config errors on a
+ * setState reachable synchronously from an effect body, and this is
+ * precisely the browser-subscription shape useSyncExternalStore exists
+ * for.
+ */
+function subscribeOnlineStatus(callback: () => void) {
+  window.addEventListener("online", callback);
+  window.addEventListener("offline", callback);
+  return () => {
+    window.removeEventListener("online", callback);
+    window.removeEventListener("offline", callback);
+  };
+}
+function getOnlineSnapshot() {
+  return navigator.onLine;
+}
+function getOnlineServerSnapshot() {
+  // Never actually shown — offline-vessel has no server data dependency
+  // and this only matters for the hydration handshake. Defaulting to
+  // "offline" is the conservative choice: it means the very first paint
+  // never briefly shows an enabled dashboard link that the real
+  // navigator.onLine value (checked a tick later, on the client) might
+  // immediately have to disable again.
+  return false;
+}
+function useIsOnline() {
+  return useSyncExternalStore(subscribeOnlineStatus, getOnlineSnapshot, getOnlineServerSnapshot);
+}
+
+/**
  * The fully-offline viewer (build spec §4). No server data dependency —
  * everything here comes from Cache Storage / localStorage via
  * offline-vessel-store.ts, read entirely client-side, because the whole
@@ -26,8 +65,14 @@ const DOC_LABELS: Record<OfflineDocType, string> = {
  * serves every vessel, since the actual content comes from the client
  * JS reading local storage after mount, not from anything the server
  * rendered per-mxeId.
+ *
+ * Its exit back into the app (moxie_digital_pwa_spec.md §3b) is a
+ * /dashboard link gated on useIsOnline() above — /dashboard itself
+ * still isn't cacheable (see that same section for why), so the link
+ * is only real when there's actually a network to carry it.
  */
 export default function OfflineVesselPage() {
+  const isOnline = useIsOnline();
   const [mxeId, setMxeId] = useState<string | null>(null);
   const [identity, setIdentity] = useState<(OfflineVesselIdentity & { hasPhoto: boolean }) | null>(null);
   const [photoBlobUrl, setPhotoBlobUrl] = useState<string | null>(null);
@@ -87,6 +132,21 @@ export default function OfflineVesselPage() {
       </header>
 
       <main className="mx-auto max-w-lg px-5 py-8">
+        {isOnline ? (
+          <Link
+            href="/dashboard"
+            className="mb-6 inline-flex items-center gap-1.5 rounded-lg bg-[var(--navy)] px-4 py-2.5 font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--gold)]"
+          >
+            Go to your dashboard →
+          </Link>
+        ) : (
+          <div
+            aria-disabled="true"
+            className="mb-6 inline-flex items-center gap-1.5 rounded-lg border border-[var(--divider)] px-4 py-2.5 font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text3)]"
+          >
+            Dashboard — needs a connection
+          </div>
+        )}
         {!loaded ? (
           <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">Loading your saved copy…</p>
         ) : identity ? (
