@@ -4,7 +4,14 @@ import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { uploadVesselDocument, type DocType } from "@/lib/vessel-uploads";
-import { updateVesselDocument, updateVesselOwnerFields, checkStorageCapacity } from "@/lib/owner-actions";
+import {
+  updateVesselDocument,
+  updateVesselOwnerFields,
+  updateVesselIntrinsicFields,
+  checkStorageCapacity,
+} from "@/lib/owner-actions";
+import { ConfirmDialog, FieldDiffList } from "@/components/ConfirmDialog";
+import { getExpiryStatus, type ExpiryStatus } from "@/lib/document-expiry";
 import { isDocumentLocked, type DocumentSlot } from "@/lib/vessel-transfer";
 import { getOfflineMeta, openOfflineDocument } from "@/lib/offline-vessel-store";
 import { useIsOnline } from "@/lib/use-is-online";
@@ -56,6 +63,132 @@ const ACTION_CLASS =
 /** Uploads are constrained to image/* or application/pdf at the file input, so the stored extension is one or the other. */
 function isPdf(path: string) {
   return path.split(".").pop()?.toLowerCase() === "pdf";
+}
+
+/**
+ * Expiry status alongside (not instead of) the upload date/size line.
+ * Registration reads reg_expiry, insurance reads ins_expiry — both
+ * already existed and were owner-editable, just disconnected from the
+ * documents they describe. The boater card gets none: a CA Boater Card
+ * is valid for the holder's lifetime, the same reason it's exempt from
+ * the Basic document limit.
+ *
+ * Colour is a second signal, never the only one. Each label reads
+ * unambiguously on its own — "Expired Mar 2026" / "Expires in 23 days" /
+ * "Expires Mar 2027" / "No expiry date set" — so the state survives
+ * greyscale, colour-blindness, and being read aloud.
+ */
+function ExpiryBadge({ status }: { status: ExpiryStatus }) {
+  const tone: Record<ExpiryStatus["state"], string> = {
+    current: "border-[var(--green-fg)] bg-[var(--green-bg)] text-[var(--green-fg)]",
+    expiring: "border-[var(--gold-line)] bg-[var(--gold-dim)] text-[var(--navy)]",
+    expired: "border-[var(--red-fg)] bg-[var(--red-bg)] text-[var(--red-fg)]",
+    none: "border-[var(--divider)] bg-[var(--gray-bg)] text-[var(--gray-fg)]",
+  };
+  return (
+    <span
+      className={`mt-1 inline-flex rounded-full border px-2 py-0.5 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.08em] ${tone[status.state]}`}
+    >
+      {status.label}
+    </span>
+  );
+}
+
+/**
+ * Inline expiry entry, right in the row. Auto-opens after an upload that
+ * left the date null (the document is on screen and the date is printed
+ * on it — a few seconds of work), and is openable by hand any other
+ * time. Always skippable, and never in the upload's way: the file is
+ * already saved by the time this appears.
+ *
+ * reg_expiry is a vessel-intrinsic field, so it goes through
+ * updateVesselIntrinsicFields behind the same ConfirmDialog step
+ * RegistrationEdit uses, rather than around it. ins_expiry is an owner
+ * field and saves directly, matching InsuranceEdit.
+ */
+function ExpiryEditor({
+  mxeId,
+  field,
+  current,
+  onClose,
+}: {
+  mxeId: string;
+  field: "reg_expiry" | "ins_expiry";
+  current: string | null;
+  onClose: () => void;
+}) {
+  const router = useRouter();
+  const [value, setValue] = useState(current ?? "");
+  const [pending, setPending] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const isIntrinsic = field === "reg_expiry";
+  const label = isIntrinsic ? "Registration expiry" : "Insurance expiry";
+
+  async function save() {
+    setPending(true);
+    setError(null);
+    try {
+      const next = value.trim() || null;
+      const result = isIntrinsic
+        ? await updateVesselIntrinsicFields(mxeId, { reg_expiry: next })
+        : await updateVesselOwnerFields(mxeId, { ins_expiry: next });
+      if (result.error) throw new Error(result.error);
+      onClose();
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save.");
+    } finally {
+      setPending(false);
+      setConfirming(false);
+    }
+  }
+
+  return (
+    <div className="mt-3 rounded-lg border border-[var(--divider)] bg-[var(--cream)] px-3 py-2.5">
+      <label className="block font-[family-name:var(--font-dm)] text-xs font-medium text-[var(--navy)]">
+        {label}
+        <input
+          type="date"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          className="mt-1 block w-full rounded-md border border-[var(--divider)] bg-[var(--white)] px-2.5 py-1.5 font-[family-name:var(--font-dm)] text-sm text-[var(--text)]"
+        />
+      </label>
+      <p className="mt-1.5 font-[family-name:var(--font-dm)] text-[11px] text-[var(--text3)]">
+        It&apos;s printed on the document itself. Adding it shows this document&apos;s status at a glance here.
+      </p>
+      <div className="mt-2 flex items-center gap-3">
+        <button
+          type="button"
+          disabled={pending || !value.trim()}
+          onClick={() => (isIntrinsic ? setConfirming(true) : void save())}
+          className="rounded-md bg-[var(--navy)] px-3 py-1.5 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--gold)] disabled:opacity-50"
+        >
+          {pending ? "Saving…" : "Save date"}
+        </button>
+        <button
+          type="button"
+          onClick={onClose}
+          className="font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text2)] underline"
+        >
+          Skip
+        </button>
+      </div>
+      {error ? <p className="mt-1.5 font-[family-name:var(--font-dm)] text-xs text-[var(--red-fg)]">{error}</p> : null}
+      {isIntrinsic ? (
+        <ConfirmDialog
+          open={confirming}
+          title="Update registration expiry?"
+          pending={pending}
+          onCancel={() => setConfirming(false)}
+          onConfirm={() => void save()}
+        >
+          <FieldDiffList diff={[{ label: "Reg. expiry", from: current ?? "", to: value.trim() }]} />
+        </ConfirmDialog>
+      ) : null}
+    </div>
+  );
 }
 
 type ViewerTarget = { docType: DocType; label: string; path: string; meta: DocumentFileMeta | undefined };
@@ -220,6 +353,8 @@ function DocumentFileRow({
   meta,
   canView,
   onView,
+  expiryField,
+  expiryValue,
   footer,
 }: {
   mxeId: string;
@@ -229,11 +364,15 @@ function DocumentFileRow({
   meta: DocumentFileMeta | undefined;
   canView: boolean;
   onView: (target: ViewerTarget) => void;
+  /** Set only for the two documents that carry a date; the boater card never expires. */
+  expiryField?: "reg_expiry" | "ins_expiry";
+  expiryValue?: string | null;
   footer?: ReactNode;
 }) {
   const router = useRouter();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [editingExpiry, setEditingExpiry] = useState(false);
 
   async function onFileSelected(files: FileList | null) {
     const file = files?.[0];
@@ -257,6 +396,10 @@ function DocumentFileRow({
       const { path, fileName } = await uploadVesselDocument(file, mxeId, docType);
       const result = await updateVesselDocument(mxeId, docType, path, fileName);
       if (result.error) throw new Error(result.error);
+      // The upload is already committed by this point — the prompt below
+      // never gates it, and skipping the date leaves the file exactly as
+      // saved.
+      if (expiryField && !expiryValue) setEditingExpiry(true);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed.");
@@ -273,6 +416,20 @@ function DocumentFileRow({
           <p className="mt-0.5 font-[family-name:var(--font-dm)] text-xs text-[var(--text3)]">
             {url ? describeDocument(meta) : "No file uploaded"}
           </p>
+          {url && expiryField ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <ExpiryBadge status={getExpiryStatus(expiryValue)} />
+              {!expiryValue && !editingExpiry ? (
+                <button
+                  type="button"
+                  onClick={() => setEditingExpiry(true)}
+                  className="mt-1 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--navy)] underline"
+                >
+                  Add date
+                </button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {url && canView ? (
@@ -300,6 +457,14 @@ function DocumentFileRow({
           </label>
         </div>
       </div>
+      {url && expiryField && editingExpiry ? (
+        <ExpiryEditor
+          mxeId={mxeId}
+          field={expiryField}
+          current={expiryValue ?? null}
+          onClose={() => setEditingExpiry(false)}
+        />
+      ) : null}
       {footer}
       {error ? <p className="mt-1 font-[family-name:var(--font-dm)] text-xs text-[var(--red-fg)]">{error}</p> : null}
     </div>
@@ -422,6 +587,8 @@ export function DocumentsEdit({
   ca_boater_card,
   subscriptionTier,
   documentMeta = {},
+  regExpiry,
+  insExpiry,
 }: {
   mxeId: string;
   doc_registration_url: string | null | undefined;
@@ -431,6 +598,9 @@ export function DocumentsEdit({
   subscriptionTier: "basic" | "full";
   /** Upload date/size/original filename per document, resolved server-side (lib/document-metadata.ts). */
   documentMeta?: VesselDocumentMeta;
+  /** Existing owner-editable columns, surfaced here against the documents they describe. No new schema. */
+  regExpiry?: string | null;
+  insExpiry?: string | null;
 }) {
   const isOnline = useIsOnline();
   const [viewing, setViewing] = useState<ViewerTarget | null>(null);
@@ -487,6 +657,8 @@ export function DocumentsEdit({
             meta={documentMeta[slot.docType]}
             canView={canView(slot.docType)}
             onView={setViewing}
+            expiryField={slot.docType === "registration" ? "reg_expiry" : "ins_expiry"}
+            expiryValue={slot.docType === "registration" ? regExpiry : insExpiry}
           />
         ),
       )}

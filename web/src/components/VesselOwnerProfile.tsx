@@ -8,6 +8,7 @@ import type { OfflineDocType } from "@/lib/offline-vessel-store";
 import type { VesselDocumentMeta } from "@/lib/document-metadata";
 import { AccountBillingPanel } from "@/components/AccountBillingPanel";
 import { AddPhotoNudge } from "@/components/AddPhotoNudge";
+import { ExpiryDateNudge } from "@/components/ExpiryDateNudge";
 import { ReplacePhotoControl } from "@/components/ReplacePhotoControl";
 import { BfcacheRefresh } from "@/components/BfcacheRefresh";
 import { VesselDetailsEdit } from "@/components/vessel-edit/VesselDetailsEdit";
@@ -152,6 +153,12 @@ export function VesselOwnerProfile({
     { docType: "registration", url: tier.doc_registration_url ?? null },
     { docType: "insurance", url: tier.doc_insurance_url ?? null },
   ];
+  // Nudge condition (ExpiryDateNudge): the document exists but the date
+  // that describes it doesn't. Nothing to ask for when there's no
+  // document yet — the upload flow prompts inline at that point instead.
+  const missingRegExpiry = !!tier.doc_registration_url && !tier.reg_expiry;
+  const missingInsExpiry = !!tier.doc_insurance_url && !tier.ins_expiry;
+
   const availableDocs: OfflineDocType[] = [
     ...docSlots
       .filter((slot, i) => slot.url && !isDocumentLocked(docSlots, i, billing.subscriptionTier))
@@ -269,6 +276,13 @@ export function VesselOwnerProfile({
       */}
       <div className={dormant.isDormant ? "pointer-events-none opacity-60" : undefined} aria-disabled={dormant.isDormant}>
         {!tier.photo_url ? <AddPhotoNudge mxeId={tier.mxe_id} vesselName={tier.vessel_name} /> : null}
+        {missingRegExpiry || missingInsExpiry ? (
+          <ExpiryDateNudge
+            mxeId={tier.mxe_id}
+            missingRegistration={missingRegExpiry}
+            missingInsurance={missingInsExpiry}
+          />
+        ) : null}
 
         <div className="mx-auto flex max-w-lg flex-col items-end gap-3 px-5 md:px-8">
         {tier.photo_url ? <ReplacePhotoControl mxeId={tier.mxe_id} /> : null}
@@ -378,7 +392,10 @@ export function VesselOwnerProfile({
           <Row label="Reg. expiry" value={tier.reg_expiry} />
         </dl>
 
-        <h3 className="mt-6 font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.14em] text-[var(--text3)]">
+        <h3
+          id="documents"
+          className="mt-6 scroll-mt-20 font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.14em] text-[var(--text3)]"
+        >
           Documents on file
         </h3>
         <div className="mt-3">
@@ -411,6 +428,8 @@ export function VesselOwnerProfile({
           ca_boater_card={tier.ca_boater_card}
           subscriptionTier={billing.subscriptionTier}
           documentMeta={documentMeta}
+          regExpiry={tier.reg_expiry}
+          insExpiry={tier.ins_expiry}
         />
 
         <div className="mt-12 flex items-center justify-between">

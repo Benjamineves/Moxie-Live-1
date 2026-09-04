@@ -22,6 +22,9 @@ export type CreateVesselInput = {
   photo_url?: string | null;
   doc_registration_url?: string | null;
   doc_insurance_url?: string | null;
+  /** Original upload names (20260918_document_original_filenames.sql) — display only, null when not captured. */
+  doc_registration_filename?: string | null;
+  doc_insurance_filename?: string | null;
   storage_type: StorageType;
   storage_state: string;
   storage_city?: string | null;
@@ -177,6 +180,8 @@ export async function createVessel(
       photo_url: input.photo_url?.trim() || null,
       doc_registration_url: input.doc_registration_url?.trim() || null,
       doc_insurance_url: input.doc_insurance_url?.trim() || null,
+      doc_registration_filename: input.doc_registration_filename?.trim() || null,
+      doc_insurance_filename: input.doc_insurance_filename?.trim() || null,
       owner_name: ownerDisplayName,
       owner_email: ownerDisplayEmail,
       // marina_id is intentionally never set here — see the migration

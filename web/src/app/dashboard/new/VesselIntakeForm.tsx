@@ -4,6 +4,7 @@ import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { uploadVesselDocument, type DocType } from "@/lib/vessel-uploads";
 import { StorageTypePicker, isMarinaGroup, storageTypeLabel } from "@/components/StorageTypePicker";
 import { vesselTypes } from "@/lib/vessel-types";
 import { US_STATES } from "@/lib/us-states";
@@ -30,6 +31,8 @@ type FormState = {
   photo_url: string;
   doc_registration_url: string;
   doc_insurance_url: string;
+  doc_registration_filename: string;
+  doc_insurance_filename: string;
 };
 
 type UploadProgress = { photo: number; registration: number; insurance: number };
@@ -60,6 +63,8 @@ export function VesselIntakeForm() {
     photo_url: "",
     doc_registration_url: "",
     doc_insurance_url: "",
+    doc_registration_filename: "",
+    doc_insurance_filename: "",
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [generalError, setGeneralError] = useState<string | null>(null);
@@ -131,22 +136,33 @@ export function VesselIntakeForm() {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Please sign in again before uploading.");
+      if (key !== "photo_url") {
+        // Documents go through the shared uploader rather than a second
+        // inline copy of the same call, so intake records the original
+        // filename like every other upload path does. Same deterministic
+        // {userId}/{mxeId}/{docType}.{ext} destination either way — this
+        // changes what's captured, not where the bytes land.
+        const { path, fileName } = await uploadVesselDocument(file, mxe, pathBase as DocType);
+        setForm((prev) => ({
+          ...prev,
+          [key]: path,
+          [key === "doc_registration_url" ? "doc_registration_filename" : "doc_insurance_filename"]: fileName,
+        }));
+        setUploadProgress((prev) => ({ ...prev, [kind]: 100 }));
+        return;
+      }
+
       const ext = extFor(file);
       const path = `${user.id}/${mxe}/${pathBase}.${ext}`;
-      const bucket = key === "photo_url" ? "vessel-photos" : "vessel-docs";
 
-      const { error } = await supabase.storage.from(bucket).upload(path, file, {
+      const { error } = await supabase.storage.from("vessel-photos").upload(path, file, {
         upsert: true,
         contentType: file.type,
       });
       if (error) throw error;
 
-      let stored = path;
-      if (bucket === "vessel-photos") {
-        const { data } = supabase.storage.from(bucket).getPublicUrl(path);
-        stored = data.publicUrl;
-      }
-      setForm((prev) => ({ ...prev, [key]: stored }));
+      const { data } = supabase.storage.from("vessel-photos").getPublicUrl(path);
+      setForm((prev) => ({ ...prev, [key]: data.publicUrl }));
       setUploadProgress((prev) => ({ ...prev, [kind]: 100 }));
     } finally {
       cleanup();
@@ -230,6 +246,8 @@ export function VesselIntakeForm() {
           photo_url: form.photo_url || null,
           doc_registration_url: form.doc_registration_url || null,
           doc_insurance_url: form.doc_insurance_url || null,
+          doc_registration_filename: form.doc_registration_filename || null,
+          doc_insurance_filename: form.doc_insurance_filename || null,
           storage_type: form.storage_type,
           storage_state: form.storage_state,
           storage_city: form.storage_city || null,
