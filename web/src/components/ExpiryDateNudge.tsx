@@ -24,10 +24,13 @@ export function ExpiryDateNudge({
   mxeId,
   missingRegistration,
   missingInsurance,
+  href,
 }: {
   mxeId: string;
   missingRegistration: boolean;
   missingInsurance: boolean;
+  /** Where "Add" goes. Passed in because the documents it points at no longer live on the page that renders this nudge. */
+  href: string;
 }) {
   const [dismissed, setDismissed] = useState(true); // hidden until the effect confirms otherwise
   const storageKey = `${DISMISSED_KEY_PREFIX}${mxeId}`;
@@ -89,7 +92,7 @@ export function ExpiryDateNudge({
           </p>
         </div>
         <a
-          href="#documents"
+          href={href}
           className="shrink-0 rounded-md bg-[var(--navy)] px-4 py-2.5 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--gold)] no-underline"
         >
           Add

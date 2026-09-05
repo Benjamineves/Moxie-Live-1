@@ -16,7 +16,6 @@ import { getOwnerBillingSummary } from "@/lib/billing-service";
 import { resolveShareByToken } from "@/lib/share-resolve";
 import { getDormantInfo, DORMANT_PUBLIC_COPY } from "@/lib/vessel-dormancy";
 import { MARKETING_ORIGIN } from "@/lib/site-domains";
-import { loadVesselDocumentMeta, type VesselDocumentMeta } from "@/lib/document-metadata";
 
 const MXE_RE = /^MXE-\d{5}$/i;
 
@@ -202,15 +201,8 @@ export default async function VesselPage({ params, searchParams }: Props) {
 
     let hasPendingDecommissionRequest = false;
     let activeTransfer: ActiveTransfer | null = null;
-    let singleVessel = false;
-    // Upload date + size for each stored document, read from Storage
-    // (see lib/document-metadata.ts). Resolved here rather than in the
-    // client component so it costs one listing inside the service block
-    // this branch already opens, instead of a round trip after paint.
-    let documentMeta: VesselDocumentMeta = {};
     const service = createSupabaseServiceClient();
     if (service) {
-      documentMeta = await loadVesselDocumentMeta(service, vessel);
       const { data: pendingRequest } = await service
         .from("vessel_decommission_requests")
         .select("id")
@@ -234,32 +226,6 @@ export default async function VesselPage({ params, searchParams }: Props) {
           expiresAt: t.expires_at,
         };
       }
-
-      // Same owner-by-email-mismatch accommodation dashboard/page.tsx
-      // uses (see lib/admin-verify.ts's requireAdmin() comment) —
-      // singleVessel drives the automatic-caching default (build spec
-      // §8 decision 2), so it has to count against both possible ids,
-      // not just vessel.owner_id, or a mismatched account would always
-      // read as "single vessel."
-      const ownerIds = [vessel.owner_id];
-      const normalizedEmail = user?.email?.trim().toLowerCase();
-      if (normalizedEmail) {
-        const { data: ownerByEmailRow } = await service
-          .from("users")
-          .select("id")
-          .eq("email", normalizedEmail)
-          .maybeSingle();
-        const ownerByEmail = ownerByEmailRow as { id: string } | null;
-        if (ownerByEmail?.id && !ownerIds.includes(ownerByEmail.id)) {
-          ownerIds.push(ownerByEmail.id);
-        }
-      }
-      const { count: activeVesselCount } = await service
-        .from("vessels")
-        .select("id", { count: "exact", head: true })
-        .in("owner_id", ownerIds)
-        .neq("lifecycle_status", "decommissioned");
-      singleVessel = (activeVesselCount ?? 0) <= 1;
     }
 
     return (
@@ -270,8 +236,6 @@ export default async function VesselPage({ params, searchParams }: Props) {
           justUpgraded={sp.upgraded === "1"}
           hasPendingDecommissionRequest={hasPendingDecommissionRequest}
           activeTransfer={activeTransfer}
-          singleVessel={singleVessel}
-          documentMeta={documentMeta}
         />
       </div>
     );
