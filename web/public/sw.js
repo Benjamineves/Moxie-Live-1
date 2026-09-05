@@ -103,6 +103,14 @@ self.addEventListener("fetch", (event) => {
   // segment the upload path always includes, so the same per-vessel
   // cache identity.json/documents are stored under is checked here too.
   // Same cache-first-READ-only rule as documents, same reason.
+  //
+  // Cache-first is deliberate and stays: an offline owner needs the
+  // photo they saved, and a revalidating strategy would make that a
+  // coin flip. Invalidation is handled where it belongs — at the URL.
+  // uploadVesselPhoto stamps a fresh ?v= token on every upload, so a
+  // replaced photo is simply a key this cache has never seen and falls
+  // through to the network. Matching on pathname (which excludes the
+  // query) keeps that token from breaking the rule below.
   const photoMatch = url.pathname.match(/\/storage\/v1\/object\/public\/vessel-photos\/.*\/(MXE-\d{5})\//i);
   if (photoMatch) {
     const mxeId = photoMatch[1].toUpperCase();

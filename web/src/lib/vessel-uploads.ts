@@ -18,11 +18,29 @@ function extFor(file: File) {
 }
 
 /**
- * Same bucket + path convention as VesselIntakeForm.tsx's photo upload —
- * shared here so AddPhotoNudge (first upload) and the owner-profile photo
- * replace control don't independently maintain their own copies of this.
- * upsert:true overwrites in place at the same deterministic path; nothing
- * about "replace" needs different logic from "add."
+ * The single photo upload path — AddPhotoNudge (first upload),
+ * ReplacePhotoControl, and VesselIntakeForm all route through here, so
+ * the path convention and cache-busting live in exactly one place.
+ *
+ * Two things that look incidental and are not:
+ *
+ * 1. The path carries NO file extension. It used to: a JPEG landed at
+ *    photo.jpg and a PNG at photo.png, so replacing a photo with a
+ *    different format wrote a SECOND object instead of overwriting the
+ *    first — orphaning bytes that nothing referenced any more, and
+ *    making the "deterministic path" claim in this comment false. One
+ *    extensionless object per vessel makes upsert actually upsert.
+ *    Storage needs no extension to serve the file correctly; contentType
+ *    below is what the browser reads.
+ *
+ * 2. The returned URL carries a ?v= token that changes on every upload.
+ *    The object path is stable by design, which means without this the
+ *    replacement is invisible: the service worker serves vessel photos
+ *    cache-first (public/sw.js), and the browser and Supabase's CDN
+ *    cache the same URL too, so a device that had already loaded the old
+ *    photo would keep showing it indefinitely. Changing the URL misses
+ *    all three caches at once. The caller persists the tokenized URL as
+ *    photo_url, so the token is what makes the new photo reachable.
  */
 export async function uploadVesselPhoto(file: File, mxeId: string): Promise<string> {
   const supabase = createSupabaseBrowserClient();
@@ -33,8 +51,7 @@ export async function uploadVesselPhoto(file: File, mxeId: string): Promise<stri
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Please sign in again before uploading.");
 
-  const ext = file.name.split(".").pop()?.toLowerCase() || (file.type.includes("png") ? "png" : "jpg");
-  const path = `${user.id}/${mxeId}/photo.${ext}`;
+  const path = `${user.id}/${mxeId}/photo`;
 
   const { error: uploadError } = await supabase.storage
     .from("vessel-photos")
@@ -42,7 +59,18 @@ export async function uploadVesselPhoto(file: File, mxeId: string): Promise<stri
   if (uploadError) throw uploadError;
 
   const { data } = supabase.storage.from("vessel-photos").getPublicUrl(path);
-  return data.publicUrl;
+  return withCacheBustToken(data.publicUrl);
+}
+
+/**
+ * Appends a per-upload token. Timestamp-based rather than random so the
+ * value is ordered and legible when reading a photo_url straight out of
+ * the database — "which of these two is newer" is answerable by eye.
+ * Storage ignores unrecognised query params; caches do not.
+ */
+function withCacheBustToken(publicUrl: string): string {
+  const token = Date.now().toString(36);
+  return `${publicUrl}${publicUrl.includes("?") ? "&" : "?"}v=${token}`;
 }
 
 /**

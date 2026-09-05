@@ -3,8 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-import { uploadVesselDocument, type DocType } from "@/lib/vessel-uploads";
+import { uploadVesselDocument, uploadVesselPhoto, type DocType } from "@/lib/vessel-uploads";
 import { StorageTypePicker, isMarinaGroup, storageTypeLabel } from "@/components/StorageTypePicker";
 import { vesselTypes } from "@/lib/vessel-types";
 import { US_STATES } from "@/lib/us-states";
@@ -39,7 +38,6 @@ type UploadProgress = { photo: number; registration: number; insurance: number }
 
 export function VesselIntakeForm() {
   const router = useRouter();
-  const supabase = createSupabaseBrowserClient();
   const [step, setStep] = useState(1);
   const [pending, startTransition] = useTransition();
   const [form, setForm] = useState<FormState>({
@@ -110,15 +108,6 @@ export function VesselIntakeForm() {
     return result.mxeId;
   }
 
-  function extFor(file: File) {
-    const direct = file.name.split(".").pop()?.toLowerCase();
-    if (direct) return direct;
-    if (file.type.includes("png")) return "png";
-    if (file.type.includes("jpeg")) return "jpg";
-    if (file.type.includes("pdf")) return "pdf";
-    return "bin";
-  }
-
   function simulateProgress(kind: keyof UploadProgress) {
     setUploadProgress((prev) => ({ ...prev, [kind]: 5 }));
     const timer = window.setInterval(() => {
@@ -127,42 +116,32 @@ export function VesselIntakeForm() {
     return () => window.clearInterval(timer);
   }
 
+  // Both branches delegate to lib/vessel-uploads.ts rather than calling
+  // Storage inline. Intake used to keep its own copy of the photo upload,
+  // which is how it drifted: the shared uploader gained an extensionless
+  // path and a cache-bust token, and a vessel registered through this
+  // form silently got neither.
   async function uploadFile(file: File, kind: keyof UploadProgress, key: keyof FormState, pathBase: string) {
-    if (!supabase) throw new Error("Missing Supabase browser configuration.");
     const cleanup = simulateProgress(kind);
     try {
       const mxe = await ensureMxeId();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error("Please sign in again before uploading.");
-      if (key !== "photo_url") {
-        // Documents go through the shared uploader rather than a second
-        // inline copy of the same call, so intake records the original
-        // filename like every other upload path does. Same deterministic
-        // {userId}/{mxeId}/{docType}.{ext} destination either way — this
-        // changes what's captured, not where the bytes land.
-        const { path, fileName } = await uploadVesselDocument(file, mxe, pathBase as DocType);
-        setForm((prev) => ({
-          ...prev,
-          [key]: path,
-          [key === "doc_registration_url" ? "doc_registration_filename" : "doc_insurance_filename"]: fileName,
-        }));
+
+      if (key === "photo_url") {
+        const publicUrl = await uploadVesselPhoto(file, mxe);
+        setForm((prev) => ({ ...prev, [key]: publicUrl }));
         setUploadProgress((prev) => ({ ...prev, [kind]: 100 }));
         return;
       }
 
-      const ext = extFor(file);
-      const path = `${user.id}/${mxe}/${pathBase}.${ext}`;
-
-      const { error } = await supabase.storage.from("vessel-photos").upload(path, file, {
-        upsert: true,
-        contentType: file.type,
-      });
-      if (error) throw error;
-
-      const { data } = supabase.storage.from("vessel-photos").getPublicUrl(path);
-      setForm((prev) => ({ ...prev, [key]: data.publicUrl }));
+      // Documents keep the original filename — the path itself is
+      // deterministic and so carries no information about what the owner
+      // actually uploaded.
+      const { path, fileName } = await uploadVesselDocument(file, mxe, pathBase as DocType);
+      setForm((prev) => ({
+        ...prev,
+        [key]: path,
+        [key === "doc_registration_url" ? "doc_registration_filename" : "doc_insurance_filename"]: fileName,
+      }));
       setUploadProgress((prev) => ({ ...prev, [kind]: 100 }));
     } finally {
       cleanup();

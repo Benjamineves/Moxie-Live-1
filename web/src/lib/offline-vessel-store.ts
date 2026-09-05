@@ -22,6 +22,8 @@
  */
 
 const META_KEY = "moxie-offline-vessels";
+/** Public Supabase Storage photo URLs, matched by path shape rather than a hardcoded project host — same rule public/sw.js uses. */
+const PHOTO_URL_PATTERN = /\/storage\/v1\/object\/public\/vessel-photos\//i;
 const IDENTITY_KEY = "/__offline__/identity.json";
 
 export type OfflineDocType = "registration" | "insurance" | "boater_card";
@@ -162,6 +164,17 @@ export async function saveVesselForOffline(identity: OfflineVesselIdentity): Pro
         // the docs list actually cached, beats an all-or-nothing save.
       }
     }
+
+    // A replaced photo gets a new ?v= token (see uploadVesselPhoto), so
+    // it is a different cache key rather than an overwrite. Without this
+    // sweep every replacement would leave its predecessor behind in this
+    // vessel's cache forever — dead bytes counting against the storage
+    // quota that iOS evicts against, for an image nothing can reach.
+    await Promise.all(
+      (await cache.keys())
+        .filter((req) => PHOTO_URL_PATTERN.test(req.url) && req.url !== identity.photoUrl)
+        .map((req) => cache.delete(req)),
+    );
 
     let hasPhoto = false;
     if (identity.photoUrl) {
