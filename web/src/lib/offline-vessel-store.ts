@@ -21,6 +21,8 @@
  * leak into a different account on a shared device (build spec §6).
  */
 
+import { vesselDocumentUrl } from "@/lib/document-url";
+
 const META_KEY = "moxie-offline-vessels";
 /** Public Supabase Storage photo URLs, matched by path shape rather than a hardcoded project host — same rule public/sw.js uses. */
 const PHOTO_URL_PATTERN = /\/storage\/v1\/object\/public\/vessel-photos\//i;
@@ -43,6 +45,14 @@ export type OfflineVesselIdentity = {
   emgPhone: string | null;
   photoUrl: string | null;
   availableDocs: OfflineDocType[];
+  /**
+   * Storage's updated_at per document, used only to derive the cache key
+   * (see lib/document-url.ts). Persisted into the cached identity.json so
+   * the offline read can rebuild the exact URL the save wrote — resolving
+   * it from the caller instead would let the two drift the moment a
+   * document is replaced, turning a stale document into a missing one.
+   */
+  docVersions?: Partial<Record<OfflineDocType, string | null>>;
 };
 
 type OfflineVesselMeta = {
@@ -87,6 +97,39 @@ export function getOfflineMeta(mxeId: string): OfflineVesselMeta | null {
   return readStore()[mxeId.toUpperCase()] ?? null;
 }
 
+const DOC_URL_PATTERN = /^\/api\/vessels\/[^/]+\/documents\/[a-z_]+$/i;
+
+/** Relative path+query of a cached entry, so absolute cache keys compare against the relative URLs the app builds. */
+function relativeKey(url: string): string {
+  const parsed = new URL(url);
+  return `${parsed.pathname}${parsed.search}`;
+}
+
+/**
+ * Resolves a cached document by the URL the save actually wrote, reading
+ * the version out of the cached identity.json rather than trusting the
+ * caller. Falls back to the untokenized URL for entries saved before
+ * documents were versioned — those are still perfectly good bytes, and
+ * failing to find them would be a regression dressed up as a fix.
+ */
+async function matchCachedDocument(cache: Cache, mxeId: string, docType: OfflineDocType) {
+  const identityRes = await cache.match(IDENTITY_KEY);
+  let uploadedAt: string | null = null;
+  if (identityRes) {
+    try {
+      const identity = (await identityRes.clone().json()) as OfflineVesselIdentity;
+      uploadedAt = identity.docVersions?.[docType] ?? null;
+    } catch {
+      // Corrupt identity.json — the untokenized fallback below still
+      // reaches anything saved before versioning existed.
+    }
+  }
+
+  const versioned = await cache.match(vesselDocumentUrl(mxeId, docType, uploadedAt));
+  if (versioned) return versioned;
+  return cache.match(vesselDocumentUrl(mxeId, docType, null));
+}
+
 /**
  * Compares metadata against what's actually still in Cache Storage.
  * True eviction detection, not a guess — this is the honesty §4c asks
@@ -105,7 +148,7 @@ export async function checkOfflineCacheHealth(mxeId: string): Promise<"healthy" 
   if (!identityRes) return "evicted";
 
   for (const doc of meta.docs) {
-    const docRes = await cache.match(`/api/vessels/${meta.mxeId}/documents/${doc}`);
+    const docRes = await matchCachedDocument(cache, meta.mxeId, doc);
     if (!docRes) return "evicted";
   }
 
@@ -150,9 +193,12 @@ export async function saveVesselForOffline(identity: OfflineVesselIdentity): Pro
     const cache = await caches.open(cacheNameFor(identity.mxeId));
     const confirmedDocs: OfflineDocType[] = [];
 
+    const wantedDocUrls = new Set<string>();
+
     for (const docType of identity.availableDocs) {
       try {
-        const url = `/api/vessels/${identity.mxeId}/documents/${docType}`;
+        const url = vesselDocumentUrl(identity.mxeId, docType, identity.docVersions?.[docType]);
+        wantedDocUrls.add(url);
         const res = await fetch(url, { cache: "no-store" });
         if (res.ok) {
           await cache.put(url, res.clone());
@@ -164,6 +210,20 @@ export async function saveVesselForOffline(identity: OfflineVesselIdentity): Pro
         // the docs list actually cached, beats an all-or-nothing save.
       }
     }
+
+    // Same reasoning as the photo sweep below: a replaced document is a
+    // new key rather than an overwrite, so its predecessor would sit here
+    // forever otherwise — bytes counting against the quota iOS evicts
+    // against, which nothing can reach. This also clears the untokenized
+    // entry left by a save that predates versioning.
+    await Promise.all(
+      (await cache.keys())
+        .filter((req) => {
+          const key = relativeKey(req.url);
+          return DOC_URL_PATTERN.test(key.split("?")[0]) && !wantedDocUrls.has(key);
+        })
+        .map((req) => cache.delete(req)),
+    );
 
     // A replaced photo gets a new ?v= token (see uploadVesselPhoto), so
     // it is a different cache key rather than an overwrite. Without this
@@ -259,7 +319,7 @@ export async function readOfflineVessel(
 export async function openOfflineDocument(mxeId: string, docType: OfflineDocType): Promise<string | null> {
   if (typeof caches === "undefined") return null;
   const cache = await caches.open(cacheNameFor(mxeId));
-  const res = await cache.match(`/api/vessels/${mxeId}/documents/${docType}`);
+  const res = await matchCachedDocument(cache, mxeId, docType);
   if (!res) return null;
   return URL.createObjectURL(await res.blob());
 }

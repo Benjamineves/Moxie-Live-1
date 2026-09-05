@@ -14,6 +14,7 @@ import { ConfirmDialog, FieldDiffList } from "@/components/ConfirmDialog";
 import { getExpiryStatus, type ExpiryStatus } from "@/lib/document-expiry";
 import { isDocumentLocked, type DocumentSlot } from "@/lib/vessel-transfer";
 import { getOfflineMeta, openOfflineDocument } from "@/lib/offline-vessel-store";
+import { vesselDocumentUrl } from "@/lib/document-url";
 import { useIsOnline } from "@/lib/use-is-online";
 import type { DocumentFileMeta, VesselDocumentMeta } from "@/lib/document-metadata";
 
@@ -235,7 +236,12 @@ function DocumentViewerModal({
       if (cancelled) return;
 
       if (isOnline) {
-        setHref(`/api/vessels/${encodeURIComponent(mxeId)}/documents/${target.docType}`);
+        // Tokenized by upload time, so replacing a document produces a
+        // URL the service worker's cache-first rule has never seen (see
+        // lib/document-url.ts). Same helper the offline save and read
+        // use — they have to agree exactly or the cached copy becomes
+        // unreachable rather than merely stale.
+        setHref(vesselDocumentUrl(mxeId, target.docType, target.meta?.uploadedAt));
         return;
       }
 
@@ -258,7 +264,7 @@ function DocumentViewerModal({
       cancelled = true;
       if (created) URL.revokeObjectURL(created);
     };
-  }, [mxeId, target.docType, isOnline]);
+  }, [mxeId, target.docType, target.meta?.uploadedAt, isOnline]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {

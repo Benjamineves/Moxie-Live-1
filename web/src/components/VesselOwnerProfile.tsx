@@ -166,6 +166,14 @@ export function VesselOwnerProfile({
     ...(tier.doc_boater_card_url ? (["boater_card"] as OfflineDocType[]) : []),
   ];
 
+  // Cache-key input only, not display data — see lib/document-url.ts. The
+  // offline save writes each document under a URL derived from these, and
+  // stores them alongside so the offline read can rebuild the same URL
+  // with no server to ask.
+  const docVersions: Partial<Record<OfflineDocType, string | null>> = Object.fromEntries(
+    availableDocs.map((docType) => [docType, documentMeta[docType]?.uploadedAt ?? null]),
+  );
+
   return (
     <>
       <BfcacheRefresh />
@@ -415,6 +423,7 @@ export function VesselOwnerProfile({
               emgPhone: tier.emg_phone ?? null,
               photoUrl: tier.photo_url ?? null,
               availableDocs,
+              docVersions,
             }}
             autoSave={singleVessel}
             disabled={dormant.isDormant || needsActivation}

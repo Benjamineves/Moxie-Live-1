@@ -85,6 +85,14 @@ self.addEventListener("fetch", (event) => {
   // undo §4b's "explicit, not silent" requirement — an owner who never
   // taps "save for offline" should have nothing saved, even if they
   // view the document online.
+  //
+  // Invalidation, as with photos below, happens at the URL rather than
+  // by weakening the strategy: lib/document-url.ts appends a ?v= token
+  // derived from the stored file's own updated_at, so replacing a
+  // document yields a key this cache has never held and falls through
+  // to the network. Matching on pathname only — the regex below runs
+  // against url.pathname, which excludes the query — is what keeps that
+  // token from falling out of this branch entirely.
   const docMatch = url.origin === self.location.origin && url.pathname.match(/^\/api\/vessels\/([A-Za-z0-9-]+)\/documents\/[a-z_]+$/i);
   if (docMatch) {
     const mxeId = docMatch[1].toUpperCase();
