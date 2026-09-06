@@ -6,6 +6,7 @@ import { AdminNav } from "@/components/AdminNav";
 import { DECOMMISSION_REASON_LABELS, type DecommissionReason } from "@/lib/vessel-decommission";
 import { RequestActionButtons } from "./RequestActionButtons";
 import { ReactivateButton } from "./ReactivateButton";
+import { ActiveSharesIndicator } from "./ActiveSharesIndicator";
 
 type RequestRow = {
   id: string;
@@ -62,6 +63,56 @@ export default async function VesselDecommissionRequestsPage({ searchParams }: P
     .order("created_at", { ascending: showingResolved ? false : true });
 
   const requests = (rows ?? []) as RequestRow[];
+
+  /*
+   * Active Trusted Contact shares per vessel, for pending
+   * "sold outside Moxie" requests only.
+   *
+   * Context, not a gate — nothing below blocks or even warns on this.
+   * A vessel being handed to a buyer while broad share links are still
+   * live is the pattern worth a glance before approving, because
+   * approval revokes those links and whoever was using them simply
+   * stops being able to load the profile. Seeing the count first lets
+   * an admin decide whether that's worth a message.
+   *
+   * Pending only, deliberately. On an approved request the count would
+   * always read zero — approval revokes every share as part of the same
+   * transaction — so showing it there would describe the approval, not
+   * the vessel at the time it was requested, which is the opposite of
+   * useful.
+   */
+  const saleReasonMxeIds = showingResolved
+    ? []
+    : [...new Set(requests.filter((r) => r.reason === "sold_outside_moxie").map((r) => r.mxe_id))];
+
+  const activeShareCounts = new Map<string, number>();
+  if (saleReasonMxeIds.length > 0) {
+    const { data: vesselRows } = await service
+      .from("vessels")
+      .select("id, mxe_id")
+      .in("mxe_id", saleReasonMxeIds);
+    const vessels = (vesselRows ?? []) as { id: string; mxe_id: string }[];
+
+    if (vessels.length > 0) {
+      // Same "active" rule the owner's own shares page applies — not
+      // revoked, and either no expiry or an expiry still in the future —
+      // expressed as query filters so the two can't quietly diverge.
+      const { data: shareRows } = await service
+        .from("vessel_shares")
+        .select("vessel_id")
+        .in("vessel_id", vessels.map((v) => v.id))
+        .is("revoked_at", null)
+        .or(`expires_at.is.null,expires_at.gt.${new Date().toISOString()}`);
+      const shares = (shareRows ?? []) as { vessel_id: string }[];
+
+      const byVesselId = new Map(vessels.map((v) => [v.id, v.mxe_id]));
+      for (const mxeId of saleReasonMxeIds) activeShareCounts.set(mxeId, 0);
+      for (const share of shares) {
+        const mxeId = byVesselId.get(share.vessel_id);
+        if (mxeId) activeShareCounts.set(mxeId, (activeShareCounts.get(mxeId) ?? 0) + 1);
+      }
+    }
+  }
 
   const { data: decommissionedRows } = await service
     .from("vessels")
@@ -125,6 +176,9 @@ export default async function VesselDecommissionRequestsPage({ searchParams }: P
                       <p className="mt-1 font-[family-name:var(--font-dm)] text-xs text-[var(--text3)]">
                         &ldquo;{r.notes}&rdquo;
                       </p>
+                    ) : null}
+                    {activeShareCounts.has(r.mxe_id) ? (
+                      <ActiveSharesIndicator count={activeShareCounts.get(r.mxe_id) ?? 0} />
                     ) : null}
                     {showingResolved ? (
                       <p className="mt-1 font-[family-name:var(--font-dm)] text-xs uppercase tracking-[0.08em] text-[var(--text3)]">

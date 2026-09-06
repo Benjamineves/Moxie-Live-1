@@ -84,6 +84,33 @@ export function RequestDecommission({
         Notes (optional)
         <textarea className={`${inputClass} min-h-16`} value={notes} onChange={(e) => setNotes(e.target.value)} />
       </label>
+      {/*
+        A nudge, never a gate. "Sold outside Moxie" is the one reason
+        where decommissioning is very often the wrong tool for what the
+        owner actually wants: a transfer keeps the badge on the hull and
+        carries the vessel's documents to the buyer, where decommission
+        ends the record and leaves the new owner registering from
+        scratch. Submission stays enabled throughout — plenty of sales
+        genuinely close before anyone hears of Moxie, and second-guessing
+        the owner there would be presumptuous.
+      */}
+      {reason === "sold_outside_moxie" ? (
+        <div className="rounded-xl border border-[var(--gold-line)] bg-[var(--gold-dim)] p-4">
+          <p className="font-[family-name:var(--font-dm)] text-sm font-semibold text-[var(--navy)]">
+            Selling this vessel?
+          </p>
+          <p className="mt-1 font-[family-name:var(--font-dm)] text-xs leading-relaxed text-[var(--text2)]">
+            Transfer Ownership keeps this vessel&apos;s badge and full document history with the new owner — no new
+            sticker, nothing to re-upload — for a small one-time fee.
+          </p>
+          <a
+            href="#transfer-ownership"
+            className="mt-2.5 inline-block font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.1em] text-[var(--gold)] underline decoration-[var(--gold-line)] underline-offset-2"
+          >
+            Transfer ownership instead
+          </a>
+        </div>
+      ) : null}
       {error ? <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">{error}</p> : null}
       <div className="flex gap-2.5">
         <button type="button" onClick={() => setOpen(false)} disabled={pending} className={cancelButtonClass}>

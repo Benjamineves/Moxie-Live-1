@@ -467,7 +467,10 @@ export function VesselOwnerProfile({
             job is the transfer flow.
           */}
           {!isDecommissioned && !needsActivation ? (
-            <div className="mt-5 rounded-xl border border-[var(--gold-line)] bg-[var(--navy-deep)] p-5">
+            <div
+              id="transfer-ownership"
+              className="mt-5 scroll-mt-20 rounded-xl border border-[var(--gold-line)] bg-[var(--navy-deep)] p-5"
+            >
               <div className="flex items-center justify-between gap-3">
                 <h3 className="font-[family-name:var(--font-display)] text-lg font-light text-white">
                   Transfer ownership
