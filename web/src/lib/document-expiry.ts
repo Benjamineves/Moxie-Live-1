@@ -75,5 +75,5 @@ export function getExpiryStatus(value: string | null | undefined, now: Date = ne
 }
 
 /** Which document slots carry an expiry date at all, and which column each reads. */
-export const EXPIRY_DOC_TYPES = ["registration", "insurance"] as const;
+export const EXPIRY_DOC_TYPES = ["registration", "insurance", "fishing_license"] as const;
 export type ExpiryDocType = (typeof EXPIRY_DOC_TYPES)[number];

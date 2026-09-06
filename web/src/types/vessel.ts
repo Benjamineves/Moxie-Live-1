@@ -18,6 +18,7 @@ export type VesselRecord = {
   doc_registration_url: string | null;
   doc_insurance_url: string | null;
   doc_boater_card_url: string | null;
+  doc_fishing_license_url: string | null;
   /**
    * Original filenames as uploaded (20260918_document_original_filenames.sql).
    * Display only, and null for anything uploaded before that column existed
@@ -79,6 +80,8 @@ export type VesselRecord = {
   flares: boolean | null;
   sound_device: boolean | null;
   ca_boater_card: boolean | null;
+  fishing_license_expiry: string | null;
+  fishing_license_lifetime: boolean | null;
   marinas?: { name: string; city: string | null; phone: string | null } | null;
 };
 

@@ -36,7 +36,7 @@ export const TRANSFER_STATUS_LABELS: Record<TransferStatus, string> = {
  */
 export { BASIC_DOCUMENT_LIMIT };
 
-export type DocumentSlot = { docType: "registration" | "insurance"; url: string | null };
+export type DocumentSlot = { docType: "registration" | "insurance" | "fishing_license"; url: string | null };
 
 export function lockedDocumentCount(
   documents: DocumentSlot[],

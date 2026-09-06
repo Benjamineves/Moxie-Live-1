@@ -28,7 +28,16 @@ const META_KEY = "moxie-offline-vessels";
 const PHOTO_URL_PATTERN = /\/storage\/v1\/object\/public\/vessel-photos\//i;
 const IDENTITY_KEY = "/__offline__/identity.json";
 
-export type OfflineDocType = "registration" | "insurance" | "boater_card";
+/**
+ * Kept in lockstep with DocType (lib/vessel-uploads.ts) by hand — two
+ * unions rather than one because this module is the offline store's own
+ * vocabulary and importing the upload module here would drag a browser
+ * Supabase client into every caller. Adding a document type means adding
+ * it in both places; nothing enforces that but this note and the fact
+ * that a miss shows up immediately as a type error at the call sites
+ * that bridge them.
+ */
+export type OfflineDocType = "registration" | "insurance" | "boater_card" | "fishing_license";
 
 export type OfflineVesselIdentity = {
   mxeId: string;

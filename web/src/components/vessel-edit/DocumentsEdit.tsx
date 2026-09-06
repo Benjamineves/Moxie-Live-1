@@ -95,6 +95,14 @@ function ExpiryBadge({ status }: { status: ExpiryStatus }) {
   );
 }
 
+type ExpiryField = "reg_expiry" | "ins_expiry" | "fishing_license_expiry";
+
+const EXPIRY_FIELD_LABELS: Record<ExpiryField, string> = {
+  reg_expiry: "Registration expiry",
+  ins_expiry: "Insurance expiry",
+  fishing_license_expiry: "Fishing license expiry",
+};
+
 /**
  * Inline expiry entry, right in the row. Auto-opens after an upload that
  * left the date null (the document is on screen and the date is printed
@@ -114,7 +122,7 @@ function ExpiryEditor({
   onClose,
 }: {
   mxeId: string;
-  field: "reg_expiry" | "ins_expiry";
+  field: ExpiryField;
   current: string | null;
   onClose: () => void;
 }) {
@@ -124,16 +132,22 @@ function ExpiryEditor({
   const [confirming, setConfirming] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isIntrinsic = field === "reg_expiry";
-  const label = isIntrinsic ? "Registration expiry" : "Insurance expiry";
+  const label = EXPIRY_FIELD_LABELS[field];
 
   async function save() {
     setPending(true);
     setError(null);
     try {
       const next = value.trim() || null;
+      // reg_expiry is the only vessel-intrinsic one. ins_expiry and
+      // fishing_license_expiry both describe things the owner holds, not
+      // the hull, so they save directly with no confirm step.
       const result = isIntrinsic
         ? await updateVesselIntrinsicFields(mxeId, { reg_expiry: next })
-        : await updateVesselOwnerFields(mxeId, { ins_expiry: next });
+        : await updateVesselOwnerFields(
+            mxeId,
+            field === "ins_expiry" ? { ins_expiry: next } : { fishing_license_expiry: next },
+          );
       if (result.error) throw new Error(result.error);
       onClose();
       router.refresh();
@@ -157,7 +171,13 @@ function ExpiryEditor({
         />
       </label>
       <p className="mt-1.5 font-[family-name:var(--font-dm)] text-[11px] text-[var(--text3)]">
-        It&apos;s printed on the document itself. Adding it shows this document&apos;s status at a glance here.
+        {field === "fishing_license_expiry"
+          ? // Said explicitly because the intuition is wrong: a CA sport
+            // fishing license runs 365 days from the day it was bought,
+            // so it does not end on Dec 31 and cannot be guessed from
+            // the year. Nothing here defaults or derives it.
+            "Read it off the license itself — a CA license runs 365 days from purchase, so it rarely lands on a year-end."
+          : "It's printed on the document itself. Adding it shows this document's status at a glance here."}
       </p>
       <div className="mt-2 flex items-center gap-3">
         <button
@@ -361,6 +381,7 @@ function DocumentFileRow({
   onView,
   expiryField,
   expiryValue,
+  expiryExempt = false,
   footer,
 }: {
   mxeId: string;
@@ -370,9 +391,15 @@ function DocumentFileRow({
   meta: DocumentFileMeta | undefined;
   canView: boolean;
   onView: (target: ViewerTarget) => void;
-  /** Set only for the two documents that carry a date; the boater card never expires. */
-  expiryField?: "reg_expiry" | "ins_expiry";
+  /** Set only for documents that can carry a date; the boater card never expires at all. */
+  expiryField?: ExpiryField;
   expiryValue?: string | null;
+  /**
+   * This particular document genuinely has no expiry — a CDFW Lifetime
+   * Sport Fishing License. Distinct from having no date on file: there
+   * is nothing missing, so no status is shown and no date is asked for.
+   */
+  expiryExempt?: boolean;
   footer?: ReactNode;
 }) {
   const router = useRouter();
@@ -405,7 +432,7 @@ function DocumentFileRow({
       // The upload is already committed by this point — the prompt below
       // never gates it, and skipping the date leaves the file exactly as
       // saved.
-      if (expiryField && !expiryValue) setEditingExpiry(true);
+      if (expiryField && !expiryValue && !expiryExempt) setEditingExpiry(true);
       router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed.");
@@ -422,7 +449,12 @@ function DocumentFileRow({
           <p className="mt-0.5 font-[family-name:var(--font-dm)] text-xs text-[var(--text3)]">
             {url ? describeDocument(meta) : "No file uploaded"}
           </p>
-          {url && expiryField ? (
+          {url && expiryField && expiryExempt ? (
+            <span className="mt-1 inline-flex rounded-full border border-[var(--green-fg)] bg-[var(--green-bg)] px-2 py-0.5 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--green-fg)]">
+              Lifetime — never expires
+            </span>
+          ) : null}
+          {url && expiryField && !expiryExempt ? (
             <div className="flex flex-wrap items-center gap-2">
               <ExpiryBadge status={getExpiryStatus(expiryValue)} />
               {!expiryValue && !editingExpiry ? (
@@ -463,7 +495,7 @@ function DocumentFileRow({
           </label>
         </div>
       </div>
-      {url && expiryField && editingExpiry ? (
+      {url && expiryField && !expiryExempt && editingExpiry ? (
         <ExpiryEditor
           mxeId={mxeId}
           field={expiryField}
@@ -555,6 +587,102 @@ function BoaterCardRow({
   );
 }
 
+/**
+ * The fishing license as one unit: the uploaded file plus the lifetime
+ * checkbox, the same shape BoaterCardRow uses — and for the same reason,
+ * since both are credentials the OPERATOR holds rather than equipment
+ * bolted to the boat.
+ *
+ * What makes it its own component instead of another slot: CDFW sells
+ * both an annual license, which expires 365 days after the day it was
+ * bought, and Lifetime Sport Fishing License packages, which genuinely
+ * never expire. So a single row has to express three different states —
+ * a date, no date yet, and no date will ever exist — where every other
+ * document here only has the first two. The checkbox is what
+ * distinguishes "the owner hasn't told us yet" from "there is nothing
+ * to tell", and without it a lifetime holder would be nagged forever for
+ * a date that does not exist.
+ *
+ * Tier-gated like registration and insurance, unlike the boater card.
+ * The boater card's exemption has never been about whose credential it
+ * is — it's included on every plan by policy.
+ *
+ * Toggling saves immediately, matching every other control in this
+ * component rather than introducing an edit/cancel/save step for one
+ * checkbox.
+ */
+function FishingLicenseRow({
+  mxeId,
+  url,
+  meta,
+  canView,
+  onView,
+  expiry,
+  lifetime,
+}: {
+  mxeId: string;
+  url: string | null;
+  meta: DocumentFileMeta | undefined;
+  canView: boolean;
+  onView: (target: ViewerTarget) => void;
+  expiry: string | null | undefined;
+  lifetime: boolean | null | undefined;
+}) {
+  const router = useRouter();
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function onToggleLifetime(checked: boolean) {
+    setError(null);
+    setSaving(true);
+    try {
+      // The date itself is deliberately left alone when switching to
+      // lifetime — if the owner unticks it again, whatever they had
+      // entered is still there rather than silently destroyed.
+      const result = await updateVesselOwnerFields(mxeId, { fishing_license_lifetime: checked });
+      if (result.error) throw new Error(result.error);
+      router.refresh();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not save.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <DocumentFileRow
+      mxeId={mxeId}
+      docType="fishing_license"
+      label="Fishing License"
+      url={url}
+      meta={meta}
+      canView={canView}
+      onView={onView}
+      expiryField="fishing_license_expiry"
+      expiryValue={expiry}
+      expiryExempt={!!lifetime}
+      footer={
+        url ? (
+          <>
+            <label className="mt-2 flex items-center gap-2 font-[family-name:var(--font-dm)] text-xs text-[var(--text2)]">
+              <input
+                type="checkbox"
+                checked={!!lifetime}
+                disabled={saving}
+                onChange={(e) => onToggleLifetime(e.target.checked)}
+              />
+              {saving ? "Saving…" : "Lifetime license — no expiry date"}
+            </label>
+            {error ? (
+              <p className="mt-1 font-[family-name:var(--font-dm)] text-xs text-[var(--red-fg)]">{error}</p>
+            ) : null}
+          </>
+        ) : null
+      }
+    />
+  );
+}
+
 /** Locked row — visible, never hidden, never deleted, just not openable. No View: the proxy route 403s a locked document server-side too. */
 function LockedDocumentRow({ label }: { label: string }) {
   return (
@@ -590,7 +718,10 @@ export function DocumentsEdit({
   doc_registration_url,
   doc_insurance_url,
   doc_boater_card_url,
+  doc_fishing_license_url,
   ca_boater_card,
+  fishingLicenseExpiry,
+  fishingLicenseLifetime,
   subscriptionTier,
   documentMeta = {},
   regExpiry,
@@ -600,7 +731,12 @@ export function DocumentsEdit({
   doc_registration_url: string | null | undefined;
   doc_insurance_url: string | null | undefined;
   doc_boater_card_url: string | null | undefined;
+  doc_fishing_license_url: string | null | undefined;
   ca_boater_card: boolean | null | undefined;
+  /** 20260919_fishing_license_document.sql. Never defaulted or derived — a CA license runs 365 days from purchase. */
+  fishingLicenseExpiry?: string | null;
+  /** True for a CDFW Lifetime Sport Fishing License, which never expires. */
+  fishingLicenseLifetime?: boolean | null;
   subscriptionTier: "basic" | "full";
   /** Upload date/size/original filename per document, resolved server-side (lib/document-metadata.ts). */
   documentMeta?: VesselDocumentMeta;
@@ -640,17 +776,33 @@ export function DocumentsEdit({
   // Offline, only what "save for offline" already cached.
   const canView = (docType: DocType) => isOnline || cachedDocs.includes(docType);
 
-  // Fixed order — registration counts first, insurance second — so
-  // which document (if any) shows locked stays stable across reloads.
+  // Fixed order — registration counts first, insurance second, fishing
+  // license third — so which document (if any) shows locked stays stable
+  // across reloads. This must stay identical to the slots array in
+  // api/vessels/[mxeId]/documents/[docType]/route.ts, or the UI and the
+  // route would disagree about which document is locked.
+  //
+  // Lock order is not render order: the fishing license is displayed
+  // below the boater card (which is exempt from counting entirely and so
+  // isn't in here at all), while still being counted last.
   const slots: DocumentSlot[] = [
     { docType: "registration", url: doc_registration_url ?? null },
     { docType: "insurance", url: doc_insurance_url ?? null },
+    { docType: "fishing_license", url: doc_fishing_license_url ?? null },
   ];
-  const labels: Record<DocumentSlot["docType"], string> = { registration: "Registration", insurance: "Insurance card" };
+  const labels: Record<DocumentSlot["docType"], string> = {
+    registration: "Registration",
+    insurance: "Insurance card",
+    fishing_license: "Fishing License",
+  };
+  const fishingLicenseIndex = slots.findIndex((s) => s.docType === "fishing_license");
+  const fishingLicenseLocked = isDocumentLocked(slots, fishingLicenseIndex, subscriptionTier);
 
   return (
     <div className="mt-4 rounded-xl border border-[var(--divider)] bg-[var(--white)] p-5 shadow-sm">
-      {slots.map((slot, i) =>
+      {slots
+        .filter((slot) => slot.docType !== "fishing_license")
+        .map((slot, i) =>
         isDocumentLocked(slots, i, subscriptionTier) ? (
           <LockedDocumentRow key={slot.docType} label={labels[slot.docType]} />
         ) : (
@@ -676,6 +828,19 @@ export function DocumentsEdit({
         canView={canView("boater_card")}
         onView={setViewing}
       />
+      {fishingLicenseLocked ? (
+        <LockedDocumentRow label={labels.fishing_license} />
+      ) : (
+        <FishingLicenseRow
+          mxeId={mxeId}
+          url={doc_fishing_license_url ?? null}
+          meta={documentMeta.fishing_license}
+          canView={canView("fishing_license")}
+          onView={setViewing}
+          expiry={fishingLicenseExpiry}
+          lifetime={fishingLicenseLifetime}
+        />
+      )}
       {viewing ? (
         <DocumentViewerModal
           mxeId={mxeId}

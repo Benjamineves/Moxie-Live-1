@@ -15,6 +15,7 @@ const DOC_LABELS: Record<OfflineDocType, string> = {
   registration: "Registration",
   insurance: "Insurance card",
   boater_card: "Boater card",
+  fishing_license: "Fishing license",
 };
 
 /**

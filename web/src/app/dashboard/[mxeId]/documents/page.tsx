@@ -31,10 +31,14 @@ const VESSEL_COLUMNS = [
   "doc_registration_url",
   "doc_insurance_url",
   "doc_boater_card_url",
+  "doc_fishing_license_url",
   "doc_registration_filename",
   "doc_insurance_filename",
   "doc_boater_card_filename",
+  "doc_fishing_license_filename",
   "ca_boater_card",
+  "fishing_license_expiry",
+  "fishing_license_lifetime",
   "qr_status",
   "lifecycle_status",
   "dormant_cause",
@@ -66,6 +70,7 @@ export default async function VesselDocumentsPage({ params }: Props) {
         doc_registration_filename: string | null;
         doc_insurance_filename: string | null;
         doc_boater_card_filename: string | null;
+        doc_fishing_license_filename: string | null;
       })
     | null;
   if (!vessel) redirect("/dashboard");

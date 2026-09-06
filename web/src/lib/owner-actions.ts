@@ -93,6 +93,8 @@ type OwnerPatch = Partial<{
   flares: boolean | null;
   sound_device: boolean | null;
   ca_boater_card: boolean | null;
+  fishing_license_expiry: string | null;
+  fishing_license_lifetime: boolean | null;
 }>;
 
 const OWNER_FIELDS = [
@@ -126,6 +128,8 @@ const OWNER_FIELDS = [
   "flares",
   "sound_device",
   "ca_boater_card",
+  "fishing_license_expiry",
+  "fishing_license_lifetime",
 ] as const;
 
 function pickAllowed<T extends object>(patch: T, allowed: readonly (keyof T)[]): Partial<T> {
@@ -208,6 +212,7 @@ const DOC_COLUMN = {
   registration: "doc_registration_url",
   insurance: "doc_insurance_url",
   boater_card: "doc_boater_card_url",
+  fishing_license: "doc_fishing_license_url",
 } as const;
 
 /**
@@ -220,6 +225,7 @@ const DOC_FILENAME_COLUMN = {
   registration: "doc_registration_filename",
   insurance: "doc_insurance_filename",
   boater_card: "doc_boater_card_filename",
+  fishing_license: "doc_fishing_license_filename",
 } as const;
 
 /**

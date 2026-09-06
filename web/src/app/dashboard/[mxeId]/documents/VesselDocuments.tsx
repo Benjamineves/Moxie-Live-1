@@ -25,7 +25,10 @@ export type DocumentsVessel = {
   doc_registration_url: string | null;
   doc_insurance_url: string | null;
   doc_boater_card_url: string | null;
+  doc_fishing_license_url: string | null;
   ca_boater_card: boolean | null;
+  fishing_license_expiry: string | null;
+  fishing_license_lifetime: boolean | null;
   qr_status: string | null;
   lifecycle_status: string | null;
   dormant_cause: string | null;
@@ -70,6 +73,7 @@ export function VesselDocuments({
   const docSlots: DocumentSlot[] = [
     { docType: "registration", url: vessel.doc_registration_url },
     { docType: "insurance", url: vessel.doc_insurance_url },
+    { docType: "fishing_license", url: vessel.doc_fishing_license_url },
   ];
   const availableDocs: OfflineDocType[] = [
     ...docSlots
@@ -90,8 +94,8 @@ export function VesselDocuments({
     <>
       <section className="mt-6 rounded-xl border border-[var(--divider)] bg-[var(--white)] p-5 shadow-sm">
         <p className="font-[family-name:var(--font-dm)] text-sm leading-relaxed text-[var(--text2)]">
-          Registration and proof of insurance are the two things you get asked for in the exact places least likely
-          to have a signal — a fuel dock, a boat ramp, an anchorage, the wrong side of a harbour wall.
+          Cellphone coverage while out on the water can be spotty, and that is why this feature exists. One less
+          thing to worry about.
         </p>
         <p className="mt-3 font-[family-name:var(--font-dm)] text-sm leading-relaxed text-[var(--text2)]">
           Saving this vessel for offline keeps a copy of each document on this device, so it opens whether or not
@@ -142,7 +146,10 @@ export function VesselDocuments({
           doc_registration_url={vessel.doc_registration_url}
           doc_insurance_url={vessel.doc_insurance_url}
           doc_boater_card_url={vessel.doc_boater_card_url}
+          doc_fishing_license_url={vessel.doc_fishing_license_url}
           ca_boater_card={vessel.ca_boater_card}
+          fishingLicenseExpiry={vessel.fishing_license_expiry}
+          fishingLicenseLifetime={vessel.fishing_license_lifetime}
           subscriptionTier={subscriptionTier}
           documentMeta={documentMeta}
           regExpiry={vessel.reg_expiry}

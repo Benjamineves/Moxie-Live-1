@@ -20,6 +20,7 @@ export function getDemoVessel(mxeId: string): VesselRecord | null {
       doc_registration_url: null,
       doc_insurance_url: null,
       doc_boater_card_url: null,
+      doc_fishing_license_url: null,
       doc_registration_filename: null,
       doc_insurance_filename: null,
       doc_boater_card_filename: null,
@@ -72,6 +73,8 @@ export function getDemoVessel(mxeId: string): VesselRecord | null {
       flares: true,
       sound_device: true,
       ca_boater_card: true,
+      fishing_license_expiry: null,
+      fishing_license_lifetime: null,
       marinas: {
         name: "Portobello Marina",
         city: "Oakland",

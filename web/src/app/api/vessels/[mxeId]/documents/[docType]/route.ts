@@ -7,7 +7,7 @@ import { getOwnerBillingSummary } from "@/lib/billing-service";
 
 const SIGNED_URL_TTL_SECONDS = 60;
 
-const DOC_TYPES = ["registration", "insurance", "boater_card"] as const;
+const DOC_TYPES = ["registration", "insurance", "boater_card", "fishing_license"] as const;
 type DocType = (typeof DOC_TYPES)[number];
 
 function contentTypeFor(path: string) {
@@ -59,7 +59,9 @@ export async function GET(request: Request, context: { params: Promise<{ mxeId: 
 
   const { data: vesselRow } = await service
     .from("vessels")
-    .select("id, owner_id, doc_registration_url, doc_insurance_url, doc_boater_card_url, lifecycle_status, dormant_cause")
+    .select(
+      "id, owner_id, doc_registration_url, doc_insurance_url, doc_boater_card_url, doc_fishing_license_url, lifecycle_status, dormant_cause",
+    )
     .eq("mxe_id", mxeId.toUpperCase())
     .maybeSingle();
 
@@ -69,6 +71,7 @@ export async function GET(request: Request, context: { params: Promise<{ mxeId: 
     doc_registration_url: string | null;
     doc_insurance_url: string | null;
     doc_boater_card_url: string | null;
+    doc_fishing_license_url: string | null;
     lifecycle_status: string | null;
     dormant_cause: string | null;
   } | null;
@@ -92,6 +95,7 @@ export async function GET(request: Request, context: { params: Promise<{ mxeId: 
     registration: vessel.doc_registration_url,
     insurance: vessel.doc_insurance_url,
     boater_card: vessel.doc_boater_card_url,
+    fishing_license: vessel.doc_fishing_license_url,
   };
   const path = paths[docType as DocType];
   if (!path) {
@@ -99,17 +103,24 @@ export async function GET(request: Request, context: { params: Promise<{ mxeId: 
   }
 
   // Same Basic-tier document lock DocumentsEdit.tsx enforces in the UI
-  // (registration counted first, insurance second; boater_card always
-  // exempt) — offline access must respect the same tier gating as
-  // online (build spec §6), not treat a locked document as newly
-  // downloadable just because it's being fetched for caching instead of
-  // direct view.
+  // (registration counted first, insurance second, fishing license
+  // third; boater_card always exempt) — offline access must respect the
+  // same tier gating as online (build spec §6), not treat a locked
+  // document as newly downloadable just because it's being fetched for
+  // caching instead of direct view.
+  //
+  // The fishing license is counted despite being a personal credential
+  // like the boater card, because the boater card's exemption is about
+  // it being included on every plan, not about whose credential it is.
+  // The order here must stay identical to DocumentsEdit's slots array or
+  // the UI and this route would disagree about which document is locked.
   if (docType !== "boater_card") {
     const billing = await getOwnerBillingSummary(vessel.owner_id);
     const subscriptionTier = billing?.subscriptionTier ?? "basic";
     const slots: DocumentSlot[] = [
       { docType: "registration", url: vessel.doc_registration_url },
       { docType: "insurance", url: vessel.doc_insurance_url },
+      { docType: "fishing_license", url: vessel.doc_fishing_license_url },
     ];
     const index = slots.findIndex((s) => s.docType === docType);
     if (index >= 0 && isDocumentLocked(slots, index, subscriptionTier)) {

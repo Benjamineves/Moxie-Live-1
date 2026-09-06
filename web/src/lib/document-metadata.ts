@@ -17,9 +17,11 @@ type DocumentPathFields = {
   doc_registration_url: string | null;
   doc_insurance_url: string | null;
   doc_boater_card_url: string | null;
+  doc_fishing_license_url: string | null;
   doc_registration_filename?: string | null;
   doc_insurance_filename?: string | null;
   doc_boater_card_filename?: string | null;
+  doc_fishing_license_filename?: string | null;
 };
 
 function splitPath(path: string): { folder: string; base: string } {
@@ -68,11 +70,13 @@ export async function loadVesselDocumentMeta(
     registration: vessel.doc_registration_url,
     insurance: vessel.doc_insurance_url,
     boater_card: vessel.doc_boater_card_url,
+    fishing_license: vessel.doc_fishing_license_url,
   };
   const fileNames: Record<DocType, string | null> = {
     registration: vessel.doc_registration_filename ?? null,
     insurance: vessel.doc_insurance_filename ?? null,
     boater_card: vessel.doc_boater_card_filename ?? null,
+    fishing_license: vessel.doc_fishing_license_filename ?? null,
   };
 
   const present = (Object.keys(paths) as DocType[]).filter((d) => !!paths[d]);

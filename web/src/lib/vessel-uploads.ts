@@ -1,11 +1,12 @@
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 
-export type DocType = "registration" | "insurance" | "boater_card";
+export type DocType = "registration" | "insurance" | "boater_card" | "fishing_license";
 
 const DOC_PATH_BASE: Record<DocType, string> = {
   registration: "registration",
   insurance: "insurance",
   boater_card: "boater_card",
+  fishing_license: "fishing_license",
 };
 
 function extFor(file: File) {
