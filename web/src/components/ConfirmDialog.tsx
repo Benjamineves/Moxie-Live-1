@@ -2,7 +2,7 @@
 
 /**
  * Generic confirm step, used before saving vessel-intrinsic fields
- * (VesselDetailsEdit, RegistrationEdit) — "you're changing registered
+ * (PublicListingEdit, RegistrationEdit) — "you're changing registered
  * vessel data" friction, not just a save button. Deliberately dumb/
  * content-agnostic so both callers can pass their own diff summary as
  * children rather than this component knowing about vessel fields.

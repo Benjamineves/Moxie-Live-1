@@ -40,7 +40,7 @@ export function RequestDecommission({
   if (!open) {
     return (
       <button type="button" onClick={() => setOpen(true)} className={editTriggerClass}>
-        Wrong boat, duplicate, or no longer yours? Request to decommission this vessel
+        Decommission this vessel
       </button>
     );
   }

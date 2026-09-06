@@ -7,8 +7,7 @@ import { AddPhotoNudge } from "@/components/AddPhotoNudge";
 import { ExpiryDateNudge } from "@/components/ExpiryDateNudge";
 import { ReplacePhotoControl } from "@/components/ReplacePhotoControl";
 import { BfcacheRefresh } from "@/components/BfcacheRefresh";
-import { VesselDetailsEdit } from "@/components/vessel-edit/VesselDetailsEdit";
-import { NotesEdit } from "@/components/vessel-edit/NotesEdit";
+import { PublicListingEdit } from "@/components/vessel-edit/PublicListingEdit";
 import { StorageEdit } from "@/components/vessel-edit/StorageEdit";
 import { ContactEdit } from "@/components/vessel-edit/ContactEdit";
 import { EmergencyEdit } from "@/components/vessel-edit/EmergencyEdit";
@@ -269,21 +268,21 @@ export function VesselOwnerProfile({
 
       <section className="mx-auto max-w-lg px-5 pb-10 md:px-8">
         {/*
-          Public listing — what a scanner sees. VesselDetailsEdit and
-          NotesEdit used to float above the page as two unlabelled
-          triggers with no indication of what they edited; giving them a
-          heading and the read-only dl every other section already has
-          makes that legible. The triggers themselves are untouched, only
-          relocated into the header row.
+          Public listing — what a scanner sees. This began as two
+          unlabelled triggers floating above the page with no indication
+          of what they edited; they're now one Edit trigger over the
+          read-only dl every other section already has, matching Storage,
+          Contact and Emergency exactly.
         */}
         <div className="flex items-center justify-between gap-3">
           <h2 className="font-[family-name:var(--font-display)] text-2xl font-light text-[var(--navy)]">
             Public listing
           </h2>
-          <div className="flex shrink-0 items-center gap-4">
-            <VesselDetailsEdit mxeId={tier.mxe_id} vessel_name={tier.vessel_name} />
-            <NotesEdit mxeId={tier.mxe_id} public_notes={tier.public_notes} />
-          </div>
+          <PublicListingEdit
+            mxeId={tier.mxe_id}
+            vessel_name={tier.vessel_name}
+            public_notes={tier.public_notes}
+          />
         </div>
         <dl className="mt-4 rounded-xl border border-[var(--divider)] bg-[var(--white)] p-5 shadow-sm">
           <Row label="Vessel name" value={tier.vessel_name} />

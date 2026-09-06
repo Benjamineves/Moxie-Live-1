@@ -47,7 +47,7 @@ export function RequestIdentityCorrection({
   if (!open) {
     return (
       <button type="button" onClick={() => setOpen(true)} className={editTriggerClass}>
-        Notice an error in HIN, make, model, year, length, draft, or engine? Request a correction
+        Error in HIN or identity details?
       </button>
     );
   }
