@@ -89,6 +89,19 @@ export default async function VesselQrPage({ params, searchParams }: Props) {
   if (printOnly) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-[420px] flex-col items-center justify-center bg-[var(--white)] p-6">
+        {/*
+          print:hidden, not a browser-back affordance: this view is reached
+          from a link, and a standalone installed app has no back button to
+          return with — the same no-back-button constraint the PWA spec
+          records for every other terminal view. The print stylesheet drops
+          it, so what physically prints is still the badge alone.
+        */}
+        <Link
+          href={`/dashboard/${encodeURIComponent(vessel.mxe_id)}/qr`}
+          className="mb-4 self-start font-[family-name:var(--font-dm)] text-xs font-medium text-[var(--text2)] no-underline transition hover:text-[var(--navy)] print:hidden"
+        >
+          ← Back
+        </Link>
         <div className="w-full max-w-[320px]" dangerouslySetInnerHTML={{ __html: badgeSvg }} />
       </main>
     );
