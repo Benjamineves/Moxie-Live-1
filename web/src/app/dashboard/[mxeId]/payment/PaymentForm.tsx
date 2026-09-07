@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, useTransition, type FormEvent } from "react";
 import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import { ShippingAddressSection, saveShippingAddress } from "./ShippingAddressSection";
 import { createBadgeFeeIntent } from "./actions";
 import { BADGE_FEE_AMOUNT_USD } from "@/lib/tier-config";
 
@@ -169,6 +170,16 @@ function CheckoutInner({ mxeId, vesselName }: { mxeId: string; vesselName: strin
     setSubmitting(true);
     setError(null);
 
+    // Before the charge, never after: an owner should not be able to
+    // pay for a badge that has nowhere to ship to. A failure here stops
+    // the submission instead of charging and sorting it out later.
+    const addressError = await saveShippingAddress(elements, mxeId);
+    if (addressError) {
+      setError(addressError);
+      setSubmitting(false);
+      return;
+    }
+
     const processingUrl = `${window.location.origin}/dashboard/${encodeURIComponent(mxeId)}/payment/processing`;
 
     const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
@@ -193,6 +204,7 @@ function CheckoutInner({ mxeId, vesselName }: { mxeId: string; vesselName: strin
 
   return (
     <form onSubmit={onSubmit} className="rounded-xl border border-[var(--divider)] bg-[var(--white)] p-5 shadow-sm">
+      <ShippingAddressSection />
       <p className="mb-4 font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
         Payment details
       </p>

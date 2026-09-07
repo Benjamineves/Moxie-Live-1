@@ -82,6 +82,11 @@ export type VesselRecord = {
   ca_boater_card: boolean | null;
   fishing_license_expiry: string | null;
   fishing_license_lifetime: boolean | null;
+  mailing_line1: string | null;
+  mailing_line2: string | null;
+  mailing_city: string | null;
+  mailing_state: string | null;
+  mailing_zip: string | null;
   marinas?: { name: string; city: string | null; phone: string | null } | null;
 };
 

@@ -417,10 +417,7 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
             Leave your email and we&apos;ll follow up when the time&apos;s right.
           </p>
           <WaitlistForm />
-          <p className="mb-12 text-[12px] text-[var(--text3)]">
-            Free for boat owners · No spam · Unsubscribe anytime
-          </p>
-          <div className="mb-9 h-px bg-[var(--divider)]" />
+          <div className="mb-9 mt-12 h-px bg-[var(--divider)]" />
           <div className="flex flex-wrap justify-center gap-x-10 gap-y-6 text-left">
             <div>
               <div className="mb-1 text-[9px] font-medium uppercase tracking-[0.14em] text-[var(--text3)]">Email</div>

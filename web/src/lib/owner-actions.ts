@@ -95,6 +95,11 @@ type OwnerPatch = Partial<{
   ca_boater_card: boolean | null;
   fishing_license_expiry: string | null;
   fishing_license_lifetime: boolean | null;
+  mailing_line1: string | null;
+  mailing_line2: string | null;
+  mailing_city: string | null;
+  mailing_state: string | null;
+  mailing_zip: string | null;
 }>;
 
 const OWNER_FIELDS = [
@@ -130,6 +135,11 @@ const OWNER_FIELDS = [
   "ca_boater_card",
   "fishing_license_expiry",
   "fishing_license_lifetime",
+  "mailing_line1",
+  "mailing_line2",
+  "mailing_city",
+  "mailing_state",
+  "mailing_zip",
 ] as const;
 
 function pickAllowed<T extends object>(patch: T, allowed: readonly (keyof T)[]): Partial<T> {

@@ -48,7 +48,7 @@ export function WaitlistForm() {
         disabled={status === "loading"}
         className="bg-[var(--navy)] px-7 py-4 font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--gold)] transition hover:bg-[var(--navy2)] disabled:opacity-60"
       >
-        {status === "done" ? "✓ Done" : status === "loading" ? "…" : "Join waitlist"}
+        {status === "done" ? "✓ Done" : status === "loading" ? "…" : "Notify me"}
       </button>
       {message ? (
         <p className="w-full px-2 py-2 text-center font-[family-name:var(--font-dm)] text-xs text-[var(--text2)]">

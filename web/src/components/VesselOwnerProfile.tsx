@@ -58,10 +58,31 @@ export type OwnerProfileTier = PublicProfileProps & {
   flares?: boolean | null;
   sound_device?: boolean | null;
   ca_boater_card?: boolean | null;
+  mailing_line1?: string | null;
+  mailing_line2?: string | null;
+  mailing_city?: string | null;
+  mailing_state?: string | null;
+  mailing_zip?: string | null;
   doc_registration_url?: string | null;
   doc_insurance_url?: string | null;
   doc_boater_card_url?: string | null;
 };
+
+/** One-line summary for the Contact dl. Returns null when nothing has been entered, so Row hides the whole line rather than showing an empty address. */
+function formatMailingAddress(tier: {
+  mailing_line1?: string | null;
+  mailing_line2?: string | null;
+  mailing_city?: string | null;
+  mailing_state?: string | null;
+  mailing_zip?: string | null;
+}): string | null {
+  const street = [tier.mailing_line1, tier.mailing_line2].filter(Boolean).join(", ");
+  const region = [tier.mailing_city, [tier.mailing_state, tier.mailing_zip].filter(Boolean).join(" ")]
+    .filter(Boolean)
+    .join(", ");
+  const full = [street, region].filter(Boolean).join(" · ");
+  return full || null;
+}
 
 function Row({ label, value }: { label: string; value: string | number | boolean | null | undefined }) {
   if (value === null || value === undefined || value === "") return null;
@@ -326,6 +347,11 @@ export function VesselOwnerProfile({
             owner_phone={tier.owner_phone}
             owner_email={tier.owner_email}
             preferred_contact={tier.preferred_contact}
+            mailing_line1={tier.mailing_line1}
+            mailing_line2={tier.mailing_line2}
+            mailing_city={tier.mailing_city}
+            mailing_state={tier.mailing_state}
+            mailing_zip={tier.mailing_zip}
           />
         </div>
         <dl className="mt-4 rounded-xl border border-[var(--divider)] bg-[var(--white)] p-5 shadow-sm">
@@ -333,6 +359,7 @@ export function VesselOwnerProfile({
           <Row label="Owner phone" value={tier.owner_phone} />
           <Row label="Owner email" value={tier.owner_email} />
           <Row label="Preferred contact" value={tier.preferred_contact} />
+          <Row label="Badge ships to" value={formatMailingAddress(tier)} />
         </dl>
 
         <div className="mt-12 flex items-center justify-between">
@@ -487,6 +514,19 @@ export function VesselOwnerProfile({
               </div>
             </div>
           ) : null}
+        </div>
+
+        {/* Same destination as the header's Documents link. Repeated at
+            the foot of a long page because that's where an owner ends up
+            after working through it, and standalone PWA mode has no back
+            button to reach the header with. */}
+        <div className="mt-8 flex justify-center">
+          <Link
+            href={`/dashboard/${encodeURIComponent(tier.mxe_id)}/documents`}
+            className="inline-flex items-center gap-2 rounded-lg border border-[var(--gold-line)] px-5 py-3 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--navy)] no-underline transition hover:bg-[var(--gold-dim)]"
+          >
+            Documents &amp; offline access →
+          </Link>
         </div>
 
         <footer className="mt-16 border-t border-[var(--divider)] pt-8 text-center">

@@ -11,9 +11,48 @@ export type StickerRow = {
   owner_email: string | null;
   qr_generated_at: string | null;
   sticker_order_status: string | null;
+  mailing_line1: string | null;
+  mailing_line2: string | null;
+  mailing_city: string | null;
+  mailing_state: string | null;
+  mailing_zip: string | null;
 };
 
-const COLUMNS = ["MXE ID", "Vessel", "Owner", "Owner email", "Paid", "Status"];
+/**
+ * The whole reason the address is collected — a fulfillment queue that
+ * can't tell you where to post the badge isn't one.
+ *
+ * A missing address is rendered as an explicit gap, not an empty cell:
+ * every vessel from this point on collects one at checkout, so a blank
+ * here means something needs chasing rather than "not applicable".
+ */
+function ShipTo({ vessel }: { vessel: StickerRow }) {
+  const street = [vessel.mailing_line1, vessel.mailing_line2].filter(Boolean);
+  const region = [vessel.mailing_city, [vessel.mailing_state, vessel.mailing_zip].filter(Boolean).join(" ")]
+    .filter(Boolean)
+    .join(", ");
+
+  if (street.length === 0 && !region) {
+    return (
+      <span className="inline-flex rounded-lg bg-[var(--amber-bg)] px-2 py-0.5 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--amber-fg)]">
+        No address on file
+      </span>
+    );
+  }
+
+  return (
+    <span className="block whitespace-normal font-[family-name:var(--font-dm)] text-[13px] leading-snug text-[var(--text)]">
+      {street.map((line) => (
+        <span key={line} className="block">
+          {line}
+        </span>
+      ))}
+      {region ? <span className="block text-[var(--text2)]">{region}</span> : null}
+    </span>
+  );
+}
+
+const COLUMNS = ["MXE ID", "Vessel", "Owner", "Ship to", "Owner email", "Paid", "Status"];
 
 export function StickerQueueTable({ initialVessels }: { initialVessels: StickerRow[] }) {
   const [vessels, setVessels] = useState(initialVessels);
@@ -51,7 +90,7 @@ export function StickerQueueTable({ initialVessels }: { initialVessels: StickerR
       ) : null}
 
       <div className="overflow-x-auto rounded-xl border border-[var(--divider)] bg-[var(--white)]">
-        <table className="w-full min-w-[720px] border-collapse text-left">
+        <table className="w-full min-w-[900px] border-collapse text-left">
           <thead>
             <tr className="border-b border-[var(--divider)]">
               {COLUMNS.map((h) => (
@@ -87,6 +126,9 @@ export function StickerQueueTable({ initialVessels }: { initialVessels: StickerR
                   </td>
                   <td className="px-4 py-3 font-[family-name:var(--font-dm)] text-sm text-[var(--text)]">
                     {v.owner_name || "—"}
+                  </td>
+                  <td className="min-w-[180px] px-4 py-3 align-top">
+                    <ShipTo vessel={v} />
                   </td>
                   <td className="px-4 py-3 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
                     {v.owner_email || "—"}

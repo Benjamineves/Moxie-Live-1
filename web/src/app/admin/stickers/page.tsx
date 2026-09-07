@@ -35,7 +35,9 @@ export default async function StickerFulfillmentPage({ searchParams }: Props) {
 
   let query = service
     .from("vessels")
-    .select("mxe_id, vessel_name, owner_name, owner_email, qr_generated_at, sticker_order_status")
+    .select(
+      "mxe_id, vessel_name, owner_name, owner_email, qr_generated_at, sticker_order_status, mailing_line1, mailing_line2, mailing_city, mailing_state, mailing_zip",
+    )
     .eq("qr_status", "active");
 
   // Default view excludes shipped vessels — that's the steady-state "queue."
