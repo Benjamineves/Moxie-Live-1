@@ -114,7 +114,7 @@ export default async function AdminOverviewPage() {
   // which predate the marina_city column.
   const { data: geoVessels } = await service
     .from("vessels")
-    .select("id, mxe_id, storage_type, marina_id, marina_city, storage_description");
+    .select("id, mxe_id, storage_type, marina_id, marina_city, storage_description, storage_state");
   const { data: marinaRows } = await service.from("marinas").select("id, city, state");
   const legacyMarinaLocation = new Map(
     (marinaRows ?? []).map((m) => [m.id as string, [m.city, m.state].filter(Boolean).join(", ") || null]),
@@ -128,6 +128,7 @@ export default async function AdminOverviewPage() {
     marina_id: string | null;
     marina_city: string | null;
     storage_description: string | null;
+    storage_state: string | null;
   }[]) {
     const legacy = v.marina_id ? (legacyMarinaLocation.get(v.marina_id) ?? null) : null;
     const source = resolveVesselLocationSource(v, legacy);

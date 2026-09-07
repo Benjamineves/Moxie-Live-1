@@ -5,8 +5,15 @@
  * Source text per vessel: marina_city (falling back to the legacy
  * marinas-table join for MXE-00001/00002, which predate that column)
  * when storage_type is 'marina'/'mooring'; storage_description for
- * every other storage_type. reg_state is deliberately NOT used here —
- * it's the boat's registration state, not where it's currently stored.
+ * every other storage_type. storage_state is appended to whichever of
+ * those resolves, as a fallback signal only — a vessel with a state on
+ * file but no city/description text still has enough to fall into
+ * "other" via hasStateSignal, rather than sitting in "unclassified"
+ * for want of a two-letter code nobody looked at. It never outranks a
+ * real place-name match: classifyRegion checks the keyword lists
+ * first, and only reaches hasStateSignal when none of them hit.
+ * reg_state is deliberately NOT used here — it's the boat's
+ * registration state, not where it's currently stored.
  *
  * Matching is keyword-based against curated city/place lists per
  * region. No match against those lists falls to "other" only when a
@@ -111,11 +118,23 @@ export function classifyRegion(sourceText: string | null | undefined): GeoRegion
 }
 
 export function resolveVesselLocationSource(
-  vessel: { storage_type: string | null; marina_city: string | null; storage_description: string | null },
+  vessel: {
+    storage_type: string | null;
+    marina_city: string | null;
+    storage_description: string | null;
+    storage_state: string | null;
+  },
   legacyMarinaLocation?: string | null,
 ): string | null {
-  if (vessel.storage_type === "marina" || vessel.storage_type === "mooring") {
-    return vessel.marina_city ?? legacyMarinaLocation ?? null;
-  }
-  return vessel.storage_description ?? null;
+  const primary =
+    vessel.storage_type === "marina" || vessel.storage_type === "mooring"
+      ? (vessel.marina_city ?? legacyMarinaLocation ?? null)
+      : vessel.storage_description ?? null;
+
+  // Appended, not substituted: classifyRegion's keyword matches on
+  // `primary` still win when it has real place-name text, since those
+  // run before the state-signal fallback. This only changes the
+  // outcome for a vessel with no place-name text at all.
+  const parts = [primary, vessel.storage_state].filter((part): part is string => !!part && part.trim() !== "");
+  return parts.length > 0 ? parts.join(" ") : null;
 }
