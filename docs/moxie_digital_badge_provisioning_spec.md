@@ -3,7 +3,7 @@
 ### Build spec · moving from per-order badge generation to pre-printed stock
 
 **Status:** Planned, not built. No code or migration written.
-**Revision:** Amended after first review. §1 and §2 approved as written. Amendments: two physical badges per identity (§1.6, threaded through §3/§5); re-binding prohibited (§4.1); scan-at-pack deferred (§4.1); pool-exhaustion behaviour decided (§3.2); print-shop export explicitly blocked (§5.3); `/s/<token>` → ScanSuccess wiring specified (§1.7); transfer/decommission behaviour specified (§2.5).
+**Revision:** Amended after first review. §1 and §2 approved as written. Amendments: two physical badges per identity (§1.6, threaded through §3/§5); re-binding prohibited (§4.1); scan-at-pack deferred (§4.1); pool-exhaustion behaviour decided (§3.2); print-shop export explicitly blocked (§5.3); `/s/<token>` → ScanSuccess wiring specified (§1.7); transfer/decommission behaviour specified (§2.5). Second amendment: the mint operation specified end to end (§5.0), including the status advancement that previously left nothing pickable.
 **Touches:** `lib/qr-render.ts`, `lib/badge-layout.ts`, `lib/mxe-id.ts`, `dashboard/new/actions.ts`, `admin/stickers`, the public `[mxeId]` route, and a new `/s/<token>` route.
 **Related:** `docs/moxie_digital_dormant_identity_spec.md` (identity permanence), `docs/moxie_digital_acceptance_tests.md` (QR print math).
 
@@ -299,7 +299,7 @@ CREATE TABLE badge_print_batches (
 );
 ```
 
-**`vessels` gains one column:** `badge_identity_id UUID UNIQUE REFERENCES badge_identities(id)`, nullable — null for every vessel created before this change, and for the print-on-demand fallback path in §3.3. The existing `vessels.mxe_id` stays exactly as it is; it is duplicated onto the vessel at assignment rather than being read through the join, so no existing query changes.
+**`vessels` gains one column:** `badge_identity_id UUID UNIQUE REFERENCES badge_identities(id)`, nullable — null for every vessel created before this change, and for the print-on-demand fallback path in §3.2. The existing `vessels.mxe_id` stays exactly as it is; it is duplicated onto the vessel at assignment rather than being read through the join, so no existing query changes.
 
 ### 2.4 Vessel-cap interaction
 
@@ -425,9 +425,103 @@ A badge sold through a dealer or retail shelf ships with no account attached. Wh
 
 ---
 
-## 5. Fulfillment queue additions
+## 5. Minting and fulfillment
 
 Scoped to what the first print run actually requires. Deeper queue features are deliberately deferred.
+
+### 5.0 The mint operation
+
+Minting has been described in fragments — token format in §1.4, artwork in §5.1, batch rows in §2.3 — but never as a single operation. This is that operation. It cross-references rather than restates those.
+
+**It is also where the blocking gap was.** Nothing in the spec advanced an identity from `minted` to `in_stock`, and §3.1 only ever picks `in_stock`. Until §5.0.4 exists, the assignment query returns zero rows forever and every signup silently takes the §3.2 fallback. That is the piece that makes the flow run at all.
+
+#### 5.0.1 Trigger
+
+An admin action on `/admin/badges` — the batch view §5.2 already requires, since inventory has no vessel row and cannot appear in the `vessels`-driven `admin/stickers` queue.
+
+| Input | Notes |
+|---|---|
+| Batch label | Free text, e.g. `2026-10 run 1`. **`UNIQUE` on `badge_print_batches.label`.** |
+| Identity count | Batch 1: `100`. |
+| Copies per identity | Default `2` (§1.6). Stored per batch, not assumed globally. |
+
+**Double-submission is guarded by the unique label, and that dictates step order.** A double-clicked or retried mint must fail *before* it consumes anything — so the batch row is inserted **first**, and the second submission hits the unique constraint and stops with no MXE IDs burned. Ordering the steps the intuitive way (allocate IDs, then record the batch) would burn 100 sequence values on every accidental retry. Gaps are acceptable (§0.1) but they should be caused by real events, not by a slow network and an impatient click.
+
+The operation is **not idempotent in the "re-running produces the same result" sense** — minting twice with different labels legitimately produces two batches. It is *guarded*, which is the property that actually matters here.
+
+#### 5.0.2 Ordered steps
+
+```
+┌─ transaction ──────────────────────────────────────────────┐
+│ 1. INSERT badge_print_batches (label UNIQUE ← the guard)   │
+│ 2. N x next_mxe_id()                          (§0.1)       │
+│ 3. N x generate token, retry on UNIQUE conflict (§1.4)     │
+│ 4. INSERT N badge_identities  status='minted'              │
+│                               artwork_path=NULL            │
+└─ COMMIT ───────────────────────────────────────────────────┘
+  5. per identity: render artwork          (§5.1)   ─┐
+  6. per identity: write to Storage                  │ background,
+  7. per identity: UPDATE artwork_path, qr_version   │ resumable
+                                                    ─┘
+  8. batch complete when 0 rows have artwork_path IS NULL
+```
+
+Steps 1–4 are one transaction and are fast — 100 `nextval()` calls and one bulk insert. Steps 5–7 are not, and cannot be: a Storage write is an external side effect that cannot join a Postgres transaction.
+
+#### 5.0.3 Failure boundaries — what a partial mint leaves behind
+
+**A failure anywhere in steps 1–4 rolls back completely.** No batch row, no identity rows. Any MXE IDs already drawn from the sequence are burned, because `nextval()` deliberately does not roll back — this is correct, and is explicitly tolerated by the sequence's own `COMMENT` ("Gaps are expected and fine").
+
+**A failure during steps 5–7 is the interesting case.** A mint that dies at identity 60 leaves 100 identity rows, 60 with artwork and 40 with `artwork_path IS NULL`.
+
+> **That state needs no cleanup, and must not be cleaned up.** The 40 rows are not orphans to delete — they are complete identity records awaiting a render that is safe to re-run.
+
+Two properties make this safe rather than a mess:
+
+1. **Nothing incomplete is pickable.** Assignment (§3.1) selects `WHERE status = 'in_stock'`, and everything in a fresh mint is `minted`. An artwork-less identity cannot reach a customer no matter how the render fails, because it never gets near the pool. The status machine is already the safety interlock; no extra guard is needed.
+2. **The render is resumable by construction.** Re-running targets `WHERE print_batch_id = $1 AND artwork_path IS NULL` and is naturally idempotent — already-rendered rows are simply not selected. The recovery UI is a **Resume render** button, not an error dialog.
+
+**The gate that keeps an incomplete batch out of stock:** `minted → printed` (§5.0.4) carries a hard precondition — **zero rows in the batch may have `artwork_path IS NULL`**. Enforce it in the transition itself, not only in the UI. That single check is what makes "identity rows with no artwork" structurally impossible to ship rather than merely discouraged.
+
+**Abandoning a batch entirely** (bad render, wrong count, supplier fell through) is `void` on all its identities with a reason. That burns those MXE IDs permanently, which is the correct and intended cost — an ID is never recycled (§6, row 5).
+
+#### 5.0.4 Status advancement — who, when, and where
+
+The transitions, and the real-world event each one corresponds to:
+
+| Transition | Who | Real-world moment | Level |
+|---|---|---|---|
+| → `minted` | the mint operation itself | step 4 | per identity (bulk) |
+| `minted` → `printed` | admin | printed sheets physically **received and inspected** | **batch** |
+| `printed` → `in_stock` | admin | badges **cut, finished, and on the shelf** ready to pick | **batch** |
+| `in_stock` → `assigned` | the system, automatically | signup (§3.1) | per identity |
+| any → `void` | admin, with a reason | damage, loss, abandoned batch | **per identity** |
+
+**Batch-level for the two manual transitions, and this is deliberate.** Badges are printed, guillotined, and shelved as a batch. There is no real-world moment at which identity 47 is printed and 48 is not, so per-identity buttons would be busywork recording an event that did not happen per identity. Transitions should mirror physical reality, or the data becomes fiction someone has to maintain by hand.
+
+**`void` is the exception, and is per identity**, because damage is per object — one badge is dropped, creased, or misfed, not a hundred. Note the §1.6 interaction: `void` remains an *identity*-level state even so. A single damaged physical copy is a reprint from stored artwork, not a void; only an identity that can produce no usable badge at all is voided.
+
+**Why `printed` and `in_stock` are not collapsed into one:** they are different real events, often days apart, and the gap between them is exactly the window in which a batch is somewhere between the printer and the shelf. Being able to see that a batch is printed but not yet stocked is worth one extra click. A small operation may well click both in the same sitting, which is fine — the states exist to be *distinguishable*, not to be slow.
+
+**Where in the UI:** the `/admin/badges` batch detail page. One advance button per transition, each showing its precondition — greyed with "40 of 100 still rendering" rather than enabled-and-then-failing.
+
+#### 5.0.5 Synchronous or background
+
+**The transaction is synchronous. The render is a background job.**
+
+100 identities means 100 QR generations, 100 rasterizations to 1800 px (§5.1), and 100 Storage uploads. That is comfortably past what a request should hold open, and plausibly past a serverless function ceiling. Steps 1–4 return in well under a second; steps 5–7 run after.
+
+**What the admin sees while it runs: the data itself, not a job-status table.**
+
+```
+Batch "2026-10 run 1"          100 identities · 200 badges
+Artwork   [##########------]   62 / 100        [ Resume render ]
+Status    minted  ->  printed (blocked: 38 rendering)  ->  in_stock
+```
+
+Progress is `COUNT(*) WHERE artwork_path IS NOT NULL` against the batch's `minted_count`. No separate job table, no progress column to keep in sync with reality, and nothing to go stale if the worker dies — the count *is* the truth, and a stalled render shows as a number that stops moving, next to the button that fixes it.
+
+**One quiet consequence of fixed-length tokens (§1.4) worth stating:** every identity in a batch encodes a URL of identical length, so every one produces the same QR version. A batch's `qr_version` is therefore a single fact about the batch, not an average of a hundred. If per-identity versions ever disagree within a batch, something has gone wrong upstream — worth asserting at the end of the render rather than discovering on a dock.
 
 ### 5.1 Stored artwork per identity
 
@@ -509,6 +603,7 @@ Flagged per the brief. Each of these is a permanent, un-pushable break.
 ### Still open
 
 1. **Print shop: sheet size, bleed, crop marks vs. die-line.** Blocks §5.3 entirely. No supplier selected. This is the only thing on the critical path to a first print run.
+   **Sheet size feeds back into batch size, not just into the exporter.** If a press sheet holds 12 identities, a 100-identity batch runs 8⅓ sheets and wastes most of a ninth; 96 or 108 would not. `100` stays the working planning figure for thresholds (§3.2) and for Batch 1, but it is a round number chosen before the constraint that should determine it was known, and it should be revisited — not defended — once a supplier is picked.
 2. **Packaging for two badges.** §1.6 changes the mailer from one 3″ badge to two. Not specced here; needs deciding alongside the mailer card.
 3. **Where the "print individually" flag surfaces** for the §3.2 fallback. Probably a badge on the existing `admin/stickers` row, but the queue is `vessels`-driven and this is a `badge_identities` fact — worth 10 minutes at build time rather than assuming.
 4. **Interaction with the dormant-vessel claim path.** Dormant identity spec §6 flags self-serve claiming as needing careful design; unbound claiming (§4.2) is a second door into the same room. Resolve together, when either is built.
