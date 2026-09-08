@@ -4,6 +4,7 @@ const LINKS = [
   { href: "/dashboard", label: "Dashboard" },
   { href: "/admin", label: "Overview" },
   { href: "/admin/stickers", label: "Sticker fulfillment" },
+  { href: "/admin/badges", label: "Badge inventory" },
   { href: "/admin/vessel-identity-log", label: "Identity change log" },
   { href: "/admin/vessel-correction-requests", label: "Correction requests" },
   { href: "/admin/vessel-decommission-requests", label: "Decommission requests" },
