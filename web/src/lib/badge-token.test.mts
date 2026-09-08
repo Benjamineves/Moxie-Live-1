@@ -174,3 +174,30 @@ test("generateUniqueBadgeTokens rejects a nonsensical count", async () => {
   await assert.rejects(() => generateUniqueBadgeTokens(-1, async () => []), /positive integer/);
   await assert.rejects(() => generateUniqueBadgeTokens(1.5, async () => []), /positive integer/);
 });
+
+test("the QR probe is an upper bound on every real token, not a best case", async () => {
+  // Regression guard for the digit-probe trap: a run of digits encodes as
+  // a cheaper Numeric segment than the Alphanumeric run real tokens
+  // produce, so a digit-filled probe can report a version no printed
+  // badge will have. The probe must never under-report.
+  const { badgeScanUrl, badgeScanUrlProbe } = await import("./badge-url.ts");
+  const QRCode = (await import("qrcode")).default;
+  const versionOf = (url: string) => QRCode.create(url, { errorCorrectionLevel: "H" }).version;
+
+  const probeVersion = versionOf(badgeScanUrlProbe());
+  for (let i = 0; i < 500; i += 1) {
+    const real = versionOf(badgeScanUrl(generateBadgeToken()));
+    assert.ok(
+      real <= probeVersion,
+      `a real token encoded at version ${real}, above the probe's ${probeVersion} — the probe is under-reporting`,
+    );
+  }
+
+  // And the probe must be measuring the alphanumeric mode, not numeric.
+  const segments = QRCode.create(badgeScanUrlProbe(), { errorCorrectionLevel: "H" }).segments ?? [];
+  const modes = segments.map((s: { mode?: { id?: string } | string }) =>
+    typeof s.mode === "string" ? s.mode : (s.mode?.id ?? "?"),
+  );
+  assert.ok(modes.includes("Alphanumeric"), `probe segments were ${modes.join("+")}, expected an Alphanumeric run`);
+  assert.ok(!modes.includes("Numeric"), `probe encoded a Numeric segment (${modes.join("+")}) — it is measuring the cheap case`);
+});
