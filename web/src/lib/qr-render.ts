@@ -1,6 +1,7 @@
 import QRCode from "qrcode";
-import { ACTIVE_QR_COLORWAY, QR_SIGNAL_PIXEL_COLOR } from "./qr-colorway";
-import { BADGE_LAYOUT, BADGE_TEXT } from "./badge-layout";
+import { ACTIVE_QR_COLORWAY, QR_SIGNAL_PIXEL_COLOR } from "./qr-colorway.ts";
+import { BADGE_LAYOUT, BADGE_TEXT } from "./badge-layout.ts";
+import { badgeThemeTokens, type BadgeTheme } from "./badge-theme.ts";
 
 /**
  * qrcode's own toString/toDataURL only support a uniform two-color
@@ -99,10 +100,15 @@ const QR_QUIET_MARGIN = 2; // module-units — same value used everywhere the QR
  * that only the underlying qrcode matrix and layout fractions could be
  * shared, not the rendering code itself).
  */
-export function buildBadgeSvg(mxeId: string, targetUrl: string, { size }: { size: number }): string {
+export function buildBadgeSvg(
+  mxeId: string,
+  targetUrl: string,
+  { size, theme = "screen" }: { size: number; theme?: BadgeTheme },
+): string {
   const UNIT = 1000; // internal coordinate space; `size` only controls on-screen display size via width/height
   const { darkModule } = ACTIVE_QR_COLORWAY;
   const L = BADGE_LAYOUT;
+  const T = badgeThemeTokens(theme);
 
   const { dim: qrDim, markup: qrMarkup } = qrFragment(targetUrl, QR_QUIET_MARGIN);
   const qrPixelSize = L.qrSize * UNIT;
@@ -112,13 +118,25 @@ export function buildBadgeSvg(mxeId: string, targetUrl: string, { size }: { size
   const marginX = L.contentMarginX * UNIT;
   const cornerR = L.cornerRadiusFraction * UNIT;
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${UNIT} ${UNIT}" width="${size}" height="${size}">
-    <rect width="${UNIT}" height="${UNIT}" rx="${cornerR}" fill="var(--navy)"/>
-    <text x="${UNIT / 2}" y="${L.wordmarkBaselineY * UNIT}" text-anchor="middle" font-family="var(--font-display)" font-style="italic" font-weight="300" font-size="${L.wordmarkFontSize * UNIT}" fill="white">${BADGE_TEXT.wordmark}</text>
+  // Caption text is uppercased HERE rather than by CSS text-transform.
+  // librsvg does not apply text-transform, so the print rasterization
+  // silently rendered mixed case where the screen rendered caps — a
+  // divergence QrDownload.tsx had already worked around with its own
+  // .toUpperCase(). Doing it in the markup makes all three renderers
+  // agree from one source, and keeps the two themes' text content
+  // identical, which is what the theme test asserts. text-transform is
+  // kept as an inert belt-and-braces for the browser.
+  const captionLine1 = BADGE_TEXT.captionLine1.toUpperCase();
+  const scanLabel = BADGE_TEXT.scanLabel(mxeId).toUpperCase();
+  const patentPending = BADGE_TEXT.patentPending.toUpperCase();
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${UNIT} ${UNIT}" width="${size}" height="${size}">${T.defs}
+    <rect width="${UNIT}" height="${UNIT}" rx="${cornerR}" fill="${T.cardFill}"/>
+    <text x="${UNIT / 2}" y="${L.wordmarkBaselineY * UNIT}" text-anchor="middle" font-family="${T.displayFamily}" font-style="italic" font-weight="300" font-size="${L.wordmarkFontSize * UNIT}" fill="white">${BADGE_TEXT.wordmark}</text>
     <svg x="${qrX}" y="${qrY}" width="${qrPixelSize}" height="${qrPixelSize}" viewBox="0 0 ${qrDim} ${qrDim}" shape-rendering="crispEdges">${qrMarkup}</svg>
     <line x1="${marginX}" y1="${L.dividerY * UNIT}" x2="${UNIT - marginX}" y2="${L.dividerY * UNIT}" stroke="${darkModule}" stroke-opacity="0.5" stroke-width="${0.002 * UNIT}"/>
-    <text x="${UNIT / 2}" y="${L.captionLine1Y * UNIT}" text-anchor="middle" font-family="var(--font-dm)" font-weight="500" font-size="${L.captionFontSize * UNIT}" letter-spacing="${0.02 * UNIT}" fill="rgba(255,255,255,.5)" style="text-transform:uppercase">${BADGE_TEXT.captionLine1}</text>
-    <text x="${UNIT / 2}" y="${L.captionLine2Y * UNIT}" text-anchor="middle" font-family="var(--font-dm)" font-weight="500" font-size="${L.captionFontSize * UNIT}" letter-spacing="${0.02 * UNIT}" fill="rgba(255,255,255,.5)" style="text-transform:uppercase">${BADGE_TEXT.scanLabel(mxeId)}</text>
-    <text x="${UNIT / 2}" y="${L.patentPendingY * UNIT}" text-anchor="middle" font-family="var(--font-dm)" font-weight="500" font-size="${L.patentPendingFontSize * UNIT}" letter-spacing="${0.014 * UNIT}" fill="rgba(255,255,255,.25)" style="text-transform:uppercase">${BADGE_TEXT.patentPending}</text>
+    <text x="${UNIT / 2}" y="${L.captionLine1Y * UNIT}" text-anchor="middle" font-family="${T.dmFamily}" font-weight="500" font-size="${L.captionFontSize * UNIT}" letter-spacing="${0.02 * UNIT}" fill="rgba(255,255,255,.5)" style="text-transform:uppercase">${captionLine1}</text>
+    <text x="${UNIT / 2}" y="${L.captionLine2Y * UNIT}" text-anchor="middle" font-family="${T.dmFamily}" font-weight="500" font-size="${L.captionFontSize * UNIT}" letter-spacing="${0.02 * UNIT}" fill="rgba(255,255,255,.5)" style="text-transform:uppercase">${scanLabel}</text>
+    <text x="${UNIT / 2}" y="${L.patentPendingY * UNIT}" text-anchor="middle" font-family="${T.dmFamily}" font-weight="500" font-size="${L.patentPendingFontSize * UNIT}" letter-spacing="${0.014 * UNIT}" fill="rgba(255,255,255,.25)" style="text-transform:uppercase">${patentPending}</text>
   </svg>`;
 }

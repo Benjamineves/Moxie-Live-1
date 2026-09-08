@@ -3,6 +3,7 @@ import { requireAdmin } from "@/lib/admin-verify";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { AdminNav } from "@/components/AdminNav";
 import { MintBatchForm } from "./MintBatchForm";
+import { RenderArtworkButton } from "./RenderArtworkButton";
 
 type BatchRow = {
   id: string;
@@ -161,11 +162,13 @@ export default async function BadgeInventoryPage() {
                         >
                           {rendered} / {batch.minted_count}
                         </p>
-                        {rendered < batch.minted_count ? (
-                          <p className="font-[family-name:var(--font-dm)] text-[10px] text-[var(--text3)]">
-                            not yet rendered
-                          </p>
-                        ) : null}
+                        <div className="mt-1.5">
+                          <RenderArtworkButton
+                            batchId={batch.id}
+                            pendingCount={batch.minted_count - rendered}
+                            totalCount={batch.minted_count}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
