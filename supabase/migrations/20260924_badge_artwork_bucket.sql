@@ -2,6 +2,15 @@
 --
 -- Stage 4 prerequisite. Nothing writes it until the render exists.
 --
+-- NO `COMMENT ON` STATEMENT HERE, AND THAT IS NOT AN OVERSIGHT.
+-- storage.buckets is owned by supabase_storage_admin, not by the role the
+-- Supabase SQL Editor runs as, and only an object's owner may comment on
+-- it — so `COMMENT ON TABLE storage.buckets` fails with "must be owner of
+-- table buckets". An earlier draft of this file carried one and had to be
+-- stripped after it failed on the way in. Bucket rationale therefore lives
+-- in this header, where it is readable, rather than in the database, where
+-- it cannot be written. The same applies to any future bucket migration.
+--
 -- ────────────────────────────────────────────────────────────────────────────
 -- PRIVATE, and this is the whole point
 --
@@ -53,9 +62,6 @@ VALUES (
 ON CONFLICT (id) DO NOTHING;
 
 -- Deliberately NO policies on storage.objects for this bucket.
-
-COMMENT ON TABLE storage.buckets IS
-  'Supabase Storage buckets. badge-artwork is private with no policies on purpose: a badge PNG carries its scannable token, so public access would expose the inventory that badge_identities RLS exists to protect. Admin reads go through signed URLs on the service-role client.';
 
 -- ────────────────────────────────────────────────────────────────────────────
 -- Verify after running:
