@@ -20,7 +20,12 @@
     ],
     "paths": {
       "@/*": ["./src/*"]
-    }
+    },
+    // node:test resolves imports at runtime, so *.test.mts must import
+    // "./badge-token.ts" with the extension. TypeScript only allows that
+    // with this flag, which is legal here because noEmit is already true:
+    // it relaxes a check and changes no output.
+    "allowImportingTsExtensions": true
   },
   "include": [
     "next-env.d.ts",
