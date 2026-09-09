@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/admin-verify";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
@@ -125,13 +126,24 @@ export default async function BadgeInventoryPage() {
                   >
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div>
-                        <p className="font-[family-name:var(--font-dm)] text-sm font-semibold text-[var(--navy)]">
+                        <Link
+                          href={`/admin/badges/${batch.id}`}
+                          className="font-[family-name:var(--font-dm)] text-sm font-semibold text-[var(--navy)] underline-offset-4 hover:underline"
+                        >
                           {batch.label}
-                        </p>
+                        </Link>
                         <p className="mt-1 font-[family-name:var(--font-dm)] text-xs text-[var(--text3)]">
                           {batch.minted_count} identities · {batch.printed_count} badges (
                           {batch.copies_per_identity}× each) · QR v{batch.qr_version} ·{" "}
                           {new Date(batch.minted_at).toLocaleString()}
+                        </p>
+                        <p className="mt-1">
+                          <Link
+                            href={`/admin/badges/${batch.id}`}
+                            className="font-[family-name:var(--font-dm)] text-xs font-medium text-[var(--blue-fg)] underline-offset-4 hover:underline"
+                          >
+                            Review artwork →
+                          </Link>
                         </p>
                         <div className="mt-2 flex flex-wrap gap-1.5">
                           {counts.map(({ status, n }) => (

@@ -222,3 +222,48 @@ export function outlineRun(run: BadgeOutlineRun): string {
 export function measureRun(run: BadgeOutlineRun): number {
   return runWidth(faces()[run.face], run);
 }
+
+/**
+ * The horizontal extent of the ink a run actually draws, in user units —
+ * the union of its positioned glyph bounding boxes.
+ *
+ * This is deliberately NOT the advance width. Advance width includes the
+ * first glyph's left side bearing, the last glyph's right side bearing
+ * and the run's trailing letter-spacing, none of which mark the page, so
+ * measured ink always falls short of it by an amount that depends on
+ * which glyphs are at the ends. Comparing rendered ink against advance
+ * width therefore needs a different expected ratio for every line
+ * (0.9837 for the wordmark, 0.9515 for "Patent Pending"), and those
+ * numbers change the moment badge copy does.
+ *
+ * Against this, correct artwork measures ~1.0 for every line, whatever it
+ * says. That is what lets the contact sheet flag an anomaly on a fixed
+ * threshold instead of four hand-calibrated ones.
+ */
+export function outlineInkExtent(run: BadgeOutlineRun): number {
+  const font = faces()[run.face];
+  const glyphs = font.stringToGlyphs(run.text);
+  const scale = run.fontSize / font.unitsPerEm;
+
+  let x = run.centerX - runWidth(font, run) / 2;
+  let minX = Infinity;
+  let maxX = -Infinity;
+
+  glyphs.forEach((glyph, i) => {
+    if (i > 0) x += font.getKerningValue(glyphs[i - 1], glyph) * scale;
+    const path = glyph.getPath(x, run.baselineY, run.fontSize);
+    // A space has an advance but no contours; it moves the pen without
+    // contributing ink, and its empty bounding box must not widen this.
+    if (path.commands.length > 0) {
+      const box = path.getBoundingBox();
+      if (box.x1 < minX) minX = box.x1;
+      if (box.x2 > maxX) maxX = box.x2;
+    }
+    x += (glyph.advanceWidth ?? 0) * scale + run.letterSpacing;
+  });
+
+  if (!Number.isFinite(minX) || !Number.isFinite(maxX)) {
+    throw new Error(`Run ${JSON.stringify(run.text)} draws no ink at all.`);
+  }
+  return maxX - minX;
+}

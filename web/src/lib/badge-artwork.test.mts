@@ -10,7 +10,7 @@ import sharp from "sharp";
 
 import { BADGE_ARTWORK_PIXELS, badgeArtworkPath, renderBadgeArtworkPng } from "./badge-artwork.ts";
 import { badgeTextRuns } from "./badge-layout.ts";
-import { measureRun } from "./badge-outline.ts";
+import { outlineInkExtent } from "./badge-outline.ts";
 
 const CARD_FILL: [number, number, number] = [0x0d, 0x1f, 0x35];
 
@@ -172,7 +172,7 @@ test("caption glyphs vary in shape, as letters do and tofu does not", async () =
 
 /**
  * Measures how wide the drawn ink actually is, versus how wide the
- * layout says the run should be.
+ * outline says it should be.
  *
  * THIS IS THE ASSERTION THE PIXEL GUARDS WERE MISSING.
  *
@@ -183,15 +183,18 @@ test("caption glyphs vary in shape, as letters do and tofu does not", async () =
  * centroid near enough the middle to pass. What it does NOT have is the
  * right width.
  *
- * Measured against the six PNGs that actually shipped corrupted, the two
- * populations do not overlap and are not close: every correct badge
- * lands between 0.958 and 0.961 of its expected advance width, while the
- * corrupted ones landed at 0.227, 0.517, 0.831, 0.881, 0.893 and 0.893.
- * The floor below sits in that gap.
+ * The comparison is against outlineInkExtent, not advance width.
+ * Advance width includes side bearings and trailing letter-spacing,
+ * which mark no pixels, so it needs a different expected ratio per line
+ * (0.9837 for the wordmark, 0.9515 for "Patent Pending") and those
+ * numbers move whenever badge copy does. Against the outline's own ink
+ * extent every correct line measures ~1.0, so one threshold covers all
+ * four and survives a copy change.
  *
- * Ink is always slightly narrower than the advance width — the run's
- * trailing letter-spacing and the first and last glyphs' side bearings
- * carry no ink — which is why the expected ratio is ~0.96 rather than 1.
+ * Calibrated on the twenty-five badges that actually shipped: the
+ * nineteen correct ones measure 0.9986-1.0004 on every line, and the six
+ * corrupted scan lines measure 0.237, 0.539, 0.866, 0.918, 0.931 and
+ * 0.932. The threshold sits in that gap with room on both sides.
  */
 test("every caption is drawn to its full width, not truncated", async () => {
   const png = await renderBadgeArtworkPng("MXE-01040", "XDGZBSER0");
@@ -220,14 +223,10 @@ test("every caption is drawn to its full width, not truncated", async () => {
       }
     }
 
-    const ratio = (maxX - minX) / measureRun(run);
+    const ratio = (maxX - minX) / outlineInkExtent(run);
     assert.ok(
-      ratio > 0.93,
-      `"${run.text}" drew ${(ratio * 100).toFixed(1)}% of its expected width — the caption is truncated`,
-    );
-    assert.ok(
-      ratio < 1.05,
-      `"${run.text}" drew ${(ratio * 100).toFixed(1)}% of its expected width — wider than the layout allows`,
+      Math.abs(ratio - 1) < 0.02,
+      `"${run.text}" drew ${(ratio * 100).toFixed(1)}% of its outline's ink width — the caption is truncated or misdrawn`,
     );
   }
 });
