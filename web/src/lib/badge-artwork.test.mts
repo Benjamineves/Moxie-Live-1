@@ -10,6 +10,7 @@ import sharp from "sharp";
 
 import { BADGE_ARTWORK_PIXELS, badgeArtworkPath, renderBadgeArtworkPng } from "./badge-artwork.ts";
 import { badgeTextRuns } from "./badge-layout.ts";
+import { measureRun } from "./badge-outline.ts";
 
 const CARD_FILL: [number, number, number] = [0x0d, 0x1f, 0x35];
 
@@ -167,4 +168,66 @@ test("caption glyphs vary in shape, as letters do and tofu does not", async () =
     distinct > 8,
     `inked columns take only ${distinct} distinct heights — that is a repeating shape, not lettering`,
   );
+});
+
+/**
+ * Measures how wide the drawn ink actually is, versus how wide the
+ * layout says the run should be.
+ *
+ * THIS IS THE ASSERTION THE PIXEL GUARDS WERE MISSING.
+ *
+ * Coverage, centroid and column variance all went green on six badges
+ * whose scan line was truncated mid-caption — because a caption that
+ * stops early still has plenty of ink, still varies in column height,
+ * and (since the layout centred it for the full string) still has a
+ * centroid near enough the middle to pass. What it does NOT have is the
+ * right width.
+ *
+ * Measured against the six PNGs that actually shipped corrupted, the two
+ * populations do not overlap and are not close: every correct badge
+ * lands between 0.958 and 0.961 of its expected advance width, while the
+ * corrupted ones landed at 0.227, 0.517, 0.831, 0.881, 0.893 and 0.893.
+ * The floor below sits in that gap.
+ *
+ * Ink is always slightly narrower than the advance width — the run's
+ * trailing letter-spacing and the first and last glyphs' side bearings
+ * carry no ink — which is why the expected ratio is ~0.96 rather than 1.
+ */
+test("every caption is drawn to its full width, not truncated", async () => {
+  const png = await renderBadgeArtworkPng("MXE-01040", "XDGZBSER0");
+
+  for (const run of badgeTextRuns("MXE-01040", BADGE_ARTWORK_PIXELS)) {
+    const top = Math.floor(run.baselineY - run.fontSize * 1.05);
+    const bottom = Math.ceil(run.baselineY + run.fontSize * 0.32);
+    const { data, info } = await sharp(png)
+      .extract({ left: 200, top, width: 1400, height: bottom - top })
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    let minX = Infinity;
+    let maxX = -Infinity;
+    for (let y = 0; y < info.height; y += 1) {
+      for (let x = 0; x < info.width; x += 1) {
+        const i = (y * info.width + x) * info.channels;
+        const delta =
+          Math.abs(data[i] - CARD_FILL[0]) +
+          Math.abs(data[i + 1] - CARD_FILL[1]) +
+          Math.abs(data[i + 2] - CARD_FILL[2]);
+        if (delta > 24) {
+          if (x < minX) minX = x;
+          if (x > maxX) maxX = x;
+        }
+      }
+    }
+
+    const ratio = (maxX - minX) / measureRun(run);
+    assert.ok(
+      ratio > 0.93,
+      `"${run.text}" drew ${(ratio * 100).toFixed(1)}% of its expected width — the caption is truncated`,
+    );
+    assert.ok(
+      ratio < 1.05,
+      `"${run.text}" drew ${(ratio * 100).toFixed(1)}% of its expected width — wider than the layout allows`,
+    );
+  }
 });

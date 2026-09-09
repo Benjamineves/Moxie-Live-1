@@ -29,7 +29,7 @@
  * next/font. Only rasterized output is outlined.
  */
 import * as opentypeModule from "opentype.js";
-import type { Font } from "opentype.js";
+import type { Font, PathCommand } from "opentype.js";
 import type { BadgeFace } from "./badge-layout.ts";
 import { CORMORANT_GARAMOND_ITALIC_300, DM_SANS_500 } from "./badge-fonts/base64.ts";
 
@@ -78,6 +78,72 @@ function faces(): Record<BadgeFace, Font> {
     parsed = { display: parseFace(FACE_BASE64.display), dm: parseFace(FACE_BASE64.dm) };
   }
   return parsed;
+}
+
+/**
+ * Coordinate formatting.
+ *
+ * We do NOT use opentype's own Path.toPathData(), because its rounding
+ * helper is broken:
+ *
+ *   +(Math.round(decimalPart + "e+" + places) + "e-" + places)
+ *
+ * It builds an exponent by string concatenation. When a coordinate's
+ * fractional part is small enough that JavaScript prints it
+ * exponentially — anything under 1e-6, e.g. 5.68e-14 — the expression
+ * becomes Math.round("5.684e-14e+2"), which is NaN, and the coordinate
+ * is emitted into the path as the literal text "NaN".
+ *
+ * That is not theoretical. Glyph points land a hair off an integer all
+ * the time (401.00000000000006), and whether any given badge hit one
+ * depended on the run's starting x, which depends on its total advance
+ * width, which depends on which digits are in the MXE ID. Six of the
+ * first twenty-five badges minted came out with a truncated scan line,
+ * because an SVG parser stops at the first token it cannot read — so the
+ * caption rendered up to the bad coordinate and then simply stopped.
+ *
+ * toFixed() never produces exponential notation in the range badge
+ * coordinates occupy, so formatting here is both correct and one less
+ * upstream behaviour to depend on.
+ */
+const PATH_DECIMALS = 2;
+
+function coord(value: number): string {
+  if (!Number.isFinite(value)) {
+    throw new Error(`Badge outline produced a non-finite coordinate (${value}).`);
+  }
+  // -0 formats as "-0"; harmless but noisy, and never meaningful here.
+  const fixed = (Object.is(value, -0) ? 0 : value).toFixed(PATH_DECIMALS);
+  // Trim only the fractional tail — toFixed always emits a ".", so this
+  // cannot eat a trailing zero of an integer part ("100" stays "100").
+  return fixed.includes(".") ? fixed.replace(/0+$/, "").replace(/\.$/, "") : fixed;
+}
+
+/**
+ * Serializes opentype's command list to SVG path data. Numbers are
+ * space-separated, which is valid between any two of them; a command
+ * letter is its own delimiter, so no separator is needed after one.
+ */
+function toPathData(commands: PathCommand[]): string {
+  let d = "";
+  for (const cmd of commands) {
+    switch (cmd.type) {
+      case "M":
+      case "L":
+        d += `${cmd.type}${coord(cmd.x)} ${coord(cmd.y)}`;
+        break;
+      case "C":
+        d += `C${coord(cmd.x1)} ${coord(cmd.y1)} ${coord(cmd.x2)} ${coord(cmd.y2)} ${coord(cmd.x)} ${coord(cmd.y)}`;
+        break;
+      case "Q":
+        d += `Q${coord(cmd.x1)} ${coord(cmd.y1)} ${coord(cmd.x)} ${coord(cmd.y)}`;
+        break;
+      case "Z":
+        d += "Z";
+        break;
+    }
+  }
+  return d;
 }
 
 export type BadgeOutlineRun = {
@@ -141,9 +207,18 @@ export function outlineRun(run: BadgeOutlineRun): string {
     // Two decimals at a 1000-unit viewBox is a 0.01-unit grid — well
     // under a printer dot at 600 DPI, and keeps the SVG a fraction of
     // the size full precision produces.
-    data += glyph.getPath(x, run.baselineY, run.fontSize).toPathData(2);
+    data += toPathData(glyph.getPath(x, run.baselineY, run.fontSize).commands);
     x += (glyph.advanceWidth ?? 0) * scale + run.letterSpacing;
   });
 
   return data;
+}
+
+/**
+ * Advance width of a run in user units — exported so callers can check a
+ * rendered badge against the width the layout intended. Used by the
+ * artwork tests to catch a caption that rendered short.
+ */
+export function measureRun(run: BadgeOutlineRun): number {
+  return runWidth(faces()[run.face], run);
 }
