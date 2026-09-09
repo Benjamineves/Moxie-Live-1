@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin-verify";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { getStripe } from "@/lib/stripe/server";
+import { cleanupVesselStorage } from "@/lib/vessel-storage-cleanup";
 
 /**
  * Reclaiming a badge from a checkout that was never completed (spec
@@ -205,30 +206,15 @@ export async function reclaimUnactivatedVessel(
   if (error) return { error: `[${error.code}] ${error.message}` };
 
   // Storage cleanup runs AFTER the transaction commits, and cannot join
-  // it — a Storage delete is an external side effect. This order is
-  // deliberate: a deleted vessel with files left over is recoverable by
-  // hand, whereas files deleted from a vessel whose delete then failed
-  // is a live record with missing documents.
+  // it — see vessel-storage-cleanup.ts for why that order is the safe
+  // one. Extracted there rather than inlined here so the branch can be
+  // exercised against a fixture: it fires on nearly every real reclaim
+  // and it handles the customer's registration and insurance documents.
   const result = data as { mxe_id: string; photo_url: string | null; doc_paths: (string | null)[] } | null;
-  const leftovers: string[] = [];
-
-  const docPaths = (result?.doc_paths ?? []).filter((p): p is string => !!p);
-  if (docPaths.length > 0) {
-    const { error: docErr } = await service.storage.from("vessel-docs").remove(docPaths);
-    if (docErr) leftovers.push(`documents (${docErr.message})`);
-  }
-
-  // photo_url is a public URL with a cache-bust token, not a path — the
-  // object key has to be recovered from it.
-  if (result?.photo_url) {
-    const match = result.photo_url.match(/\/vessel-photos\/(.+?)(\?|$)/);
-    if (match) {
-      const { error: photoErr } = await service.storage.from("vessel-photos").remove([decodeURIComponent(match[1])]);
-      if (photoErr) leftovers.push(`photo (${photoErr.message})`);
-    } else {
-      leftovers.push("photo (could not derive object path from URL)");
-    }
-  }
+  const { leftovers } = await cleanupVesselStorage(service, {
+    photoUrl: result?.photo_url ?? null,
+    docPaths: result?.doc_paths ?? [],
+  });
 
   revalidatePath("/admin/badges");
   revalidatePath("/admin/stickers");
