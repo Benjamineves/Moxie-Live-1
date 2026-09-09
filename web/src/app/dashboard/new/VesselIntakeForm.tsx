@@ -7,7 +7,7 @@ import { uploadVesselDocument, uploadVesselPhoto, type DocType } from "@/lib/ves
 import { StorageTypePicker, isMarinaGroup, storageTypeLabel } from "@/components/StorageTypePicker";
 import { vesselTypes } from "@/lib/vessel-types";
 import { US_STATES } from "@/lib/us-states";
-import { createVessel, previewNextMxeId, type StorageType } from "./actions";
+import { createVessel, type StorageType } from "./actions";
 
 type FormState = {
   vessel_name: string;
@@ -67,7 +67,19 @@ export function VesselIntakeForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [capReached, setCapReached] = useState(false);
-  const [mxeId, setMxeId] = useState<string>("");
+  // Upload paths need a stable folder segment before the vessel exists,
+  // and the MXE ID is no longer available to be it: stage 7 assigns the
+  // ID from the badge pool at insert time, so nothing here can know it
+  // in advance. A per-form random key does the same job without a server
+  // round trip and without burning a sequence value every time someone
+  // opens the form and walks away.
+  //
+  // The stored path is authoritative everywhere it matters — the
+  // documents route signs whatever path is on the vessel row rather than
+  // rebuilding one from the MXE ID — so intake files living under a
+  // draft folder is a naming quirk, not a broken reference. Replacements
+  // made later from the manage page write under the real MXE ID.
+  const [draftKey] = useState<string>(() => `intake-${crypto.randomUUID()}`);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress>({
     photo: 0,
@@ -100,14 +112,6 @@ export function VesselIntakeForm() {
     }
   }
 
-  async function ensureMxeId() {
-    if (mxeId) return mxeId;
-    const result = await previewNextMxeId();
-    if (!result.mxeId) throw new Error(result.error ?? "Could not reserve MXE ID.");
-    setMxeId(result.mxeId);
-    return result.mxeId;
-  }
-
   function simulateProgress(kind: keyof UploadProgress) {
     setUploadProgress((prev) => ({ ...prev, [kind]: 5 }));
     const timer = window.setInterval(() => {
@@ -124,10 +128,9 @@ export function VesselIntakeForm() {
   async function uploadFile(file: File, kind: keyof UploadProgress, key: keyof FormState, pathBase: string) {
     const cleanup = simulateProgress(kind);
     try {
-      const mxe = await ensureMxeId();
 
       if (key === "photo_url") {
-        const publicUrl = await uploadVesselPhoto(file, mxe);
+        const publicUrl = await uploadVesselPhoto(file, draftKey);
         setForm((prev) => ({ ...prev, [key]: publicUrl }));
         setUploadProgress((prev) => ({ ...prev, [kind]: 100 }));
         return;
@@ -136,7 +139,7 @@ export function VesselIntakeForm() {
       // Documents keep the original filename — the path itself is
       // deterministic and so carries no information about what the owner
       // actually uploaded.
-      const { path, fileName } = await uploadVesselDocument(file, mxe, pathBase as DocType);
+      const { path, fileName } = await uploadVesselDocument(file, draftKey, pathBase as DocType);
       setForm((prev) => ({
         ...prev,
         [key]: path,
@@ -197,14 +200,7 @@ export function VesselIntakeForm() {
       return;
     }
     if (step === 3) {
-      startTransition(async () => {
-        try {
-          await ensureMxeId();
-          setStep(4);
-        } catch (error) {
-          setGeneralError(error instanceof Error ? error.message : "Could not prepare review step.");
-        }
-      });
+      setStep(4);
     }
   }
 
@@ -237,7 +233,6 @@ export function VesselIntakeForm() {
           is_liveaboard: form.is_liveaboard,
           slip_notes: form.slip_notes || null,
         },
-        mxeId || undefined,
       );
 
       if (!result.mxeId) {
@@ -439,10 +434,15 @@ export function VesselIntakeForm() {
 
       {step === 4 ? (
         <div className="mt-6 space-y-3 rounded-xl border border-[var(--divider)] bg-[var(--cream)] p-4">
+          {/* No MXE ID here. It used to be shown in gold on this screen,
+              pulled from the sequence before the vessel existed — but the
+              ID now comes from the badge pool at creation, so anything
+              shown here would be a guess at a number the customer is
+              about to be given for life (§4.1). It appears on the next
+              screen, once it is real. */}
           <p className="font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
-            Assigned MXE ID
+            Review
           </p>
-          <p className="font-[family-name:var(--font-display)] text-3xl font-light italic text-[var(--gold)]">{mxeId || "Generating..."}</p>
           <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
             {form.vessel_name} · {form.make} {form.model} · {form.year}
           </p>

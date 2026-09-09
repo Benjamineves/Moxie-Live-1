@@ -367,6 +367,14 @@ RETURNING mxe_id, token;
 
 Fail closed at the data layer: the `UPDATE` returns zero rows. It must never silently fall through to "mint a new one" inside the same query — that would reintroduce per-order printing invisibly, which is the exact thing this change exists to eliminate.
 
+**Assignment happens at vessel creation, which is before payment.** `createVessel` inserts the vessel with `qr_status = 'pending_payment'` and the Stripe webhook activates it later, so a badge is claimed from stock at the moment the row is created and an abandoned checkout leaves that badge assigned to a vessel that never activated.
+
+> **An identity assigned to a vessel that never activated, whose badge never shipped, is reclaimable to `in_stock`.**
+>
+> This is not ID recycling and does not contradict §2.5 or §6 row 5. Those exist because a badge **in circulation** carries an ID a customer has seen and may have stuck to a hull — reissuing it would point two boats at one identity. A badge that never left the shelf has none of those properties: nothing was printed against it, nothing shipped, and no customer ever held it. The MXE ID was shown to whoever abandoned the checkout, so reclaiming is only safe while the vessel is genuinely inert — never activated, never paid, no badge despatched.
+>
+> **Not built.** `delete_unactivated_vessel` is the likely hook. Recorded here so the principle exists before the first abandoned checkout does, rather than being decided under pressure when the pool is low.
+
 **Decided: degrade explicitly, do not block signup.**
 
 On zero rows, fall back to the existing mint-on-demand path — `next_mxe_id()`, create the vessel with `badge_identity_id = null` — and flag it loudly for individual printing. A stopped signup is a lost customer; one hand-printed badge is an afternoon's annoyance.

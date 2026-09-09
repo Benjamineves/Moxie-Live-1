@@ -25,6 +25,18 @@ function extFor(file: File) {
  *
  * Two things that look incidental and are not:
  *
+ * 0. `pathKey` is the vessel's MXE ID once one exists — which is the
+ *    normal case, and every replacement made from the manage pages. It
+ *    is NOT the MXE ID during intake: stage 7 assigns the ID from the
+ *    badge pool at insert time, so the form has no ID to use and passes
+ *    a per-session draft key instead. Nothing downstream rebuilds a path
+ *    from the MXE ID — the documents route signs whatever path is stored
+ *    on the vessel row — so the stored value is authoritative and a
+ *    draft folder is a naming quirk rather than a broken reference. The
+ *    parameter is named for what it is rather than for what it usually
+ *    contains, because the day it silently stopped always being an MXE
+ *    ID is the day the old name became a lie.
+ *
  * 1. The path carries NO file extension. It used to: a JPEG landed at
  *    photo.jpg and a PNG at photo.png, so replacing a photo with a
  *    different format wrote a SECOND object instead of overwriting the
@@ -43,7 +55,7 @@ function extFor(file: File) {
  *    all three caches at once. The caller persists the tokenized URL as
  *    photo_url, so the token is what makes the new photo reachable.
  */
-export async function uploadVesselPhoto(file: File, mxeId: string): Promise<string> {
+export async function uploadVesselPhoto(file: File, pathKey: string): Promise<string> {
   const supabase = createSupabaseBrowserClient();
   if (!supabase) throw new Error("Missing Supabase browser configuration.");
 
@@ -52,7 +64,7 @@ export async function uploadVesselPhoto(file: File, mxeId: string): Promise<stri
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Please sign in again before uploading.");
 
-  const path = `${user.id}/${mxeId}/photo`;
+  const path = `${user.id}/${pathKey}/photo`;
 
   const { error: uploadError } = await supabase.storage
     .from("vessel-photos")
@@ -80,7 +92,7 @@ function withCacheBustToken(publicUrl: string): string {
  * doc upload).
  *
  * Returns the original filename alongside the path because the path itself is
- * deterministic ({userId}/{mxeId}/registration.pdf) and therefore carries no
+ * deterministic ({userId}/{pathKey}/registration.pdf) and therefore carries no
  * information — every vessel's registration document has the identical
  * basename. The caller persists fileName into the matching doc_*_filename
  * column (20260918_document_original_filenames.sql); it is the only point in
@@ -88,7 +100,7 @@ function withCacheBustToken(publicUrl: string): string {
  */
 export async function uploadVesselDocument(
   file: File,
-  mxeId: string,
+  pathKey: string,
   docType: DocType,
 ): Promise<{ path: string; fileName: string }> {
   const supabase = createSupabaseBrowserClient();
@@ -100,7 +112,7 @@ export async function uploadVesselDocument(
   if (!user) throw new Error("Please sign in again before uploading.");
 
   const ext = extFor(file);
-  const path = `${user.id}/${mxeId}/${DOC_PATH_BASE[docType]}.${ext}`;
+  const path = `${user.id}/${pathKey}/${DOC_PATH_BASE[docType]}.${ext}`;
 
   const { error: uploadError } = await supabase.storage
     .from("vessel-docs")

@@ -1,6 +1,5 @@
 "use server";
 
-import { generateNextMxeId } from "@/lib/mxe-id";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { isValidStateCode, normalizeStateCode } from "@/lib/us-states";
@@ -55,18 +54,17 @@ function validate(input: CreateVesselInput) {
   return null;
 }
 
-export async function previewNextMxeId(): Promise<{ mxeId?: string; error?: string }> {
-  try {
-    const mxeId = await generateNextMxeId();
-    return { mxeId };
-  } catch (error) {
-    return { error: error instanceof Error ? error.message : "Unable to preview MXE ID." };
-  }
-}
-
+/**
+ * previewNextMxeId used to live here. It burned a sequence value to show
+ * the customer their MXE ID on the review screen, before the vessel
+ * existed — and stage 7 makes that unworkable: the ID now comes from the
+ * badge pool at insert time, so a previewed sequence value would be a
+ * different number from the one the vessel actually gets. Spec §4.1 is
+ * emphatic that the MXE ID is a fixed fact from the moment it is shown,
+ * so it is now shown after creation rather than guessed before it.
+ */
 export async function createVessel(
   input: CreateVesselInput,
-  proposedMxeId?: string,
 ): Promise<{ mxeId?: string; error?: string; code?: "VESSEL_CAP_REACHED" }> {
   const basicError = validate(input);
   if (basicError) return { error: basicError };
@@ -161,14 +159,18 @@ export async function createVessel(
 
   const isMarinaStorage = input.storage_type === "marina" || input.storage_type === "mooring";
 
-  for (let attempt = 0; attempt < 3; attempt += 1) {
-    const mxeId =
-      attempt === 0 && proposedMxeId && /^MXE-\d{5}$/i.test(proposedMxeId)
-        ? proposedMxeId.toUpperCase()
-        : await generateNextMxeId();
-    const { error } = await service.from("vessels").insert({
+  // The MXE ID and the badge are decided inside create_vessel_with_badge
+  // (20260926), not here, so neither appears in this payload. The
+  // three-attempt retry loop that used to wrap this insert is gone with
+  // them: it existed only because a previewed ID could be taken by a
+  // concurrent signup between preview and insert. A pool claim uses FOR
+  // UPDATE SKIP LOCKED and next_mxe_id() draws from a sequence, so
+  // neither source can hand out the same ID twice and there is nothing
+  // left for a retry to fix. A duplicate now would mean something is
+  // genuinely wrong and should surface, not be swallowed and retried.
+  const { data, error } = await service.rpc("create_vessel_with_badge", {
+    p_vessel: {
       owner_id: ownerId,
-      mxe_id: mxeId,
       vessel_name: input.vessel_name.trim(),
       vessel_type: input.vessel_type.trim(),
       make: input.make.trim(),
@@ -202,13 +204,26 @@ export async function createVessel(
       marina_phone: isMarinaStorage ? input.marina_phone?.trim() || null : null,
       is_liveaboard: isMarinaStorage ? input.is_liveaboard ?? null : null,
       slip_notes: isMarinaStorage ? input.slip_notes?.trim() || null : null,
-    });
+    },
+  });
 
-    if (!error) return { mxeId };
-    if (!error.message.toLowerCase().includes("duplicate")) {
-      return { error: error.message };
-    }
+  if (error) return { error: error.message };
+
+  const result = data as { mxe_id?: string; from_pool?: boolean } | null;
+  if (!result?.mxe_id) {
+    return { error: "Vessel was created but no MXE ID came back. Contact support before paying." };
   }
 
-  return { error: "Could not reserve an MXE ID. Please try again." };
+  // §3.2's fallback is deliberately loud rather than silent — if stock
+  // ran out, the vessel has badge_identity_id NULL and its badge has to
+  // be printed individually. Logged here so it is visible in the
+  // deployment logs from the first occurrence, before the queue flag and
+  // the low-water alarm exist (7b).
+  if (!result.from_pool) {
+    console.warn(
+      `[badge-pool] ${result.mxe_id} was minted on demand — the in_stock pool was empty. This badge must be printed individually.`,
+    );
+  }
+
+  return { mxeId: result.mxe_id };
 }

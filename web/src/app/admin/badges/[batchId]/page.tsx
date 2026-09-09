@@ -82,6 +82,19 @@ export default async function BadgeBatchDetailPage({
     .select("status, artwork_path")
     .eq("print_batch_id", batch.id);
 
+  // Pool depth across ALL batches, not just this one. Assignment (§3.1)
+  // drains oldest-first across the whole pool, so "how much stock is
+  // left" is never a per-batch number — and with a 25-identity first run
+  // it is the number worth watching. This is a deliberate stand-in for
+  // the low-water alarm (§3.2, amber at 25 / red at 10), which is 7b:
+  // seeing the count move is what makes the alarm's thresholds a
+  // judgement rather than a guess.
+  const { count: poolAvailable } = await service
+    .from("badge_identities")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "in_stock")
+    .eq("distribution_channel", "direct");
+
   const statusCounts: Record<string, number> = {};
   let missingArtwork = 0;
   for (const row of (statusRows ?? []) as { status: string; artwork_path: string | null }[]) {
@@ -123,6 +136,34 @@ export default async function BadgeBatchDetailPage({
         {/* Status controls render immediately — they need counts, not
             measurements, and an admin who came here to advance a batch
             should not wait on a hundred Storage reads to do it. */}
+        <div className="mb-4 rounded-xl border border-[var(--divider)] bg-[var(--white)] p-4">
+          <p className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
+            Assignable pool
+          </p>
+          <p className="mt-1 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
+            <strong
+              className={
+                (poolAvailable ?? 0) === 0
+                  ? "text-[var(--red-fg)]"
+                  : (poolAvailable ?? 0) <= 10
+                    ? "text-[var(--red-fg)]"
+                    : (poolAvailable ?? 0) <= 25
+                      ? "text-[var(--amber-fg)]"
+                      : "text-[var(--green-fg)]"
+              }
+            >
+              {poolAvailable ?? 0} identities
+            </strong>{" "}
+            in stock across all batches · {statusCounts.in_stock ?? 0} of them in this one ·{" "}
+            {statusCounts.assigned ?? 0} assigned here
+          </p>
+          <p className="mt-1 font-[family-name:var(--font-dm)] text-[11px] text-[var(--text3)]">
+            Identities, not physical badges — each ships as {batch.copies_per_identity} copies. At
+            zero, signup falls back to minting on demand and those badges must be printed
+            individually.
+          </p>
+        </div>
+
         <div className="mb-6">
           <BatchStatusControls
             batchId={batch.id}
