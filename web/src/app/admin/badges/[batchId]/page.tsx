@@ -6,6 +6,8 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { AdminNav } from "@/components/AdminNav";
 import { BADGE_ARTWORK_BUCKET } from "@/lib/badge-artwork";
 import { measureBadgeArtwork, type BadgeMeasurement } from "@/lib/badge-measure";
+import { BatchStatusControls } from "../BatchStatusControls";
+import { VoidBadgeButton } from "../VoidBadgeButton";
 
 /**
  * Batch detail — the pre-print contact sheet (spec §5.2).
@@ -48,6 +50,7 @@ type IdentityRow = {
   mxe_id: string;
   status: string;
   artwork_path: string | null;
+  void_reason: string | null;
 };
 
 export default async function BadgeBatchDetailPage({
@@ -71,6 +74,24 @@ export default async function BadgeBatchDetailPage({
 
   if (!batchRow) notFound();
   const batch = batchRow as BatchRow;
+
+  // Counts only — deliberately a separate, cheap query from the contact
+  // sheet's, so the status controls are not behind the measurement pass.
+  const { data: statusRows } = await service
+    .from("badge_identities")
+    .select("status, artwork_path")
+    .eq("print_batch_id", batch.id);
+
+  const statusCounts: Record<string, number> = {};
+  let missingArtwork = 0;
+  for (const row of (statusRows ?? []) as { status: string; artwork_path: string | null }[]) {
+    statusCounts[row.status] = (statusCounts[row.status] ?? 0) + 1;
+    // Voided identities are excluded here for the same reason the
+    // database excludes them from the gate: a deliberately dead badge
+    // must not hold the rest of the batch on the bench, and a batch
+    // abandoned mid-render is voided exactly as it stands.
+    if (row.artwork_path === null && row.status !== "void") missingArtwork += 1;
+  }
 
   return (
     <div className="min-h-screen bg-[var(--cream)] px-4 py-8 sm:px-8">
@@ -98,6 +119,17 @@ export default async function BadgeBatchDetailPage({
             permanent adhesive.
           </p>
         </header>
+
+        {/* Status controls render immediately — they need counts, not
+            measurements, and an admin who came here to advance a batch
+            should not wait on a hundred Storage reads to do it. */}
+        <div className="mb-6">
+          <BatchStatusControls
+            batchId={batch.id}
+            counts={statusCounts}
+            missingArtwork={missingArtwork}
+          />
+        </div>
 
         {/* The sheet streams in on its own. Signing is fast, but reading a
             hundred PNGs back out of Storage to measure them is not, and
@@ -127,7 +159,7 @@ async function ContactSheet({ batchId }: { batchId: string }) {
 
   const { data: identityRows, error } = await service
     .from("badge_identities")
-    .select("id, mxe_id, status, artwork_path")
+    .select("id, mxe_id, status, artwork_path, void_reason")
     .eq("print_batch_id", batchId)
     .order("mxe_id", { ascending: true });
 
@@ -193,6 +225,7 @@ async function ContactSheet({ batchId }: { batchId: string }) {
 
   const missing = identities.length - rendered.length;
   const flagged = rendered.filter((i) => {
+    if (i.status === "void") return false;
     const m = measurements.get(i.id);
     return !m || !m.ok || !m.worst.ok;
   }).length;
@@ -215,6 +248,7 @@ async function ContactSheet({ batchId }: { batchId: string }) {
           <BadgeTile
             key={identity.id}
             identity={identity}
+            batchId={batchId}
             signedUrl={identity.artwork_path ? signedUrlByPath.get(identity.artwork_path) : undefined}
             measurement={measurements.get(identity.id)}
           />
@@ -226,13 +260,23 @@ async function ContactSheet({ batchId }: { batchId: string }) {
 
 function BadgeTile({
   identity,
+  batchId,
   signedUrl,
   measurement,
 }: {
   identity: IdentityRow;
+  batchId: string;
   signedUrl?: string;
   measurement?: BadgeMeasurement;
 }) {
+  // A voided identity is shown, not hidden. Its MXE ID is burned
+  // permanently (§6 row 5) and the sheet is the record of where the
+  // batch's numbers went — an absence would just look like a gap someone
+  // has to go and explain. It is dimmed rather than flagged red: it is a
+  // deliberate decision, not a defect, and it is excluded from the
+  // flagged count for the same reason.
+  const isVoid = identity.status === "void";
+
   // An identity with no artwork is a gap in the sheet, not an absence
   // from it. A badge that was never rendered and a badge that rendered
   // wrong are both things the review has to notice.
@@ -249,14 +293,17 @@ function BadgeTile({
             {identity.mxe_id}
           </p>
           <p className="font-[family-name:var(--font-dm)] text-[10px] text-[var(--amber-fg)]">
-            no artwork
+            {isVoid ? `void · ${identity.void_reason ?? "no reason"}` : "no artwork"}
           </p>
+          {isVoid ? null : (
+            <VoidBadgeButton identityId={identity.id} mxeId={identity.mxe_id} batchId={batchId} />
+          )}
         </figcaption>
       </figure>
     );
   }
 
-  const failed = !measurement || !measurement.ok || !measurement.worst.ok;
+  const failed = !isVoid && (!measurement || !measurement.ok || !measurement.worst.ok);
   const ratioLabel = !measurement
     ? "unmeasured"
     : measurement.ok
@@ -266,9 +313,11 @@ function BadgeTile({
   return (
     <figure
       className={`rounded-xl border p-2 ${
-        failed
-          ? "border-2 border-[var(--red-fg)] bg-[var(--red-bg)]"
-          : "border-[var(--divider)] bg-[var(--white)]"
+        isVoid
+          ? "border-dashed border-[var(--divider)] bg-[var(--cream)] opacity-60"
+          : failed
+            ? "border-2 border-[var(--red-fg)] bg-[var(--red-bg)]"
+            : "border-[var(--divider)] bg-[var(--white)]"
       }`}
     >
       {signedUrl ? (
@@ -311,8 +360,11 @@ function BadgeTile({
             failed ? "font-semibold text-[var(--red-fg)]" : "text-[var(--text3)]"
           }`}
         >
-          {ratioLabel}
+          {isVoid ? `void · ${identity.void_reason ?? "no reason"}` : ratioLabel}
         </p>
+        {isVoid ? null : (
+          <VoidBadgeButton identityId={identity.id} mxeId={identity.mxe_id} batchId={batchId} />
+        )}
       </figcaption>
     </figure>
   );

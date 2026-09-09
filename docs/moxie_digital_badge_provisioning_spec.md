@@ -188,7 +188,8 @@ The parameter costs nothing here because it is produced *after* the scan, by the
 badge QR  →  /s/K7M2QP9XR        (34 chars, version 4 — what's printed)
                     │
                     ├─ status = assigned  →  307 → /MXE-01042?scan=1  →  existing scan branch
-                    ├─ status = in_stock  →  render "not registered yet" (200, no redirect)
+                    ├─ minted / printed / in_stock
+                    │                     →  render "not registered yet" (200, no redirect)
                     ├─ status = void      →  render "no longer valid"   (200, no redirect)
                     └─ token unknown      →  404
 ```
@@ -199,6 +200,12 @@ badge QR  →  /s/K7M2QP9XR        (34 chars, version 4 — what's printed)
 
 1. **The redirect must be `307`, and must not be cached.** A `301`/`308` is cached by browsers and intermediaries effectively forever. If an identity is ever re-bound by the explicit admin action §4.1 permits, a cached permanent redirect would keep sending scanners to the old vessel with no way to fix it — on a device we don't control, for a badge that is glued to a hull. The token→vessel mapping is stable in practice but must not be declared immutable to the network.
 2. **An unclaimed badge must render, not 404.** A 404 on a physical product reads as a broken product. `in_stock` is a normal state for a badge sitting in a warehouse or a print shop, and scanning one there must produce a calm "this badge hasn't been registered yet" page. It must also not disclose inventory scale — no counts, no batch, no MXE ID beyond what is already printed on the badge in the scanner's hand.
+
+   **This covers `minted` and `printed` too, not only `in_stock`.** Those are the states a badge occupies while it is being produced, and a badge scanned on a packing line or at the print shop is in exactly the same position as one on a warehouse shelf: real, unregistered, and not an error. The rule is that only an *unknown token* 404s; every status a real badge can hold renders.
+
+   **A status this code has not heard of renders the same way.** If a later migration adds a state, the person holding the badge gets the calmest true statement available rather than a 500. Degrading toward "not registered yet" is always safe; degrading toward an error page is not.
+
+3. **The redirect target is the vessel's `mxe_id`, not the identity's.** They are the same by construction — assignment gives the identity's reserved ID to the vessel — but `/<mxeId>` resolves the *vessel* row, and `apply_vessel_identity_correction` can move it. Following the vessel keeps a corrected boat reachable from the badge already on its hull. If the join comes back empty the identity's own ID is used, so a badge on a hull never 404s because of a missing row.
 
 **Side benefit worth keeping:** after the redirect the visitor's address bar shows `/MXE-01042`, which is bookmarkable, shareable, and human-meaningful — better than an opaque token, and it puts the ID the owner will be asked for on screen.
 
@@ -495,11 +502,13 @@ The transitions, and the real-world event each one corresponds to:
 | `minted` → `printed` | admin | printed sheets physically **received and inspected** | **batch** |
 | `printed` → `in_stock` | admin | badges **cut, finished, and on the shelf** ready to pick | **batch** |
 | `in_stock` → `assigned` | the system, automatically | signup (§3.1) | per identity |
-| any → `void` | admin, with a reason | damage, loss, abandoned batch | **per identity** |
+| `minted` / `printed` / `in_stock` → `void` | admin, with a reason | damage, loss, abandoned batch | **per identity** |
 
 **Batch-level for the two manual transitions, and this is deliberate.** Badges are printed, guillotined, and shelved as a batch. There is no real-world moment at which identity 47 is printed and 48 is not, so per-identity buttons would be busywork recording an event that did not happen per identity. Transitions should mirror physical reality, or the data becomes fiction someone has to maintain by hand.
 
-**`void` is the exception, and is per identity**, because damage is per object — one badge is dropped, creased, or misfed, not a hundred. Note the §1.6 interaction: `void` remains an *identity*-level state even so. A single damaged physical copy is a reprint from stored artwork, not a void; only an identity that can produce no usable badge at all is voided.
+**`assigned` cannot be voided.** This narrows what an earlier draft of this table wrote as "any → void". An assigned identity's badge is on a customer's hull and its token is live: voiding it would make `/s/<token>` answer "no longer valid" for a boat that is registered and paid up, with no way to reach the owner and no way to un-print the badge. Nothing legitimate needs it — a damaged customer badge is a reprint from stored artwork (§5.1), and transfer and decommission both leave `badge_identities` untouched by design (§2.5). `void_badge_identity` refuses it. Blocking is the recoverable choice; the reverse mistake is not.
+
+**`void` is otherwise per identity**, because damage is per object — one badge is dropped, creased, or misfed, not a hundred. Note the §1.6 interaction: `void` remains an *identity*-level state even so. A single damaged physical copy is a reprint from stored artwork, not a void; only an identity that can produce no usable badge at all is voided.
 
 **Why `printed` and `in_stock` are not collapsed into one:** they are different real events, often days apart, and the gap between them is exactly the window in which a batch is somewhere between the printer and the shelf. Being able to see that a batch is printed but not yet stocked is worth one extra click. A small operation may well click both in the same sitting, which is fine — the states exist to be *distinguishable*, not to be slow.
 
