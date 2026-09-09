@@ -1,56 +1,12 @@
-import QRCode from "qrcode";
 import { ACTIVE_QR_COLORWAY, QR_SIGNAL_PIXEL_COLOR } from "./qr-colorway.ts";
-import { BADGE_LAYOUT, BADGE_TEXT } from "./badge-layout.ts";
+import { getQrModules, MAX_BADGE_QR_VERSION, assertBadgeQrVersionWithinBudget } from "./qr-modules.ts";
+
+// Re-exported so existing server-side importers keep their import site.
+// Client components must import from ./qr-modules directly — see the
+// header there.
+export { getQrModules, MAX_BADGE_QR_VERSION, assertBadgeQrVersionWithinBudget };
+import { BADGE_LAYOUT, badgeTextRuns } from "./badge-layout.ts";
 import { badgeThemeTokens, type BadgeTheme } from "./badge-theme.ts";
-
-/**
- * qrcode's own toString/toDataURL only support a uniform two-color
- * scheme (color.dark/color.light) — there's no per-module override in
- * its public API, so a single recolored signal pixel needs the raw
- * module matrix (create()) instead, rendered by hand. Finder-pattern
- * corners need no special-casing: they're ordinary "on" modules in the
- * matrix, so they inherit ACTIVE_QR_COLORWAY.darkModule the same as
- * every other data module — this is a color change, not a logic change.
- *
- * Error correction is explicitly Level H here — the current code being
- * replaced never actually set errorCorrectionLevel (silently defaulting
- * to qrcode's 'M'), contrary to the build spec's own §15 ("Level H...
- * non-negotiable"). Fixing that as part of this change, not leaving it
- * as a silent gap.
- */
-export function getQrModules(text: string) {
-  const qr = QRCode.create(text, { errorCorrectionLevel: "H" });
-  const size = qr.modules.size;
-  return {
-    size,
-    version: qr.version,
-    isDark: (row: number, col: number) => qr.modules.get(row, col) === 1,
-    signalRow: size - 1,
-    signalCol: size - 1,
-  };
-}
-
-/**
- * The badge print spec is measured against a version 5 (37x37 module)
- * grid — 3in badge, 62% QR block, 41 units including the quiet zone,
- * ~1.15mm modules (see docs/moxie_digital_acceptance_tests.md's
- * QR-generation section for the full math). A version bump densifies
- * every printed badge without anyone deciding that on purpose, and
- * badges are physical and permanent — there's no "push a fix" once one
- * is printed and stuck to a hull. This is the one place that constraint
- * can actually be enforced, since it's the one place the final encoded
- * URL (base URL + mxeId + params) is assembled.
- */
-export const MAX_BADGE_QR_VERSION = 5;
-
-export function assertBadgeQrVersionWithinBudget(text: string): void {
-  const { version } = getQrModules(text);
-  if (version > MAX_BADGE_QR_VERSION) {
-    throw new Error(
-      `Badge QR for "${text}" encodes at version ${version}, exceeding the version ${MAX_BADGE_QR_VERSION} the badge print spec is designed for (docs/moxie_digital_acceptance_tests.md). This must be resolved deliberately — shorten the encoded URL, or re-derive the badge layout for a denser code — not shipped silently.`,
-    );
-  }
-}
 
 /**
  * Just the module cells + background, no outer <svg> wrapper — shared by
@@ -118,25 +74,21 @@ export function buildBadgeSvg(
   const marginX = L.contentMarginX * UNIT;
   const cornerR = L.cornerRadiusFraction * UNIT;
 
-  // Caption text is uppercased HERE rather than by CSS text-transform.
-  // librsvg does not apply text-transform, so the print rasterization
-  // silently rendered mixed case where the screen rendered caps — a
-  // divergence QrDownload.tsx had already worked around with its own
-  // .toUpperCase(). Doing it in the markup makes all three renderers
-  // agree from one source, and keeps the two themes' text content
-  // identical, which is what the theme test asserts. text-transform is
-  // kept as an inert belt-and-braces for the browser.
-  const captionLine1 = BADGE_TEXT.captionLine1.toUpperCase();
-  const scanLabel = BADGE_TEXT.scanLabel(mxeId).toUpperCase();
-  const patentPending = BADGE_TEXT.patentPending.toUpperCase();
+  // Every text run is declared once in badge-layout.ts and realized here
+  // by the theme — <text> for screen, an outlined <path> for print. The
+  // wordmark is drawn above the QR block and the three caption lines
+  // below it, which is why the list is split around the QR rather than
+  // emitted in one go.
+  const runs = badgeTextRuns(mxeId, UNIT);
+  const wordmark = runs.find((run) => run.key === "wordmark");
+  if (!wordmark) throw new Error("badgeTextRuns lost the wordmark run.");
+  const captions = runs.filter((run) => run.key !== "wordmark");
 
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${UNIT} ${UNIT}" width="${size}" height="${size}">${T.defs}
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${UNIT} ${UNIT}" width="${size}" height="${size}">
     <rect width="${UNIT}" height="${UNIT}" rx="${cornerR}" fill="${T.cardFill}"/>
-    <text x="${UNIT / 2}" y="${L.wordmarkBaselineY * UNIT}" text-anchor="middle" font-family="${T.displayFamily}" font-style="italic" font-weight="300" font-size="${L.wordmarkFontSize * UNIT}" fill="white">${BADGE_TEXT.wordmark}</text>
+    ${T.renderText(wordmark)}
     <svg x="${qrX}" y="${qrY}" width="${qrPixelSize}" height="${qrPixelSize}" viewBox="0 0 ${qrDim} ${qrDim}" shape-rendering="crispEdges">${qrMarkup}</svg>
     <line x1="${marginX}" y1="${L.dividerY * UNIT}" x2="${UNIT - marginX}" y2="${L.dividerY * UNIT}" stroke="${darkModule}" stroke-opacity="0.5" stroke-width="${0.002 * UNIT}"/>
-    <text x="${UNIT / 2}" y="${L.captionLine1Y * UNIT}" text-anchor="middle" font-family="${T.dmFamily}" font-weight="500" font-size="${L.captionFontSize * UNIT}" letter-spacing="${0.02 * UNIT}" fill="rgba(255,255,255,.5)" style="text-transform:uppercase">${captionLine1}</text>
-    <text x="${UNIT / 2}" y="${L.captionLine2Y * UNIT}" text-anchor="middle" font-family="${T.dmFamily}" font-weight="500" font-size="${L.captionFontSize * UNIT}" letter-spacing="${0.02 * UNIT}" fill="rgba(255,255,255,.5)" style="text-transform:uppercase">${scanLabel}</text>
-    <text x="${UNIT / 2}" y="${L.patentPendingY * UNIT}" text-anchor="middle" font-family="${T.dmFamily}" font-weight="500" font-size="${L.patentPendingFontSize * UNIT}" letter-spacing="${0.014 * UNIT}" fill="rgba(255,255,255,.25)" style="text-transform:uppercase">${patentPending}</text>
+    ${captions.map((run) => T.renderText(run)).join("\n    ")}
   </svg>`;
 }

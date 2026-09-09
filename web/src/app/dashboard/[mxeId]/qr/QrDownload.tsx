@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { getQrModules } from "@/lib/qr-render";
+import { getQrModules } from "@/lib/qr-modules";
 import { ACTIVE_QR_COLORWAY, QR_SIGNAL_PIXEL_COLOR } from "@/lib/qr-colorway";
 import { BADGE_LAYOUT, BADGE_PRINT_PIXELS, BADGE_TEXT } from "@/lib/badge-layout";
 

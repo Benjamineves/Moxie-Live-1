@@ -55,3 +55,92 @@ export const BADGE_LAYOUT = {
   patentPendingY: 0.955,
   patentPendingFontSize: 0.018,
 } as const;
+
+/**
+ * The two faces the badge draws. A face implies its style and weight —
+ * `display` is Cormorant Garamond italic 300, `dm` is DM Sans 500 — so
+ * face-to-font is one mapping rather than a family/style/weight triple
+ * that two renderers could assemble differently.
+ */
+export type BadgeFace = "display" | "dm";
+
+/**
+ * Every piece of text on the badge, declared once with its geometry.
+ *
+ * This exists so the screen and print themes cannot disagree about
+ * *what* is drawn or *where*, only about *how*. Screen turns each run
+ * into a <text> element; print turns the identical run into a path
+ * outline (badge-outline.ts). Both consume this list, so a run added,
+ * moved or reworded changes both at once — there is no second place to
+ * update and forget.
+ *
+ * Captions are uppercased HERE rather than by CSS text-transform.
+ * librsvg does not apply text-transform, so the print rasterization
+ * silently rendered mixed case where the screen rendered caps — a
+ * divergence QrDownload.tsx had already worked around with its own
+ * .toUpperCase(). Doing it at the source makes all three renderers agree.
+ *
+ * `unit` is the coordinate space the caller is drawing in (1000 for
+ * buildBadgeSvg's viewBox); every fraction above is resolved against it
+ * so callers receive absolute numbers and do no arithmetic of their own.
+ */
+export function badgeTextRuns(
+  mxeId: string,
+  unit: number,
+): Array<{
+  key: string;
+  text: string;
+  face: BadgeFace;
+  centerX: number;
+  baselineY: number;
+  fontSize: number;
+  letterSpacing: number;
+  fill: string;
+}> {
+  const L = BADGE_LAYOUT;
+  const centerX = unit / 2;
+  const captionFill = "rgba(255,255,255,.5)";
+
+  return [
+    {
+      key: "wordmark",
+      text: BADGE_TEXT.wordmark,
+      face: "display",
+      centerX,
+      baselineY: L.wordmarkBaselineY * unit,
+      fontSize: L.wordmarkFontSize * unit,
+      letterSpacing: 0,
+      fill: "white",
+    },
+    {
+      key: "captionLine1",
+      text: BADGE_TEXT.captionLine1.toUpperCase(),
+      face: "dm",
+      centerX,
+      baselineY: L.captionLine1Y * unit,
+      fontSize: L.captionFontSize * unit,
+      letterSpacing: 0.02 * unit,
+      fill: captionFill,
+    },
+    {
+      key: "scanLabel",
+      text: BADGE_TEXT.scanLabel(mxeId).toUpperCase(),
+      face: "dm",
+      centerX,
+      baselineY: L.captionLine2Y * unit,
+      fontSize: L.captionFontSize * unit,
+      letterSpacing: 0.02 * unit,
+      fill: captionFill,
+    },
+    {
+      key: "patentPending",
+      text: BADGE_TEXT.patentPending.toUpperCase(),
+      face: "dm",
+      centerX,
+      baselineY: L.patentPendingY * unit,
+      fontSize: L.patentPendingFontSize * unit,
+      letterSpacing: 0.014 * unit,
+      fill: "rgba(255,255,255,.25)",
+    },
+  ];
+}

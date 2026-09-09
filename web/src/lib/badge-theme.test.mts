@@ -1,14 +1,19 @@
 /**
- * The drift guard.
+ * The badge drift guard.
  *
- * This repo has twice shipped two renderers of the same artwork that
- * quietly disagreed — three copies of the pixel-M mark, and a
- * downloadable PNG that lost its "Patent Pending" line. Parameterising
- * buildBadgeSvg by theme removes the opportunity to fork it; these tests
- * are what make that structural rather than a matter of discipline.
+ * Badges are physical and permanent — once one is pressed and stuck to a
+ * hull there is no pushing a fix. The failure this file exists to
+ * prevent is two renderers quietly disagreeing: that is what produced
+ * three copies of the pixel-M mark, and a downloadable PNG missing its
+ * "Patent Pending" line. Parameterising buildBadgeSvg by theme removes
+ * the opportunity to fork it; these tests are what keep the two branches
+ * honest afterwards.
  *
- * The contract: both themes produce IDENTICAL geometry and IDENTICAL
- * text, differing only in fill values and font references.
+ * The single most important assertion here is that the print theme
+ * contains no font reference, no CSS variable and no <text> element at
+ * all. That is not a style preference — it is what makes the whole class
+ * of font-resolution defect impossible rather than merely fixed. See
+ * badge-outline.ts for the measurement that forced it.
  */
 import { test } from "node:test";
 import assert from "node:assert/strict";
@@ -18,6 +23,7 @@ import { dirname, resolve } from "node:path";
 
 import { buildBadgeSvg } from "./qr-render.ts";
 import { PRINT_CARD_FILL, badgeThemeTokens } from "./badge-theme.ts";
+import { badgeTextRuns, BADGE_TEXT } from "./badge-layout.ts";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const MXE = "MXE-01042";
@@ -26,104 +32,154 @@ const URL_ = "https://moxieyacht.com/s/ZNGSEXCBQ";
 const screen = buildBadgeSvg(MXE, URL_, { size: 1800, theme: "screen" });
 const print = buildBadgeSvg(MXE, URL_, { size: 1800, theme: "print" });
 
-/** Strip the print theme's <defs> so structural comparisons see the badge itself. */
-const withoutDefs = (svg: string) => svg.replace(/<defs>[\s\S]*?<\/defs>/, "");
-
 const tagCounts = (svg: string) => {
-  const counts = new Map<string, number>();
-  for (const m of svg.matchAll(/<([a-z]+)[\s/>]/g)) counts.set(m[1], (counts.get(m[1]) ?? 0) + 1);
+  const counts: Record<string, number> = {};
+  for (const [, tag] of svg.matchAll(/<([a-zA-Z]+)\b/g)) counts[tag] = (counts[tag] ?? 0) + 1;
   return counts;
 };
-const textNodes = (svg: string) => [...svg.matchAll(/<text\b[^>]*>([^<]*)<\/text>/g)].map((m) => m[1]);
-// The leading \s matters: without it, attr "y" also matches the tail of
-// font-family=" and the comparison reports a geometry difference that is
-// really the intended font substitution.
+
+/** Leading \s so `y` does not also match the tail of `font-family="`. */
 const attrValues = (svg: string, attr: string) =>
   [...svg.matchAll(new RegExp(`\\s${attr}="([^"]*)"`, "g"))].map((m) => m[1]);
 
+const screenTextNodes = [...screen.matchAll(/<text\b[^>]*>([^<]*)<\/text>/g)].map((m) => m[1]);
+const printTextNodes = attrValues(print, "data-badge-text");
+
 test("both themes share one viewBox", () => {
-  const vb = (svg: string) => /viewBox="([^"]+)"/.exec(svg)?.[1];
-  assert.equal(vb(screen), "0 0 1000 1000");
-  assert.equal(vb(print), vb(screen));
+  const of = (svg: string) => svg.match(/viewBox="([^"]+)"/)?.[1];
+  assert.equal(of(print), of(screen));
+  assert.equal(of(screen), "0 0 1000 1000");
 });
 
-test("both themes emit identical element counts", () => {
-  const a = tagCounts(withoutDefs(screen));
-  const b = tagCounts(withoutDefs(print));
-  assert.deepEqual([...b.entries()].sort(), [...a.entries()].sort(),
-    "the two themes no longer draw the same elements — one of them has been forked");
-});
-
-test("both themes emit identical text content", () => {
-  const a = textNodes(screen);
-  const b = textNodes(print);
-  assert.deepEqual(b, a);
-  // And the actual strings, so a silent loss like the missing
-  // "Patent Pending" fails here rather than in someone's hands.
-  assert.deepEqual(a, ["Moxie", "REGISTERED VESSEL", `SCAN · ${MXE}`, "PATENT PENDING"]);
+test("both themes draw the same words in the same order", () => {
+  const expected = ["Moxie", "REGISTERED VESSEL", `SCAN · ${MXE}`, "PATENT PENDING"];
+  assert.deepEqual(screenTextNodes, expected);
+  assert.deepEqual(printTextNodes, expected);
 });
 
 test("caption text is uppercased in the markup, not left to CSS", () => {
-  // librsvg ignores text-transform, so relying on CSS meant the printed
-  // badge said "Registered Vessel" while the screen said "REGISTERED
-  // VESSEL". Both themes must carry caps in the markup itself.
-  for (const svg of [screen, print]) {
-    assert.ok(svg.includes(">REGISTERED VESSEL<"), "caption line 1 is not uppercase in the markup");
-    assert.ok(svg.includes(">PATENT PENDING<"), "patent pending is not uppercase in the markup");
-  }
+  // librsvg ignores text-transform, so a caption left in title case on
+  // screen would print in title case too. Uppercasing at the source in
+  // badgeTextRuns is what makes all three renderers agree.
+  assert.equal(BADGE_TEXT.captionLine1, "Registered Vessel");
+  assert.ok(screenTextNodes.includes("REGISTERED VESSEL"));
+  assert.ok(printTextNodes.includes("REGISTERED VESSEL"));
 });
 
-test("geometry attributes are byte-identical between themes", () => {
-  for (const attr of ["x", "y", "width", "height", "rx", "x1", "y1", "x2", "y2", "font-size", "letter-spacing", "stroke-width"]) {
+test("both themes realize every run from the one declaration", () => {
+  const runs = badgeTextRuns(MXE, 1000);
+  assert.equal(runs.length, 4, "a run was added or dropped without updating this guard");
+  assert.deepEqual(screenTextNodes, runs.map((r) => r.text));
+  assert.deepEqual(printTextNodes, runs.map((r) => r.text));
+});
+
+test("non-text geometry is byte-identical between themes", () => {
+  // The rect, the divider and the nested QR <svg> carry these; text
+  // positioning is asserted separately because print encodes it inside
+  // path data rather than x/y attributes.
+  for (const attr of ["width", "height", "rx", "x1", "y1", "x2", "y2", "stroke-width", "viewBox"]) {
     assert.deepEqual(attrValues(print, attr), attrValues(screen, attr), `${attr} differs between themes`);
   }
 });
 
-test("the ONLY differences are the card fill and the two font families", () => {
-  // Normalise the known-permitted substitutions; anything left over is
-  // an unintended divergence.
-  const T = badgeThemeTokens("print");
-  const normalised = print
-    .replace(/<defs>[\s\S]*?<\/defs>/, "")
-    .split(T.cardFill).join("var(--navy)")
-    .split(T.displayFamily).join("var(--font-display)")
-    .split(T.dmFamily).join("var(--font-dm)");
+test("the two themes differ only in the card fill and how text is drawn", () => {
+  const stripText = (svg: string) => svg.replace(/\s*<(?:text|path)\b[^>]*(?:>[^<]*<\/text>|\/>)/g, "");
+  const normalised = stripText(print).split(PRINT_CARD_FILL).join("var(--navy)");
+  assert.equal(
+    normalised,
+    stripText(screen),
+    "outside the text runs and the card fill the two themes should be identical — they are not",
+  );
+});
 
-  assert.equal(normalised, screen,
-    "after substituting fills and fonts the two themes should be identical — they are not");
+test("every element count matches except text becoming path", () => {
+  const s = tagCounts(screen);
+  const p = tagCounts(print);
+  assert.equal(s.text, 4, "screen should draw four <text> runs");
+  assert.equal(p.path, 4, "print should draw four outlined <path> runs");
+  for (const tag of ["svg", "rect", "line"]) {
+    assert.equal(p[tag], s[tag], `<${tag}> count differs between themes`);
+  }
 });
 
 test("the print card fill still matches --navy in globals.css", () => {
-  // The one literal a server-side rasterizer cannot look up for itself.
-  // If globals.css moves, this fails rather than printing the old colour.
   const css = readFileSync(resolve(HERE, "../app/globals.css"), "utf8");
-  const navy = /--navy:\s*(#[0-9a-fA-F]{6})/.exec(css)?.[1];
-  assert.ok(navy, "could not find --navy in globals.css");
-  assert.equal(PRINT_CARD_FILL.toLowerCase(), navy.toLowerCase());
+  const navy = css.match(/--navy:\s*([^;]+);/)?.[1]?.trim();
+  assert.equal(
+    navy,
+    PRINT_CARD_FILL,
+    "PRINT_CARD_FILL is a hand-copied literal of --navy; globals.css moved and it did not",
+  );
 });
 
-test("the screen theme is unchanged: still CSS variables, no embedded fonts", () => {
-  assert.ok(screen.includes('fill="var(--navy)"'));
-  assert.ok(screen.includes('font-family="var(--font-display)"'));
-  assert.ok(screen.includes('font-family="var(--font-dm)"'));
-  assert.ok(!screen.includes("<defs>"), "the screen theme must not carry embedded fonts");
-  assert.ok(!screen.includes("base64"), "the screen theme must not carry embedded fonts");
+test("the screen theme is unchanged: still CSS variables", () => {
+  assert.ok(screen.includes("var(--navy)"));
+  assert.ok(screen.includes("var(--font-display)"));
+  assert.ok(screen.includes("var(--font-dm)"));
+  assert.ok(!screen.includes("@font-face"), "the browser gets its fonts from next/font, not embedded copies");
 });
 
-test("the print theme resolves everything a rasterizer cannot", () => {
-  assert.ok(!withoutDefs(print).includes("var(--"), "print theme still contains an unresolved CSS variable");
-  assert.ok(print.includes("@font-face"), "print theme is missing its embedded faces");
-  assert.ok(print.includes("Cormorant Garamond") && print.includes("DM Sans"));
+/**
+ * THE ONE THAT MATTERS.
+ *
+ * Three separate defects reached artwork through font resolution: an
+ * unresolved var(--navy) rendering the card black, text-transform being
+ * ignored, and @font-face being ignored outright — the last of which
+ * printed a whole badge of tofu on Vercel while looking fine on a Mac,
+ * because macOS had system fonts to fall back to and the serverless
+ * runtime did not.
+ *
+ * Every one of those is a lookup performed at rasterization time. Print
+ * artwork now performs none: no font-family to match, no CSS variable to
+ * resolve, no @font-face to load, no <text> to shape. If this assertion
+ * ever fails, that guarantee has been given away.
+ */
+test("print artwork asks the rasterizer to resolve nothing", () => {
+  assert.ok(!print.includes("var(--"), "a CSS variable reached print artwork; it will render as a default");
+  assert.ok(!print.includes("<text"), "print artwork must draw outlines, never text — fonts do not exist on the render host");
+  assert.ok(!print.includes("font-family"), "print artwork must not name a font family");
+  assert.ok(!print.includes("@font-face"), "@font-face is inert in librsvg — embedding one gives false confidence");
+  assert.ok(!print.includes("text-transform"), "text-transform is inert in librsvg");
 });
 
-test("both embedded faces are real WOFF2 payloads", () => {
-  // Guards against an empty or truncated base64 regeneration, which
-  // would fall back to a system font as silently as no embed at all.
-  const faces = [...print.matchAll(/base64,([A-Za-z0-9+/=]+)\)/g)].map((m) => m[1]);
-  assert.equal(faces.length, 2, `expected 2 embedded faces, found ${faces.length}`);
-  for (const b64 of faces) {
-    const buf = Buffer.from(b64, "base64");
-    assert.ok(buf.length > 1000, `embedded face is only ${buf.length} bytes`);
-    assert.equal(buf.subarray(0, 4).toString("latin1"), "wOF2", "embedded face is not WOFF2");
+test("every character in every run produced actual contours", () => {
+  // The per-character guard. Each glyph outline opens with at least one
+  // moveto — several ('o', 'e', 'P') open two or more — so a run whose
+  // moveto count drops below its printable character count has silently
+  // drawn nothing for some character. That is precisely how a badge
+  // would ship with a letter missing, and it is invisible in markup
+  // review because the path attribute is still long and still valid.
+  const ds = attrValues(print, "d");
+  assert.equal(ds.length, 4, "expected one path per text run");
+  const runs = badgeTextRuns(MXE, 1000);
+  ds.forEach((d, i) => {
+    assert.ok(/^M[-\d]/.test(d), `run ${i} does not start with a moveto`);
+    const movetos = (d.match(/M/g) ?? []).length;
+    const printable = [...runs[i].text].filter((c) => c !== " ").length;
+    assert.ok(
+      movetos >= printable,
+      `run "${runs[i].text}" produced ${movetos} contours for ${printable} printable characters — a glyph is missing`,
+    );
+  });
+});
+
+test("outlined text is centred, matching text-anchor=middle on screen", () => {
+  // Path data is absolute, so the drawn extent can be measured directly
+  // and compared to the centre the screen theme anchors to.
+  for (const d of attrValues(print, "d")) {
+    const xs = [...d.matchAll(/[ML]\s*(-?[\d.]+)\s+(-?[\d.]+)/g)].map((m) => Number(m[1]));
+    assert.ok(xs.length > 0, "no absolute coordinates found in path data");
+    const centre = (Math.min(...xs) + Math.max(...xs)) / 2;
+    assert.ok(
+      Math.abs(centre - 500) < 12,
+      `outlined run centres on x=${centre.toFixed(1)}, not the badge centre 500 — anchoring drifted`,
+    );
   }
+});
+
+test("the theme surface is exactly two things", () => {
+  // If a third field appears here, the assertion above about the themes
+  // being otherwise identical has quietly stopped covering it.
+  assert.deepEqual(Object.keys(badgeThemeTokens("print")).sort(), ["cardFill", "renderText"]);
+  assert.deepEqual(Object.keys(badgeThemeTokens("screen")).sort(), ["cardFill", "renderText"]);
 });

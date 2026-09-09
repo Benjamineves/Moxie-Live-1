@@ -9,6 +9,46 @@ import assert from "node:assert/strict";
 import sharp from "sharp";
 
 import { BADGE_ARTWORK_PIXELS, badgeArtworkPath, renderBadgeArtworkPng } from "./badge-artwork.ts";
+import { badgeTextRuns } from "./badge-layout.ts";
+
+const CARD_FILL: [number, number, number] = [0x0d, 0x1f, 0x35];
+
+/**
+ * Ink coverage inside one horizontal band of the badge — the fraction of
+ * pixels that differ from the card fill.
+ *
+ * Sampling is clamped to the card interior (x 200..1600) because the
+ * bottom caption band otherwise reaches into the rounded corners, where
+ * the pixels outside the radius are not card fill and would read as ink.
+ */
+async function bandInk(png: Buffer, top: number, bottom: number) {
+  const left = 200;
+  const width = 1400;
+  const { data, info } = await sharp(png)
+    .extract({ left, top, width, height: bottom - top })
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  let ink = 0;
+  let sumX = 0;
+  for (let y = 0; y < info.height; y += 1) {
+    for (let x = 0; x < info.width; x += 1) {
+      const i = (y * info.width + x) * info.channels;
+      const delta =
+        Math.abs(data[i] - CARD_FILL[0]) +
+        Math.abs(data[i + 1] - CARD_FILL[1]) +
+        Math.abs(data[i + 2] - CARD_FILL[2]);
+      if (delta > 24) {
+        ink += 1;
+        sumX += x;
+      }
+    }
+  }
+  return {
+    coverage: ink / (info.width * info.height),
+    centroidX: ink === 0 ? NaN : left + sumX / ink,
+  };
+}
 
 test("artwork rasterizes to exactly 1800x1800", async () => {
   const png = await renderBadgeArtworkPng("MXE-01042", "ZNGSEXCBQ");
@@ -40,5 +80,91 @@ test("the storage path is batch-scoped and sorts by MXE ID", () => {
   assert.equal(
     badgeArtworkPath("2f8c1e70-0000-4000-8000-000000000001", "MXE-01042"),
     "2f8c1e70-0000-4000-8000-000000000001/MXE-01042.png",
+  );
+});
+
+/**
+ * THE ASSERTION THAT WAS MISSING.
+ *
+ * The previous pixel test sampled the card fill and passed happily on an
+ * image whose every glyph was a tofu box, because it only ever looked at
+ * a 4x4 patch of empty navy. A test suite that goes green on unreadable
+ * artwork is not testing the thing that matters.
+ *
+ * This looks where the text actually is. Each run gets a band around its
+ * baseline, and the band must contain a believable amount of ink —
+ * enough to be text, not so much as to be a row of filled boxes — and it
+ * must be centred, because a run drawn at the wrong anchor is as broken
+ * as one not drawn at all.
+ *
+ * The bounds are deliberately wide. This is a smoke detector for "the
+ * text did not render, or rendered as something other than text"; it is
+ * not a pixel-diff against a golden image, which would break on every
+ * librsvg point release without telling us anything true.
+ */
+test("every text run leaves believable ink where it should", async () => {
+  const png = await renderBadgeArtworkPng("MXE-01042", "ZNGSEXCBQ");
+
+  for (const run of badgeTextRuns("MXE-01042", BADGE_ARTWORK_PIXELS)) {
+    const top = Math.floor(run.baselineY - run.fontSize * 1.05);
+    const bottom = Math.ceil(run.baselineY + run.fontSize * 0.32);
+    const { coverage, centroidX } = await bandInk(png, top, bottom);
+
+    assert.ok(
+      coverage > 0.005,
+      `"${run.text}" band is ${(coverage * 100).toFixed(2)}% ink — the text did not render`,
+    );
+    assert.ok(
+      coverage < 0.35,
+      `"${run.text}" band is ${(coverage * 100).toFixed(2)}% ink — far too heavy for text, likely tofu boxes or a filled rect`,
+    );
+    assert.ok(
+      Math.abs(centroidX - BADGE_ARTWORK_PIXELS / 2) < 60,
+      `"${run.text}" ink centres on x=${centroidX.toFixed(0)}, not the badge centre — anchoring is wrong`,
+    );
+  }
+});
+
+/**
+ * Tofu is uniform: every missing glyph draws the identical box, so the
+ * ink repeats on a fixed pitch. Real text does not — letters differ in
+ * width and in how much of their column is inked. Measuring the variance
+ * of per-column ink separates the two without pinning us to an exact
+ * rendering.
+ */
+test("caption glyphs vary in shape, as letters do and tofu does not", async () => {
+  const png = await renderBadgeArtworkPng("MXE-01042", "ZNGSEXCBQ");
+  const run = badgeTextRuns("MXE-01042", BADGE_ARTWORK_PIXELS).find((r) => r.key === "captionLine1")!;
+  const top = Math.floor(run.baselineY - run.fontSize * 1.05);
+  const bottom = Math.ceil(run.baselineY + run.fontSize * 0.32);
+
+  const { data, info } = await sharp(png)
+    .extract({ left: 200, top, width: 1400, height: bottom - top })
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+
+  const columns: number[] = [];
+  for (let x = 0; x < info.width; x += 1) {
+    let ink = 0;
+    for (let y = 0; y < info.height; y += 1) {
+      const i = (y * info.width + x) * info.channels;
+      const delta =
+        Math.abs(data[i] - CARD_FILL[0]) +
+        Math.abs(data[i + 1] - CARD_FILL[1]) +
+        Math.abs(data[i + 2] - CARD_FILL[2]);
+      if (delta > 24) ink += 1;
+    }
+    columns.push(ink);
+  }
+
+  const inked = columns.filter((c) => c > 0);
+  assert.ok(inked.length > 50, `only ${inked.length} inked columns — the caption is missing`);
+
+  // A row of identical hollow boxes gives every inked column one of two
+  // values (side wall vs top/bottom rule). Letters give a spread.
+  const distinct = new Set(inked).size;
+  assert.ok(
+    distinct > 8,
+    `inked columns take only ${distinct} distinct heights — that is a repeating shape, not lettering`,
   );
 });
