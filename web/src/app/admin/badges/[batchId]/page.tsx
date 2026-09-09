@@ -6,6 +6,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { AdminNav } from "@/components/AdminNav";
 import { BADGE_ARTWORK_BUCKET } from "@/lib/badge-artwork";
 import { measureBadgeArtwork, type BadgeMeasurement } from "@/lib/badge-measure";
+import { readBadgePoolStatus } from "@/lib/badge-pool";
 import { BatchStatusControls } from "../BatchStatusControls";
 import { VoidBadgeButton } from "../VoidBadgeButton";
 
@@ -89,11 +90,7 @@ export default async function BadgeBatchDetailPage({
   // the low-water alarm (§3.2, amber at 25 / red at 10), which is 7b:
   // seeing the count move is what makes the alarm's thresholds a
   // judgement rather than a guess.
-  const { count: poolAvailable } = await service
-    .from("badge_identities")
-    .select("id", { count: "exact", head: true })
-    .eq("status", "in_stock")
-    .eq("distribution_channel", "direct");
+  const pool = await readBadgePoolStatus(service);
 
   const statusCounts: Record<string, number> = {};
   let missingArtwork = 0;
@@ -143,16 +140,14 @@ export default async function BadgeBatchDetailPage({
           <p className="mt-1 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
             <strong
               className={
-                (poolAvailable ?? 0) === 0
-                  ? "text-[var(--red-fg)]"
-                  : (poolAvailable ?? 0) <= 10
-                    ? "text-[var(--red-fg)]"
-                    : (poolAvailable ?? 0) <= 25
-                      ? "text-[var(--amber-fg)]"
-                      : "text-[var(--green-fg)]"
+                pool.level === "ok"
+                  ? "text-[var(--green-fg)]"
+                  : pool.level === "amber"
+                    ? "text-[var(--amber-fg)]"
+                    : "text-[var(--red-fg)]"
               }
             >
-              {poolAvailable ?? 0} identities
+              {pool.available} identities
             </strong>{" "}
             in stock across all batches · {statusCounts.in_stock ?? 0} of them in this one ·{" "}
             {statusCounts.assigned ?? 0} assigned here

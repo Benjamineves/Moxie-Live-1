@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/admin-verify";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { AdminNav } from "@/components/AdminNav";
 import { StickerQueueTable, type StickerRow } from "./StickerQueueTable";
+import { readBadgePoolStatus } from "@/lib/badge-pool";
 
 type Props = {
   searchParams: Promise<{ shipped?: string }>;
@@ -36,7 +37,7 @@ export default async function StickerFulfillmentPage({ searchParams }: Props) {
   let query = service
     .from("vessels")
     .select(
-      "mxe_id, vessel_name, owner_name, owner_email, qr_generated_at, sticker_order_status, mailing_line1, mailing_line2, mailing_city, mailing_state, mailing_zip",
+      "mxe_id, vessel_name, owner_name, owner_email, qr_generated_at, sticker_order_status, mailing_line1, mailing_line2, mailing_city, mailing_state, mailing_zip, badge_identity_id, created_at",
     )
     .eq("qr_status", "active");
 
@@ -50,6 +51,11 @@ export default async function StickerFulfillmentPage({ searchParams }: Props) {
   const { data: rows, error } = await query.order("qr_generated_at", { ascending: true });
 
   const vessels = (rows ?? []) as StickerRow[];
+
+  // §3.2: which of these need a hand-printed badge. The cutoff is read
+  // here rather than assumed, because "no badge assigned" means two
+  // different things either side of the moment stock first existed.
+  const pool = await readBadgePoolStatus(service);
 
   return (
     <div className="min-h-screen bg-[var(--cream)] px-4 py-8 sm:px-8">
@@ -84,7 +90,7 @@ export default async function StickerFulfillmentPage({ searchParams }: Props) {
             </p>
           </div>
         ) : (
-          <StickerQueueTable initialVessels={vessels} />
+          <StickerQueueTable initialVessels={vessels} stockSince={pool.stockSince} />
         )}
       </main>
     </div>

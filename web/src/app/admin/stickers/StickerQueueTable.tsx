@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { StickerStatusSelect } from "./StickerStatusSelect";
+import { needsIndividualPrinting } from "@/lib/badge-pool";
 import type { StickerOrderStatus } from "./actions";
 
 export type StickerRow = {
@@ -16,6 +17,9 @@ export type StickerRow = {
   mailing_city: string | null;
   mailing_state: string | null;
   mailing_zip: string | null;
+  /** §3.2 — null means no pre-minted badge was assigned to this vessel. */
+  badge_identity_id: string | null;
+  created_at: string | null;
 };
 
 /**
@@ -54,10 +58,43 @@ function ShipTo({ vessel }: { vessel: StickerRow }) {
 
 const COLUMNS = ["MXE ID", "Vessel", "Owner", "Ship to", "Owner email", "Paid", "Status"];
 
-export function StickerQueueTable({ initialVessels }: { initialVessels: StickerRow[] }) {
+/**
+ * §3.2's requirement that the mint-on-demand fallback be visible rather
+ * than silent. A vessel with no assigned badge needs one printed by
+ * hand, and the picker has to know that before they go to the shelf
+ * looking for a badge that was never made.
+ *
+ * Same amber treatment as a missing address, and deliberately so: both
+ * mean "this row cannot be fulfilled as-is". `stockSince` is what keeps
+ * it honest — vessels registered before any stock existed are history,
+ * not fallbacks, and an alert that is always on is an alert nobody reads.
+ */
+function PrintIndividually({ vessel, stockSince }: { vessel: StickerRow; stockSince: string | null }) {
+  if (!needsIndividualPrinting(vessel, stockSince)) return null;
+  return (
+    <span
+      title="No pre-minted badge was assigned — the pool was empty at signup. This badge has to be printed on its own."
+      className="inline-flex items-center rounded-full bg-[var(--amber-bg)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--amber-fg)]"
+    >
+      Print individually
+    </span>
+  );
+}
+
+export function StickerQueueTable({
+  initialVessels,
+  stockSince,
+}: {
+  initialVessels: StickerRow[];
+  stockSince: string | null;
+}) {
   const [vessels, setVessels] = useState(initialVessels);
 
   const shippedCount = vessels.filter((v) => v.sticker_order_status === "shipped").length;
+  // Surfaced as a count as well as per-row chips: a picker scanning a
+  // hundred rows for amber will miss one, and "2 need individual
+  // printing" is the sentence that makes them look.
+  const individualCount = vessels.filter((v) => needsIndividualPrinting(v, stockSince)).length;
 
   function handleStatusChange(mxeId: string, status: StickerOrderStatus) {
     setVessels((prev) => prev.map((v) => (v.mxe_id === mxeId ? { ...v, sticker_order_status: status } : v)));
@@ -77,6 +114,19 @@ export function StickerQueueTable({ initialVessels }: { initialVessels: StickerR
 
   return (
     <div>
+      {individualCount > 0 ? (
+        <div className="mb-3 rounded-xl border border-[var(--amber-fg)] bg-[var(--amber-bg)] px-4 py-3">
+          <p className="font-[family-name:var(--font-dm)] text-sm font-semibold text-[var(--amber-fg)]">
+            {individualCount} {individualCount === 1 ? "vessel needs" : "vessels need"} a badge printed
+            individually
+          </p>
+          <p className="mt-0.5 font-[family-name:var(--font-dm)] text-xs text-[var(--amber-fg)]">
+            No pre-minted badge was assigned — the pool was empty at signup. There is nothing on the
+            shelf to pick for these.
+          </p>
+        </div>
+      ) : null}
+
       {shippedCount > 0 ? (
         <div className="mb-3 flex justify-end">
           <button
@@ -119,6 +169,7 @@ export function StickerQueueTable({ initialVessels }: { initialVessels: StickerR
                           Shipped
                         </span>
                       ) : null}
+                      <PrintIndividually vessel={v} stockSince={stockSince} />
                     </span>
                   </td>
                   <td className="px-4 py-3 font-[family-name:var(--font-dm)] text-sm text-[var(--text)]">

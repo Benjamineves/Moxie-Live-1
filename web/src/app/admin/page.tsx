@@ -5,6 +5,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { AdminNav } from "@/components/AdminNav";
 import { AdminGeoMap } from "@/components/AdminGeoMap";
 import { GEO_REGIONS, classifyRegion, resolveVesselLocationSource } from "@/lib/vessel-geo";
+import { readBadgePoolStatus, POOL_AMBER_THRESHOLD, POOL_RED_THRESHOLD } from "@/lib/badge-pool";
 
 function startOfMonth(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -105,6 +106,12 @@ export default async function AdminOverviewPage() {
     .from("vessel_decommission_requests")
     .select("id", { count: "exact", head: true })
     .eq("status", "pending");
+
+  // §3.2's low-water alarm. Wanted BEFORE the first batch ships, because
+  // the failure it warns about is silent: an empty pool does not stop
+  // signup, it quietly reverts to hand-printing one badge at a time,
+  // which is the thing this whole change exists to end.
+  const pool = await readBadgePoolStatus(service);
 
   const ratioFullPct = totalOwners > 0 ? Math.round((fullCount / totalOwners) * 100) : 0;
 
@@ -282,6 +289,56 @@ export default async function AdminOverviewPage() {
         </section>
 
         {/* 4. Needs attention */}
+        {/* Above "Needs attention" rather than inside it, because it is
+            not a queue with items to work through — it is a level that
+            has to stay off the floor, and it reads wrong sitting beside
+            three counts of pending requests. Hidden entirely until stock
+            has ever existed, so it does not shout on a system that has
+            not minted a batch yet. */}
+        {pool.stockSince ? (
+          <section className="mb-8">
+            <Link
+              href="/admin/badges"
+              className={`block rounded-2xl border p-5 shadow-sm transition ${
+                pool.level === "ok"
+                  ? "border-[var(--divider)] bg-[var(--white)] hover:border-[var(--gold-line)]"
+                  : pool.level === "amber"
+                    ? "border-[var(--amber-fg)] bg-[var(--amber-bg)]"
+                    : "border-[var(--red-fg)] bg-[var(--red-bg)]"
+              }`}
+            >
+              <p className="font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.14em] text-[var(--text3)]">
+                Badge pool
+              </p>
+              <p
+                className={`mt-1 font-[family-name:var(--font-display)] text-4xl font-light ${
+                  pool.level === "ok"
+                    ? "text-[var(--navy)]"
+                    : pool.level === "amber"
+                      ? "text-[var(--amber-fg)]"
+                      : "text-[var(--red-fg)]"
+                }`}
+              >
+                {pool.available} identities in stock
+              </p>
+              <p className="mt-1 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
+                {pool.level === "empty"
+                  ? "Empty — every new registration is now minting on demand and needs its badge printed individually. →"
+                  : pool.level === "red"
+                    ? `Below ${POOL_RED_THRESHOLD}. Mint and print the next batch now. →`
+                    : pool.level === "amber"
+                      ? `Below ${POOL_AMBER_THRESHOLD}. Start the next batch — printing takes days, not minutes. →`
+                      : "Assignable to new registrations →"}
+              </p>
+              {/* §1.6: two physical badges per identity. Saying so here is
+                  what stops the number reading as twice the safety it is. */}
+              <p className="mt-1 font-[family-name:var(--font-dm)] text-xs text-[var(--text3)]">
+                Identities, not badges — each ships as two copies.
+              </p>
+            </Link>
+          </section>
+        ) : null}
+
         <section>
           <p className="mb-4 font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.14em] text-[var(--text3)]">
             Needs attention
