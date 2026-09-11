@@ -14,6 +14,9 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
   children,
+  confirmLabel,
+  pendingLabel,
+  destructive = false,
 }: {
   open: boolean;
   title: string;
@@ -21,6 +24,20 @@ export function ConfirmDialog({
   onConfirm: () => void;
   onCancel: () => void;
   children?: React.ReactNode;
+  /**
+   * Defaults to "Confirm & save", which is right for the edit forms this
+   * was built for and wrong for anything that destroys something. Pass
+   * the verb the action actually performs.
+   */
+  confirmLabel?: string;
+  pendingLabel?: string;
+  /**
+   * Styles the confirm button as destructive and relabels the dismiss
+   * button "Keep it" — on a destructive dialog, a button marked "Cancel"
+   * beside one that cancels a transfer is genuinely ambiguous about
+   * which one cancels what.
+   */
+  destructive?: boolean;
 }) {
   if (!open) return null;
 
@@ -42,15 +59,19 @@ export function ConfirmDialog({
             disabled={pending}
             className="flex-1 rounded-lg border border-[var(--divider)] px-4 py-2.5 font-[family-name:var(--font-dm)] text-sm text-[var(--text)] disabled:opacity-40"
           >
-            Cancel
+            {destructive ? "Keep it" : "Cancel"}
           </button>
           <button
             type="button"
             onClick={onConfirm}
             disabled={pending}
-            className="flex-1 rounded-lg bg-[var(--navy-deep)] px-4 py-2.5 font-[family-name:var(--font-dm)] text-sm font-semibold text-[var(--gold)] disabled:opacity-40"
+            className={
+              destructive
+                ? "flex-1 rounded-lg bg-[var(--red-fg)] px-4 py-2.5 font-[family-name:var(--font-dm)] text-sm font-semibold text-[var(--white)] disabled:opacity-40"
+                : "flex-1 rounded-lg bg-[var(--navy-deep)] px-4 py-2.5 font-[family-name:var(--font-dm)] text-sm font-semibold text-[var(--gold)] disabled:opacity-40"
+            }
           >
-            {pending ? "Saving…" : "Confirm & save"}
+            {pending ? (pendingLabel ?? "Saving…") : (confirmLabel ?? "Confirm & save")}
           </button>
         </div>
       </div>

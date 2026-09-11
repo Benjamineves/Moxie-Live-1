@@ -4,7 +4,16 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { initiateOwnershipTransfer, cancelOwnershipTransfer } from "@/lib/owner-actions";
-import { editTriggerClass, inputClass, labelClass, saveButtonClass, cancelButtonClass } from "./formStyles";
+import {
+  editTriggerClass,
+  inputClass,
+  labelClass,
+  saveButtonClass,
+  cancelButtonClass,
+  onDarkPrimaryButtonClass,
+  onDarkDangerButtonClass,
+} from "./formStyles";
+import { CancelTransferDialog } from "./CancelTransferDialog";
 
 export type ActiveTransfer = {
   id: string;
@@ -25,6 +34,7 @@ export function TransferOwnershipPanel({ mxeId, activeTransfer }: { mxeId: strin
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   async function copyToClipboard(text: string) {
     try {
@@ -56,6 +66,7 @@ export function TransferOwnershipPanel({ mxeId, activeTransfer }: { mxeId: strin
         setError(result.error);
         return;
       }
+      setConfirmingCancel(false);
       router.refresh();
     });
   }
@@ -88,30 +99,40 @@ export function TransferOwnershipPanel({ mxeId, activeTransfer }: { mxeId: strin
       <div className="mx-auto mt-3 max-w-lg rounded-xl border border-[var(--gold-line)] bg-[var(--gold-dim)] p-5 shadow-sm">
         {activeTransfer.status === "pending" ? (
           <>
-            <p className="font-[family-name:var(--font-dm)] text-sm font-medium text-[var(--navy)]">
+            <p className="font-[family-name:var(--font-dm)] text-sm font-medium text-[var(--white)]">
               Waiting for {activeTransfer.buyerEmail} to accept.
             </p>
-            <p className="mt-1 font-[family-name:var(--font-dm)] text-xs text-[var(--text2)]">
+            <p className="mt-1 font-[family-name:var(--font-dm)] text-xs text-[rgba(255,255,255,.7)]">
               {daysLeft > 0 ? `Expires in ${daysLeft} day${daysLeft === 1 ? "" : "s"}.` : "Expires today."} Nothing is
               charged until they accept and you complete payment.
             </p>
           </>
         ) : (
           <>
-            <p className="font-[family-name:var(--font-dm)] text-sm font-medium text-[var(--navy)]">
+            <p className="font-[family-name:var(--font-dm)] text-sm font-medium text-[var(--white)]">
               {activeTransfer.buyerEmail} accepted — pay the transfer fee to finish.
             </p>
-            <p className="mt-1 font-[family-name:var(--font-dm)] text-xs text-[var(--text2)]">
+            <p className="mt-1 font-[family-name:var(--font-dm)] text-xs text-[rgba(255,255,255,.7)]">
               Ownership moves the moment this clears.
             </p>
           </>
         )}
-        {error ? <p className="mt-2 font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">{error}</p> : null}
-        <div className="mt-3 flex flex-wrap gap-2.5">
+        {/* --red-fg measures 1.48:1 here. An error a seller cannot read
+            is an error that did not happen, as far as they know. */}
+        {error ? (
+          <p className="mt-2 font-[family-name:var(--font-dm)] text-sm text-[var(--danger-on-dark)]">{error}</p>
+        ) : null}
+
+        {/* Primary first and filled; cancel last, outlined, and warm red.
+            These were peers in the same class until a seller cancelled a
+            live sale by clicking the one they could not read. Resending
+            an email is repeatable; cancelling ends a sale and tells the
+            buyer it is off. They should not look alike. */}
+        <div className="mt-3 flex flex-wrap items-center gap-2.5">
           {activeTransfer.status === "awaiting_payment" ? (
             <Link
               href={`/dashboard/transfer/${encodeURIComponent(activeTransfer.id)}/payment`}
-              className={saveButtonClass}
+              className={onDarkPrimaryButtonClass}
             >
               Pay transfer fee
             </Link>
@@ -120,20 +141,28 @@ export function TransferOwnershipPanel({ mxeId, activeTransfer }: { mxeId: strin
               type="button"
               onClick={() => onResend(activeTransfer.id, activeTransfer.buyerEmail)}
               disabled={pending}
-              className={cancelButtonClass}
+              className={onDarkPrimaryButtonClass}
             >
               Resend link
             </button>
           )}
           <button
             type="button"
-            onClick={() => onCancel(activeTransfer.id)}
+            onClick={() => setConfirmingCancel(true)}
             disabled={pending}
-            className={cancelButtonClass}
+            className={onDarkDangerButtonClass}
           >
             {pending ? "Working…" : "Cancel transfer"}
           </button>
         </div>
+
+        <CancelTransferDialog
+          open={confirmingCancel}
+          buyerEmail={activeTransfer.buyerEmail}
+          pending={pending}
+          onConfirm={() => onCancel(activeTransfer.id)}
+          onDismiss={() => setConfirmingCancel(false)}
+        />
       </div>
     );
   }

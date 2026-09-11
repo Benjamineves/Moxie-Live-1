@@ -3,7 +3,12 @@
 import { useCallback, useEffect, useState, useTransition, type FormEvent } from "react";
 import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { createTransferFeeIntent } from "./actions";
+import { cancelOwnershipTransfer } from "@/lib/owner-actions";
+import { CancelTransferDialog } from "@/components/vessel-edit/CancelTransferDialog";
+import { cancelButtonClass, dangerButtonClass } from "@/components/vessel-edit/formStyles";
 import { TRANSFER_FEE_AMOUNT_USD } from "@/lib/tier-config";
 
 type Props = {
@@ -32,6 +37,30 @@ export function TransferPaymentForm({ transferId, mxeId, buyerEmail, sellerTier,
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+
+  // Cancellation gets its own pending flag rather than sharing the
+  // checkout one — a seller cancelling should not see the payment form
+  // flicker into a loading state, and the two can genuinely overlap.
+  const router = useRouter();
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [cancelPending, startCancel] = useTransition();
+
+  function onCancelTransfer() {
+    setCancelError(null);
+    startCancel(async () => {
+      const result = await cancelOwnershipTransfer(transferId);
+      if (result.error) {
+        setCancelError(result.error);
+        return;
+      }
+      // Back to the vessel, which is where a seller who just called off
+      // a sale actually wants to be — and this page redirects away on
+      // its own now the transfer is no longer awaiting_payment.
+      setConfirmingCancel(false);
+      router.replace(`/${encodeURIComponent(mxeId)}?role=owner`);
+    });
+  }
 
   const attempt = useCallback(
     (onCancelled: () => boolean) => {
@@ -126,6 +155,48 @@ export function TransferPaymentForm({ transferId, mxeId, buyerEmail, sellerTier,
             </p>
           )}
         </div>
+
+        {/* THE WAY OUT.
+            This screen had none — no back, no cancel, nothing. In a
+            standalone PWA there is no browser chrome to escape with
+            either (pwa spec §3b), so a seller having second thoughts
+            about a sale was stuck on a payment form.
+
+            Two doors, deliberately far apart in weight, because they are
+            not the same decision. Leaving changes nothing and the
+            transfer stays live; cancelling ends the sale and tells the
+            buyer. The neutral one is a plain link, the destructive one
+            is outlined red and asks first. */}
+        <div className="mt-10 border-t border-[var(--divider)] pt-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <Link href={`/${encodeURIComponent(mxeId)}?role=owner`} className={cancelButtonClass}>
+              Back to {mxeId}
+            </Link>
+            <button
+              type="button"
+              onClick={() => setConfirmingCancel(true)}
+              disabled={cancelPending}
+              className={dangerButtonClass}
+            >
+              {cancelPending ? "Cancelling…" : "Cancel this transfer"}
+            </button>
+          </div>
+          <p className="mt-2.5 font-[family-name:var(--font-dm)] text-xs text-[var(--text3)]">
+            Going back leaves the transfer open — you can pay later, and {buyerEmail} keeps waiting. Cancelling ends it
+            and tells them.
+          </p>
+          {cancelError ? (
+            <p className="mt-2 font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">{cancelError}</p>
+          ) : null}
+        </div>
+
+        <CancelTransferDialog
+          open={confirmingCancel}
+          buyerEmail={buyerEmail}
+          pending={cancelPending}
+          onConfirm={onCancelTransfer}
+          onDismiss={() => setConfirmingCancel(false)}
+        />
       </main>
     </div>
   );

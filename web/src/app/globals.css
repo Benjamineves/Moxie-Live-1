@@ -28,6 +28,16 @@
   --amber-fg: #633806;
   --red-bg: #faece7;
   --red-fg: #712b13;
+
+  /* Danger on a DARK surface. --red-fg is #712b13, which is built for
+     light backgrounds and measures 1.48:1 on the navy-deep cards — a
+     seller could not read the error text or the cancel control on the
+     transfer panel, and one of them cancelled a live sale by clicking
+     something they could not see. These two are the on-dark pair:
+     7.51:1 for the text, and a border alpha chosen to clear the 3:1 a
+     control boundary needs (3.28:1). */
+  --danger-on-dark: #ff9e80;
+  --danger-on-dark-line: rgba(255, 158, 128, 0.55);
   --gray-bg: #f1efe8;
   --gray-fg: #888780;
   --purple-bg: #eeedfe;
