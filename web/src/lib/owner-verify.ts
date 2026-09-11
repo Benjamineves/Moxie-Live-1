@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
-import { getPublicSupabase } from "@/lib/supabase-public";
-import type { PermissiveDatabase } from "@/lib/supabase/schema-stub";
+import { getPublicSupabase } from "./supabase-public.ts";
+import type { PermissiveDatabase } from "./supabase/schema-stub.ts";
 
 /** Resolve vessel owner email for permission checks. Prefer service role when set (server-only). */
 export async function getOwnerEmailByUserId(ownerId: string): Promise<string | null> {
