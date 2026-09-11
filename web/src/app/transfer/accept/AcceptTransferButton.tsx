@@ -4,7 +4,18 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { acceptOwnershipTransfer } from "./actions";
 
-export function AcceptTransferButton({ transferId }: { transferId: string }) {
+export function AcceptTransferButton({
+  transferId,
+  acceptedHref,
+}: {
+  transferId: string;
+  /**
+   * Where to land once the accept succeeds — this same page carrying
+   * `accepted=1`, which is what tells the server render to confirm the
+   * acceptance instead of reporting it as already done.
+   */
+  acceptedHref: string;
+}) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -18,6 +29,12 @@ export function AcceptTransferButton({ transferId }: { transferId: string }) {
           setError(result.error);
           return;
         }
+        // replace, not push: the pre-acceptance view of this page is
+        // gone the moment the transfer leaves `pending`, so leaving it
+        // in history only gives the buyer a back button to a screen that
+        // will re-render as "Already accepted." The refresh is still
+        // needed — replace alone reuses the cached render.
+        router.replace(acceptedHref);
         router.refresh();
       } catch (err) {
         setError(err instanceof Error ? err.message : "Could not accept this transfer. Please try again.");

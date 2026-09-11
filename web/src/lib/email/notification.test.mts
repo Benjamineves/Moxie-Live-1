@@ -109,7 +109,9 @@ test("the buyer's completion email links at the vessel they were given", () => {
     message: "x",
     mxeId: "MXE-01042",
   });
-  assert.ok(withVessel.includes("https://moxieyacht.com/dashboard/MXE-01042"));
+  assert.ok(withVessel.includes("https://moxieyacht.com/MXE-01042?role=owner"));
+  // Not /dashboard/MXE-…, which is not a route and 404s for everyone.
+  assert.ok(!withVessel.includes("/dashboard/MXE-01042"));
 
   // And degrades to the dashboard rather than a broken URL when the
   // lookup found nothing.
@@ -192,14 +194,40 @@ test("CTAs point at routes that exist", () => {
   // real pages. A billing portal URL deliberately is not used here —
   // those are single-use and expire, so one in an email read tomorrow is
   // a dead link.
+  //
+  // THIS TEST USED TO RUN ONLY THE mxeId: null CASE, which is exactly
+  // why it passed while the buyer's completion CTA pointed at
+  // /dashboard/MXE-… — a route that does not exist. Every type is now
+  // rendered BOTH ways, because a CTA that is only correct when the
+  // vessel lookup failed is not a correct CTA.
   const allowed = [
     "https://moxieyacht.com/dashboard",
     "https://moxieyacht.com/dashboard/upgrade",
     "https://moxieyacht.com/dashboard/manage-fleet",
+    "https://moxieyacht.com/MXE-01042?role=owner",
   ];
   for (const type of EMAILING) {
-    const text = renderNotificationEmailText({ type, message: "x", mxeId: null });
-    const url = text.split("\n").find((l) => l.startsWith("https://"));
-    assert.ok(url && allowed.includes(url), `${type} links at ${url}, which is not a known route`);
+    for (const mxeId of [null, "MXE-01042"]) {
+      const text = renderNotificationEmailText({ type, message: "x", mxeId });
+      const url = text.split("\n").find((l) => l.startsWith("https://"));
+      assert.ok(
+        url && allowed.includes(url),
+        `${type} (mxeId=${mxeId ?? "null"}) links at ${url}, which is not a known route`,
+      );
+    }
+  }
+});
+
+test("no CTA points under /dashboard/<mxeId>, which is not a page", () => {
+  // /dashboard/[mxeId] has sub-routes (documents, payment, qr, shares)
+  // and no page of its own, so the bare path 404s. The owner view of a
+  // vessel is at the root path. Guarding the shape rather than the one
+  // type that got it wrong.
+  for (const type of EMAILING) {
+    const text = renderNotificationEmailText({ type, message: "x", mxeId: "MXE-01042" });
+    assert.ok(
+      !/https:\/\/moxieyacht\.com\/dashboard\/MXE-\d{5}(?:$|[^/])/m.test(text),
+      `${type} links at a bare /dashboard/<mxeId>, which is not a route`,
+    );
   }
 });

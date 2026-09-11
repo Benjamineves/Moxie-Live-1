@@ -4,9 +4,18 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { notifyOwner } from "@/lib/notify";
 import { hashShareToken } from "@/lib/share-token";
 import { AcceptTransferButton } from "./AcceptTransferButton";
+import { AcceptedConfirmation } from "./AcceptedConfirmation";
 
 type Props = {
-  searchParams: Promise<{ token?: string }>;
+  /**
+   * `accepted=1` is set by AcceptTransferButton on a successful accept,
+   * via router.replace, and distinguishes the buyer who just clicked
+   * from one returning to a link they already used. Both land on an
+   * awaiting_payment transfer and they need to hear opposite things:
+   * one has just completed their side of a boat purchase, the other is
+   * checking on something they did days ago.
+   */
+  searchParams: Promise<{ token?: string; accepted?: string }>;
 };
 
 type TransferRow = {
@@ -125,6 +134,11 @@ export default async function AcceptTransferPage({ searchParams }: Props) {
     );
   }
   if (transfer.status === "awaiting_payment") {
+    // Just clicked Accept vs. came back to a used link. Same row, same
+    // status, opposite messages — see the Props comment.
+    if (sp.accepted === "1") {
+      return <AcceptedConfirmation mxeId={transfer.mxe_id} />;
+    }
     return (
       <TerminalMessage
         headline="Already accepted."
@@ -189,7 +203,7 @@ export default async function AcceptTransferPage({ searchParams }: Props) {
 
         <div className="mt-6">
           {signedInEmail === transfer.buyer_email ? (
-            <AcceptTransferButton transferId={transfer.id} />
+            <AcceptTransferButton transferId={transfer.id} acceptedHref={`${nextPath}&accepted=1`} />
           ) : (
             <div className="rounded-xl border border-[var(--gold-line)] bg-[var(--gold-dim)] p-5 text-center">
               <p className="font-[family-name:var(--font-dm)] text-sm font-medium text-[var(--navy)]">

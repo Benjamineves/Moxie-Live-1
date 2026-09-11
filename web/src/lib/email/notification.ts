@@ -118,9 +118,16 @@ const COPY: Record<EmailableNotificationType, Copy> = {
       "It keeps the MXE ID it already had, so the badge on the hull carries on working and now resolves to you.",
       "Its documents did not come with it — registration and insurance belong to the previous owner. Upload yours to bring the record up to date.",
     ],
+    // /{mxeId}?role=owner, NOT /dashboard/{mxeId}. The latter has never
+    // existed as a route — /dashboard/[mxeId] holds only sub-pages
+    // (documents, payment, qr, shares) and no page of its own — so this
+    // CTA 404'd for every buyer who clicked it, signed in or not. The
+    // owner view of a vessel lives at the root path, which is what every
+    // in-app link to a vessel already uses, and which redirects a
+    // logged-out visitor to /login?next=… instead of a dead end.
     cta: {
       label: "Open your vessel",
-      path: (mxeId) => (mxeId ? `/dashboard/${encodeURIComponent(mxeId)}` : "/dashboard"),
+      path: (mxeId) => (mxeId ? `/${encodeURIComponent(mxeId)}?role=owner` : "/dashboard"),
     },
   },
   vessel_locked: {
