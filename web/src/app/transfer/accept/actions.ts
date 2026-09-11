@@ -2,6 +2,7 @@
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { notifyOwner } from "@/lib/notify";
 
 /**
  * Buyer's half of Ownership Transfer acceptance. Enforces the email
@@ -29,10 +30,12 @@ export async function acceptOwnershipTransfer(transferId: string): Promise<{ err
 
   const { data: transferRow } = await service
     .from("ownership_transfers")
-    .select("id, buyer_email, status")
+    .select("id, buyer_email, status, seller_id, mxe_id, vessel_id")
     .eq("id", transferId)
     .maybeSingle();
-  const transfer = transferRow as { id: string; buyer_email: string; status: string } | null;
+  const transfer = transferRow as
+    | { id: string; buyer_email: string; status: string; seller_id: string; mxe_id: string; vessel_id: string }
+    | null;
   if (!transfer) return { error: "Transfer not found." };
 
   const normalizedEmail = user.email.trim().toLowerCase();
@@ -71,5 +74,20 @@ export async function acceptOwnershipTransfer(transferId: string): Promise<{ err
     p_buyer_id: buyerId,
   });
   if (error) return { error: error.message };
+
+  // The seller is not here — they sent a link and went back to their
+  // life. Acceptance is also the moment the transfer fee becomes
+  // payable, so it is the outcome they most need to hear about.
+  //
+  // Keyed on the transfer id: if this ever runs twice for the same
+  // transfer the seller gets one email, but a genuinely new transfer to
+  // the same buyer is a different episode and always sends.
+  await notifyOwner(
+    transfer.seller_id,
+    "transfer_accepted",
+    `${transfer.buyer_email} accepted your transfer of ${transfer.mxe_id}. Complete the transfer fee to move ownership.`,
+    { vesselId: transfer.vessel_id, dedupeKey: transferId },
+  );
+
   return {};
 }

@@ -32,7 +32,12 @@ type Copy = {
   title: string;
   /** Sentences after the lead. */
   detail: string[];
-  cta: { label: string; path: string };
+  /**
+   * Path is resolvable rather than fixed so the buyer's completion email
+   * can link at the vessel they have just been given rather than a
+   * dashboard they then have to search.
+   */
+  cta: { label: string; path: string | ((mxeId: string | null) => string) };
   /** The reassurance box, HTML. Omitted when there is nothing to reassure. */
   reassurance?: string;
 };
@@ -77,6 +82,47 @@ const COPY: Record<EmailableNotificationType, Copy> = {
     reassurance:
       "A paused vessel is not a deleted one. It keeps its MXE ID and its record, and it comes back the moment there is room on your plan.",
   },
+  transfer_accepted: {
+    subject: "Your buyer accepted the transfer",
+    title: "Your buyer accepted",
+    detail: [
+      "Ownership has not moved yet. The transfer fee is the last step, and the vessel stays yours until it is paid.",
+    ],
+    cta: { label: "Complete the transfer", path: "/dashboard" },
+    reassurance:
+      "Nothing changes on the vessel until you complete payment. If you have changed your mind, you can still cancel the transfer.",
+  },
+  transfer_declined_or_expired: {
+    subject: "Your vessel transfer didn't go through",
+    title: "The transfer didn't go through",
+    detail: [
+      "The vessel is still yours and nothing about it has changed. If the sale is still on, start a new transfer and the buyer will get a fresh link.",
+    ],
+    cta: { label: "Start a new transfer", path: "/dashboard" },
+    reassurance:
+      "No fee was charged. A transfer only costs anything once the buyer has accepted and you complete it.",
+  },
+  transfer_completed_seller: {
+    subject: "Transfer complete — the vessel is no longer yours",
+    title: "The transfer is complete",
+    detail: [
+      "The vessel now belongs to the buyer, and your shares of it have been revoked. The transfer fee has been charged to your card.",
+      "A read-only copy of the vessel as it was on the day you transferred it stays in your dashboard.",
+    ],
+    cta: { label: "View your record of it", path: "/dashboard" },
+  },
+  transfer_completed_buyer: {
+    subject: "The vessel is yours",
+    title: "The vessel is yours",
+    detail: [
+      "It keeps the MXE ID it already had, so the badge on the hull carries on working and now resolves to you.",
+      "Its documents did not come with it — registration and insurance belong to the previous owner. Upload yours to bring the record up to date.",
+    ],
+    cta: {
+      label: "Open your vessel",
+      path: (mxeId) => (mxeId ? `/dashboard/${encodeURIComponent(mxeId)}` : "/dashboard"),
+    },
+  },
   vessel_locked: {
     subject: "A vessel on your Moxie account is locked",
     title: "A vessel is locked",
@@ -89,6 +135,10 @@ const COPY: Record<EmailableNotificationType, Copy> = {
   },
 };
 
+function ctaPath(copy: Copy, mxeId: string | null): string {
+  return typeof copy.cta.path === "function" ? copy.cta.path(mxeId) : copy.cta.path;
+}
+
 function origin(baseUrl?: string): string {
   return (baseUrl ?? process.env.NEXT_PUBLIC_BASE_URL ?? "https://moxieyacht.com").replace(/\/$/, "");
 }
@@ -99,7 +149,7 @@ export function notificationSubject(type: EmailableNotificationType): string {
 
 export function renderNotificationEmailHtml(input: NotificationEmailInput): string {
   const copy = COPY[input.type];
-  const url = `${origin(input.baseUrl)}${copy.cta.path}`;
+  const url = `${origin(input.baseUrl)}${ctaPath(copy, input.mxeId ?? null)}`;
 
   return renderEmailLayout({
     subject: copy.subject,
@@ -125,7 +175,7 @@ export function renderNotificationEmailText(input: NotificationEmailInput): stri
   return renderPlainText({
     title: copy.title,
     paragraphs: [input.message, ...copy.detail],
-    action: { label: copy.cta.label, url: `${origin(input.baseUrl)}${copy.cta.path}` },
+    action: { label: copy.cta.label, url: `${origin(input.baseUrl)}${ctaPath(copy, input.mxeId ?? null)}` },
     closing: copy.reassurance ? [copy.reassurance] : undefined,
     footerReason: "Sent by Moxie because of a change to your account.",
   });

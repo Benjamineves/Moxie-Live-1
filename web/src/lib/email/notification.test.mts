@@ -24,14 +24,15 @@ const ALL: NotificationType[] = [
   "downgrade_grace_started",
   "vessel_locked",
   "vessel_reactivated",
+  "transfer_accepted",
+  "transfer_declined_or_expired",
+  "transfer_completed_seller",
+  "transfer_completed_buyer",
 ];
 
-const EMAILING: EmailableNotificationType[] = [
-  "subscription_past_due",
-  "vessel_lapsed",
-  "downgrade_grace_started",
-  "vessel_locked",
-];
+const EMAILING: EmailableNotificationType[] = ALL.filter(
+  (t): t is EmailableNotificationType => t !== "vessel_reactivated",
+);
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -56,14 +57,65 @@ test("four types email and vessel_reactivated does not", () => {
   );
 });
 
-test("dedupe windows match the grace period each message quotes", () => {
+test("account-level dedupe windows match the grace period each message quotes", () => {
   // The messages quote a fixed number of days. A repeat inside that
   // period would restate a figure that is no longer true, so the window
   // is the episode, not an arbitrary cooldown.
-  assert.equal(NOTIFICATION_POLICY.subscription_past_due.dedupeWindowMs, DORMANCY.PAST_DUE_GRACE_DAYS * DAY);
-  assert.equal(NOTIFICATION_POLICY.downgrade_grace_started.dedupeWindowMs, DORMANCY.DOWNGRADE_GRACE_DAYS * DAY);
-  assert.equal(NOTIFICATION_POLICY.vessel_lapsed.dedupeWindowMs, 7 * DAY);
-  assert.equal(NOTIFICATION_POLICY.vessel_locked.dedupeWindowMs, 7 * DAY);
+  assert.deepEqual(NOTIFICATION_POLICY.subscription_past_due.dedupe, {
+    mode: "window",
+    windowMs: DORMANCY.PAST_DUE_GRACE_DAYS * DAY,
+  });
+  assert.deepEqual(NOTIFICATION_POLICY.downgrade_grace_started.dedupe, {
+    mode: "window",
+    windowMs: DORMANCY.DOWNGRADE_GRACE_DAYS * DAY,
+  });
+  assert.deepEqual(NOTIFICATION_POLICY.vessel_lapsed.dedupe, { mode: "window", windowMs: 7 * DAY });
+  assert.deepEqual(NOTIFICATION_POLICY.vessel_locked.dedupe, { mode: "window", windowMs: 7 * DAY });
+});
+
+/**
+ * The point of stage 3's dedupe change. A seller may cancel a transfer
+ * and start another to the same buyer for the same vessel minutes later.
+ * Under a time window the second transfer's emails would be suppressed
+ * as duplicates of the first, which is wrong — it is a new episode, and
+ * only the transfer id distinguishes it.
+ */
+test("every transfer type dedupes by key, never by a window", () => {
+  for (const type of ALL) {
+    if (!type.startsWith("transfer_")) continue;
+    assert.deepEqual(
+      NOTIFICATION_POLICY[type].dedupe,
+      { mode: "key" },
+      `${type} must key on the transfer, or a second transfer to the same buyer is wrongly suppressed`,
+    );
+  }
+});
+
+test("both sides of a completed transfer are separate types", () => {
+  // Seller and buyer are opposite sides of one event and share almost no
+  // useful sentence. Two types is what stops one message being addressed
+  // to two audiences.
+  assert.notEqual(
+    notificationSubject("transfer_completed_seller"),
+    notificationSubject("transfer_completed_buyer"),
+  );
+  assert.ok(NOTIFICATION_POLICY.transfer_completed_seller.email);
+  assert.ok(NOTIFICATION_POLICY.transfer_completed_buyer.email);
+});
+
+test("the buyer's completion email links at the vessel they were given", () => {
+  const withVessel = renderNotificationEmailText({
+    type: "transfer_completed_buyer",
+    message: "x",
+    mxeId: "MXE-01042",
+  });
+  assert.ok(withVessel.includes("https://moxieyacht.com/dashboard/MXE-01042"));
+
+  // And degrades to the dashboard rather than a broken URL when the
+  // lookup found nothing.
+  const without = renderNotificationEmailText({ type: "transfer_completed_buyer", message: "x", mxeId: null });
+  assert.ok(without.includes("https://moxieyacht.com/dashboard"));
+  assert.ok(!without.includes("/dashboard/null"));
 });
 
 test("every emailing type has a distinct subject", () => {
@@ -140,7 +192,11 @@ test("CTAs point at routes that exist", () => {
   // real pages. A billing portal URL deliberately is not used here —
   // those are single-use and expire, so one in an email read tomorrow is
   // a dead link.
-  const allowed = ["https://moxieyacht.com/dashboard", "https://moxieyacht.com/dashboard/upgrade", "https://moxieyacht.com/dashboard/manage-fleet"];
+  const allowed = [
+    "https://moxieyacht.com/dashboard",
+    "https://moxieyacht.com/dashboard/upgrade",
+    "https://moxieyacht.com/dashboard/manage-fleet",
+  ];
   for (const type of EMAILING) {
     const text = renderNotificationEmailText({ type, message: "x", mxeId: null });
     const url = text.split("\n").find((l) => l.startsWith("https://"));

@@ -3,7 +3,7 @@
  * owner-side flow and the admin queue.
  */
 
-import { BASIC_DOCUMENT_LIMIT } from "@/lib/tier-config";
+import { BASIC_DOCUMENT_LIMIT } from "./tier-config.ts";
 
 export const TRANSFER_EXPIRY_DAYS = 7;
 

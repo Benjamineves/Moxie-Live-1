@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { notifyOwner } from "@/lib/notify";
 import { hashShareToken } from "@/lib/share-token";
 import { AcceptTransferButton } from "./AcceptTransferButton";
 
@@ -14,6 +15,8 @@ type TransferRow = {
   buyer_email: string;
   status: string;
   expires_at: string;
+  seller_id: string;
+  vessel_id: string;
 };
 
 type VesselPreview = {
@@ -58,7 +61,7 @@ export default async function AcceptTransferPage({ searchParams }: Props) {
 
   const { data: transferRow } = await service
     .from("ownership_transfers")
-    .select("id, mxe_id, buyer_email, status, expires_at")
+    .select("id, mxe_id, buyer_email, status, expires_at, seller_id, vessel_id")
     .eq("token_hash", hashShareToken(token))
     .maybeSingle();
   let transfer = transferRow as TransferRow | null;
@@ -76,11 +79,30 @@ export default async function AcceptTransferPage({ searchParams }: Props) {
   // evaluated whenever the link is actually opened, same approach as
   // every other read path that touches this table.
   if (transfer.status === "pending" && new Date(transfer.expires_at) < new Date()) {
-    await service
+    const { data: expiredRows } = await service
       .from("ownership_transfers")
       .update({ status: "expired", expired_at: new Date().toISOString() })
       .eq("id", transfer.id)
-      .eq("status", "pending");
+      .eq("status", "pending")
+      .select("id");
+
+    // Only when THIS render is the one that flipped it — the guarded
+    // update returns no rows if another render got there first, which is
+    // what stops two simultaneous opens both notifying.
+    //
+    // Notifying from a page render would normally be a poor idea, since
+    // a render can repeat freely. It is safe here because the update is
+    // guarded and the notification dedupes on the transfer id, so the
+    // seller hears once no matter how many times the stale link is
+    // opened.
+    if ((expiredRows ?? []).length > 0) {
+      await notifyOwner(
+        transfer.seller_id,
+        "transfer_declined_or_expired",
+        `Your transfer of ${transfer.mxe_id} to ${transfer.buyer_email} expired before it was accepted. The vessel is still yours.`,
+        { vesselId: transfer.vessel_id, dedupeKey: transfer.id },
+      );
+    }
     transfer = { ...transfer, status: "expired" };
   }
 

@@ -25,12 +25,27 @@ import {
  * notification that vanished because an email provider had a bad minute
  * would be a worse failure than a missing email.
  */
+export type NotifyOptions = {
+  vesselId?: string;
+  /**
+   * The episode this notification belongs to, for types whose policy
+   * dedupes by key rather than by time — the transfer id, for transfer
+   * events. Ignored by window-mode types.
+   */
+  dedupeKey?: string;
+};
+
 export async function notifyOwner(
   ownerId: string,
   type: NotificationType,
   message: string,
-  vesselId?: string,
+  options: string | NotifyOptions = {},
 ): Promise<void> {
+  // The fourth argument used to be a bare vesselId. Accepting both keeps
+  // the existing call sites working and unchanged rather than rewriting
+  // them to prove a point.
+  const { vesselId, dedupeKey }: NotifyOptions = typeof options === "string" ? { vesselId: options } : options;
+
   const service = createSupabaseServiceClient();
   if (!service) return;
 
@@ -38,7 +53,7 @@ export async function notifyOwner(
   // the record; everything below is best effort on top of it.
   const { data: inserted, error } = await service
     .from("owner_notifications")
-    .insert({ owner_id: ownerId, type, message, vessel_id: vesselId ?? null })
+    .insert({ owner_id: ownerId, type, message, vessel_id: vesselId ?? null, dedupe_key: dedupeKey ?? null })
     .select("id")
     .maybeSingle();
 
@@ -55,6 +70,7 @@ export async function notifyOwner(
       type,
       message,
       vesselId,
+      dedupeKey,
       insertedId: (inserted as { id: string } | null)?.id ?? null,
     });
   } catch (err) {
@@ -71,17 +87,16 @@ async function maybeSendNotificationEmail(args: {
   type: EmailableNotificationType;
   message: string;
   vesselId?: string;
+  dedupeKey?: string;
   insertedId: string | null;
 }): Promise<void> {
-  const { service, ownerId, type, message, vesselId, insertedId } = args;
+  const { service, ownerId, type, message, vesselId, dedupeKey, insertedId } = args;
 
   const to = await getOwnerEmailByUserId(ownerId);
   if (!to) {
     console.warn(`[notify] No email on file for owner ${ownerId}; in-app row recorded, email skipped.`);
     return;
   }
-
-  const since = new Date(Date.now() - NOTIFICATION_POLICY[type].dedupeWindowMs).toISOString();
 
   // DEDUPLICATION, and it suppresses the EMAIL ONLY.
   //
@@ -91,25 +106,42 @@ async function maybeSendNotificationEmail(args: {
   // prevent.
   //
   // Reads the rows that already exist rather than keeping separate
-  // state: owner, type, vessel and timestamp are all on the table, and a
-  // second source of truth about what was sent is a thing that can
-  // disagree with the first.
+  // state: a second source of truth about what was sent is a thing that
+  // can disagree with the first.
+  const strategy = NOTIFICATION_POLICY[type].dedupe;
+
   let query = service
     .from("owner_notifications")
     .select("id", { count: "exact", head: true })
     .eq("owner_id", ownerId)
-    .eq("type", type)
-    .gte("created_at", since);
+    .eq("type", type);
 
-  // Null is not equal to anything in SQL, so an account-level
-  // notification has to be matched with IS NULL rather than = null.
-  query = vesselId ? query.eq("vessel_id", vesselId) : query.is("vessel_id", null);
+  if (strategy.mode === "key") {
+    if (!dedupeKey) {
+      // A key-mode type with no key cannot be deduplicated at all, and
+      // sending anyway would be the exact duplicate this is here to
+      // stop. Loud, because it is a programming error at the call site
+      // rather than anything the owner did.
+      console.error(`[notify] ${type} dedupes by key but no dedupeKey was given; skipping email. In-app row still recorded.`);
+      return;
+    }
+    // No time bound. A transfer's events belong to that transfer whether
+    // they are minutes or months apart.
+    query = query.eq("dedupe_key", dedupeKey);
+  } else if (strategy.mode === "window") {
+    query = query.gte("created_at", new Date(Date.now() - strategy.windowMs).toISOString());
+    // Null is not equal to anything in SQL, so an account-level
+    // notification has to be matched with IS NULL rather than = null.
+    query = vesselId ? query.eq("vessel_id", vesselId) : query.is("vessel_id", null);
+  }
 
   // Excluding the row written moments ago, which would otherwise always
   // match and suppress every email.
   if (insertedId) query = query.neq("id", insertedId);
 
-  const { count, error: dedupeError } = await query;
+  const { count, error: dedupeError } = strategy.mode === "none"
+    ? { count: 0, error: null }
+    : await query;
 
   if (dedupeError) {
     // Fail closed. The whole point of this stage is that one payment
@@ -122,7 +154,9 @@ async function maybeSendNotificationEmail(args: {
 
   if ((count ?? 0) > 0) {
     console.log(
-      `[notify] Duplicate suppressed (type=${type}, owner=${ownerId}, vessel=${vesselId ?? "none"}): ${count} prior notification(s) inside the ${NOTIFICATION_POLICY[type].dedupeWindowMs / DAY_MS}-day window. In-app row still recorded.`,
+      `[notify] Duplicate suppressed (type=${type}, owner=${ownerId}, ${
+        strategy.mode === "key" ? `key=${dedupeKey}` : `vessel=${vesselId ?? "none"}, window=${(strategy as { windowMs: number }).windowMs / DAY_MS}d`
+      }): ${count} prior notification(s). In-app row still recorded.`,
     );
     return;
   }

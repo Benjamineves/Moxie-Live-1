@@ -281,8 +281,46 @@ async function completeOwnershipTransferFromPayment(service: ServiceClient, inte
   });
   if (error) {
     console.error(`[stripe-webhook] payment_intent.succeeded ${intent.id}: complete_ownership_transfer failed for transfer ${transferId}:`, error);
+    return;
+  }
+  console.log(`[stripe-webhook] payment_intent.succeeded ${intent.id}: completed transfer ${transferId}.`);
+
+  // BOTH parties, and deliberately not the same message. The seller has
+  // lost a vessel and been charged a fee; the buyer has gained one and
+  // needs to know its documents did not come with it. One message
+  // addressed to both would be useful to neither.
+  //
+  // Read AFTER completion, because that is when buyer_id is finally set
+  // — before acceptance there is no buyer account to notify.
+  const { data: doneRow } = await service
+    .from("ownership_transfers")
+    .select("id, seller_id, buyer_id, mxe_id, vessel_id, buyer_email")
+    .eq("id", transferId)
+    .maybeSingle();
+  const done = doneRow as
+    | { id: string; seller_id: string; buyer_id: string | null; mxe_id: string; vessel_id: string; buyer_email: string }
+    | null;
+  if (!done) return;
+
+  // Keyed on the transfer id, which is also what makes this safe against
+  // Stripe redelivering payment_intent.succeeded: the completion RPC is
+  // already idempotent, and now the emails are too.
+  await notifyOwner(
+    done.seller_id,
+    "transfer_completed_seller",
+    `${done.mxe_id} now belongs to ${done.buyer_email}. The transfer fee has been charged.`,
+    { vesselId: done.vessel_id, dedupeKey: done.id },
+  );
+
+  if (done.buyer_id) {
+    await notifyOwner(
+      done.buyer_id,
+      "transfer_completed_buyer",
+      `${done.mxe_id} is now registered to you.`,
+      { vesselId: done.vessel_id, dedupeKey: done.id },
+    );
   } else {
-    console.log(`[stripe-webhook] payment_intent.succeeded ${intent.id}: completed transfer ${transferId}.`);
+    console.error(`[stripe-webhook] transfer ${transferId} completed with no buyer_id; buyer not notified.`);
   }
 }
 
