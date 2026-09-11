@@ -171,11 +171,23 @@ test("plain text contains no markup", () => {
  * The generated files are what actually gets pasted. If they drift from
  * the modules, the thing in the dashboard is not the thing under review.
  */
-test("the generated paste file is current", () => {
+test("the generated paste file is current, and is pure HTML", () => {
   const generated = readFileSync(resolve(HERE, "../../../../docs/email/supabase_password_reset.html"), "utf8");
-  assert.ok(
-    generated.includes(renderPasswordResetHtml().trim()),
+  assert.equal(
+    generated,
+    renderPasswordResetHtml(),
     "docs/email/supabase_password_reset.html is stale — run npm run email:build",
   );
-  assert.ok(generated.includes("PASTE TARGET, NOT SOURCE OF TRUTH"));
+  // It exists to be selected whole and pasted into Supabase's Body box.
+  // A comment header would be pasted along with the template, so the
+  // provenance lives in docs/email/README.md instead.
+  assert.ok(generated.startsWith("<!DOCTYPE html>"), "the paste file must begin with the document itself");
+  assert.ok(!generated.includes("<!--\n  MOXIE"), "no note may sit above the template");
+});
+
+test("the README carries the warnings that used to sit in the file", () => {
+  const readme = readFileSync(resolve(HERE, "../../../../docs/email/README.md"), "utf8");
+  assert.ok(readme.includes("paste target, not the source of truth"));
+  assert.ok(readme.includes("{{ .ConfirmationURL }}"));
+  assert.ok(readme.includes("Reset your Moxie password"), "the subject line has to be findable");
 });
