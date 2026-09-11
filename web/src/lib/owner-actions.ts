@@ -7,14 +7,7 @@ import { getStripe } from "@/lib/stripe/server";
 import { resolveOwnerIds, loadOwnedVessel } from "@/lib/vessel-ownership";
 import { normalizeStateCode } from "@/lib/us-states";
 import { isDecommissionReason, type DecommissionReason } from "@/lib/vessel-decommission";
-import { generateShareToken } from "@/lib/share-token";
-import { TRANSFER_EXPIRY_DAYS } from "@/lib/vessel-transfer";
-import { notifyEmailAddress } from "@/lib/notify-address";
-import {
-  renderTransferInvitationHtml,
-  renderTransferInvitationText,
-  transferInvitationSubject,
-} from "@/lib/email/transfer";
+import { createTransferAndNotifyBuyer } from "@/lib/transfer-initiate";
 import { FULL_STORAGE_CAP_BYTES } from "@/lib/tier-config";
 import { getAccountStorageUsageBytes } from "@/lib/storage-usage";
 
@@ -550,51 +543,14 @@ export async function initiateOwnershipTransfer(
     return { error: "A transfer for this vessel is already in progress. Cancel it first to start a new one." };
   }
 
-  const { token, tokenHash } = generateShareToken();
-  const expiresAt = new Date(Date.now() + TRANSFER_EXPIRY_DAYS * 24 * 60 * 60 * 1000);
-
-  const { data: created, error } = await service
-    .from("ownership_transfers")
-    .insert({
-      vessel_id: vessel.id,
-      mxe_id: vessel.mxe_id,
-      seller_id: vessel.owner_id,
-      initiated_by: vessel.owner_id,
-      initiated_via: "owner",
-      buyer_email: normalizedBuyerEmail,
-      token_hash: tokenHash,
-      expires_at: expiresAt.toISOString(),
-    })
-    .select("id")
-    .maybeSingle();
-  if (error) return { error: error.message };
-
-  // Email the buyer the link ourselves rather than leaving the seller to
-  // forward it. A link that arrives from Moxie, naming the vessel and
-  // who started the transfer, is verifiable; the same link pasted into a
-  // message from a stranger is indistinguishable from phishing. That
-  // credibility is the point of the stage.
-  //
-  // Best effort, and deliberately after the insert: the transfer exists
-  // whether or not the email lands, the seller still has the link on
-  // screen, and a provider outage must not fail an action the seller has
-  // already completed.
-  const acceptUrl = `${(process.env.NEXT_PUBLIC_BASE_URL ?? "https://moxieyacht.com").replace(/\/$/, "")}/transfer/accept?token=${encodeURIComponent(token)}`;
-  const emailInput = {
-    acceptUrl,
-    mxeId: vessel.mxe_id,
-    vesselName: vessel.vessel_name,
-    sellerName: vessel.owner_name,
-    sellerEmail: vessel.owner_email,
-    expiresOn: expiresAt.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
-  };
-  await notifyEmailAddress({
-    to: normalizedBuyerEmail,
-    subject: transferInvitationSubject(emailInput),
-    html: renderTransferInvitationHtml(emailInput),
-    text: renderTransferInvitationText(emailInput),
-    context: `transfer invitation for ${vessel.mxe_id} (transfer ${(created as { id: string } | null)?.id ?? "unknown"})`,
+  // Authorization is done; the rest is the same code the transfer test
+  // script runs, so what is verified is what ships.
+  const { token, error } = await createTransferAndNotifyBuyer({
+    service,
+    vessel,
+    buyerEmail: normalizedBuyerEmail,
   });
+  if (error) return { error };
 
   return { token };
 }
