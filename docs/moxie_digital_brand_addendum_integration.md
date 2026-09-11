@@ -137,6 +137,97 @@ Plus, from Part I: no gradients except the gold radial glow, never Inter/Roboto/
 
 ---
 
+## 6b. Every colour token assumes a background — say which
+
+This section exists because the same mistake shipped twice in two days,
+both times found by a customer rather than by us:
+
+- A seller **cancelled a live sale** because the cancel control on the
+  transfer panel was `--text` on a dark card: **1.10:1**. The error
+  message that would have explained what happened was `--red-fg` on the
+  same card: **1.48:1**. Both invisible.
+- The link steering sellers from decommissioning toward a transfer —
+  commercially the most valuable link on that screen — was `--gold` on a
+  `--gold-dim` tint: **1.80:1**.
+
+Neither was carelessness at the call site. Both happened because a token
+carries no indication of the background it was chosen against, so a
+component that was correct on cream became unreadable the moment someone
+wrapped it in a tinted or dark panel. The next tinted panel will
+rediscover it the same way unless the pairing is written down.
+
+**The rule: a token is defined against a surface. Moving a component to a
+different surface means changing its tokens, not just its container.**
+
+### The two pairs that exist today
+
+| Purpose | On a DARK surface | On a LIGHT surface |
+|---|---|---|
+| Gold — links, triggers, accents | `--gold` `#c9a84c` | `--gold-deep` `#7d6119` |
+| Danger — errors, destructive controls | `--danger-on-dark` `#ff9e80` | `--red-fg` `#712b13` |
+
+Measured, so the choice is checkable rather than a matter of taste:
+
+**Gold**
+
+| | `--gold` | `--gold-deep` |
+|---|---|---|
+| on `--navy-deep` | **8.32:1** ✓ | 3.26:1 ✗ |
+| on `--gold-dim` over `--navy-deep` | **6.60:1** ✓ | — |
+| on `--white` | 2.29:1 ✗ | **5.84:1** ✓ |
+| on `--cream` | 2.05:1 ✗ | **5.23:1** ✓ |
+| on `--gray-bg` | 1.99:1 ✗ | **5.08:1** ✓ |
+| on `--gold-dim` over `--gray-bg` | 1.80:1 ✗ | **4.61:1** ✓ |
+
+**Danger**
+
+| | `--danger-on-dark` | `--red-fg` |
+|---|---|---|
+| on `--navy-deep` | **9.47:1** ✓ | 1.86:1 ✗ |
+| on `--gold-dim` over `--navy-deep` | **7.51:1** ✓ | 1.48:1 ✗ |
+| on `--white` | 2.01:1 ✗ | **10.21:1** ✓ |
+| on `--cream` | — | **9.14:1** ✓ |
+
+Note that the failures are symmetrical. `--gold-deep` on navy is as wrong
+as `--gold` on cream; this is a pairing, not a ranking, and "use the
+darker one to be safe" is not a rule that works.
+
+### Three things that follow from it
+
+1. **A translucent tint is not a background.** `--gold-dim` is
+   `rgba(201,168,76,.15)`, so it takes the colour of whatever is behind
+   it. On `--gray-bg` it composites to `rgb(235,228,209)` — light. On
+   `--navy-deep` it composites to `rgb(36,39,39)` — near black. The same
+   class needs opposite text tokens in those two places, and reading the
+   component alone will not tell you which.
+
+2. **A shared class cannot assume a shared surface.** `editTriggerClass`
+   had ten call sites: nine on white cards, one inside the navy transfer
+   card. Correcting it for the nine would have broken the tenth, from
+   8.32:1 to 3.26:1. Shared styles that can land on either kind of
+   surface need two variants and a name that says which is which —
+   `editTriggerClass` / `editTriggerOnDarkClass`.
+
+3. **Hover states need checking too, and tend to be worse.** The edit
+   trigger's rest state was `--gold` at 2.29:1 on white; its hover was
+   `--gold-lt`, which is *lighter* — 1.77:1. The state a user enters
+   deliberately was the least readable one.
+
+### The one genuine exemption
+
+The wordmark's gold **M** and aqua **.** are a logotype, and logotypes are
+exempt (WCAG 1.4.3). Eleven instances in the app. Nothing else is.
+
+### Where the tokens live
+
+`web/src/app/globals.css`, each with a comment giving its measured ratios
+and the surface it was chosen against. Add the ratio to the comment when
+adding a token — a number in the file is what makes the next reviewer
+able to check rather than guess.
+
+
+---
+
 ## 7. Suggested order
 
 1. **Audit the live app's tokens** against §1 — cheap, and establishes whether there's real drift or just the design files being ahead.

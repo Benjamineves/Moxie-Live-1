@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { initiateOwnershipTransfer, cancelOwnershipTransfer } from "@/lib/owner-actions";
 import {
-  editTriggerClass,
+  editTriggerOnDarkClass,
   inputClass,
   labelClass,
   saveButtonClass,
@@ -203,7 +203,11 @@ export function TransferOwnershipPanel({ mxeId, activeTransfer }: { mxeId: strin
 
   if (!open) {
     return (
-      <button type="button" onClick={() => setOpen(true)} className={editTriggerClass}>
+      // This trigger renders inside the navy-deep "Transfer ownership"
+      // card in VesselOwnerProfile, not on a white one — so it keeps
+      // --gold, which is correct there, while every other edit trigger
+      // in the app moved to --gold-deep for its light card.
+      <button type="button" onClick={() => setOpen(true)} className={editTriggerOnDarkClass}>
         Selling? Transfer ownership to a new owner
       </button>
     );
