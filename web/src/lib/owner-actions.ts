@@ -496,7 +496,7 @@ export async function openBillingPortal(): Promise<{ error?: string }> {
 export async function initiateOwnershipTransfer(
   mxeId: string,
   buyerEmail: string,
-): Promise<{ token?: string; error?: string }> {
+): Promise<{ token?: string; error?: string; emailed?: boolean }> {
   const normalizedBuyerEmail = buyerEmail.trim().toLowerCase();
   if (!normalizedBuyerEmail || !normalizedBuyerEmail.includes("@")) {
     return { error: "Enter a valid email address." };
@@ -545,14 +545,17 @@ export async function initiateOwnershipTransfer(
 
   // Authorization is done; the rest is the same code the transfer test
   // script runs, so what is verified is what ships.
-  const { token, error } = await createTransferAndNotifyBuyer({
+  const { token, error, emailed } = await createTransferAndNotifyBuyer({
     service,
     vessel,
     buyerEmail: normalizedBuyerEmail,
   });
   if (error) return { error };
 
-  return { token };
+  // `emailed` is passed back so the confirmation screen can lead with the
+  // email when it went out and fall back to "send this yourself" when it
+  // did not. The transfer succeeded either way — this is not an error.
+  return { token, emailed };
 }
 
 /**

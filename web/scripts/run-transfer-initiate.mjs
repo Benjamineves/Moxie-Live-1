@@ -66,4 +66,5 @@ const result = await createTransferAndNotifyBuyer({
 console.log("--- returned ---");
 console.log(`  transferId: ${result.transferId ?? "none"}`);
 console.log(`  token:      ${result.token ? result.token.slice(0, 6) + "… (" + result.token.length + " chars)" : "none"}`);
+console.log(`  emailed:    ${result.emailed === true ? "yes" : `no (${result.emailFailureReason ?? "unknown"})`}`);
 if (result.error) console.log(`  error:      ${result.error}`);

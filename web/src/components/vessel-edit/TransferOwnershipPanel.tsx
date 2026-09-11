@@ -31,6 +31,12 @@ export function TransferOwnershipPanel({ mxeId, activeTransfer }: { mxeId: strin
   const [open, setOpen] = useState(false);
   const [buyerEmail, setBuyerEmail] = useState("");
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
+  // Whether the buyer's invitation actually went out. The confirmation
+  // screen leads with the email, so it has to know rather than assume:
+  // the send is best-effort and a provider outage does not fail the
+  // transfer. When it is false the seller IS the delivery mechanism
+  // again, and has to be told so.
+  const [emailed, setEmailed] = useState(true);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -54,6 +60,7 @@ export function TransferOwnershipPanel({ mxeId, activeTransfer }: { mxeId: strin
         setError(result.error ?? "Could not start the transfer.");
         return;
       }
+      setEmailed(result.emailed !== false);
       setGeneratedLink(`${window.location.origin}/transfer/accept?token=${result.token}`);
     });
   }
@@ -86,6 +93,7 @@ export function TransferOwnershipPanel({ mxeId, activeTransfer }: { mxeId: strin
       }
       setOpen(true);
       setBuyerEmail(email);
+      setEmailed(result.emailed !== false);
       setGeneratedLink(`${window.location.origin}/transfer/accept?token=${result.token}`);
     });
   }
@@ -143,7 +151,7 @@ export function TransferOwnershipPanel({ mxeId, activeTransfer }: { mxeId: strin
               disabled={pending}
               className={onDarkPrimaryButtonClass}
             >
-              Resend link
+              Email a new link
             </button>
           )}
           <button
@@ -170,13 +178,47 @@ export function TransferOwnershipPanel({ mxeId, activeTransfer }: { mxeId: strin
   if (generatedLink) {
     return (
       <div className="mx-auto mt-3 max-w-lg rounded-xl border border-[var(--divider)] bg-[var(--white)] p-5 shadow-sm">
-        <p className="font-[family-name:var(--font-dm)] text-sm font-medium text-[var(--navy)]">
-          Send this link to {buyerEmail}
-        </p>
-        <p className="mt-1 font-[family-name:var(--font-dm)] text-xs text-[var(--text3)]">
-          Only they can accept it — the link is locked to that email. This is shown once; you can resend a fresh one
-          later if needed.
-        </p>
+        {/* Moxie emails the buyer on initiation (see
+            createTransferAndNotifyBuyer), so the email is the primary
+            fact and the link below is the fallback — for a seller who
+            would rather send it themselves, or a buyer it never reached.
+            This screen used to read "Send this link to…", which was
+            true only while the seller WAS the delivery mechanism.
+
+            The send is best effort, so `emailed` is the real result and
+            not an assumption. When it is false the seller is the only
+            route left and the copy has to say so plainly, not bury it. */}
+        {emailed ? (
+          <>
+            <p className="font-[family-name:var(--font-dm)] text-sm font-medium text-[var(--navy)]">
+              We&apos;ve emailed the transfer link to {buyerEmail}
+            </p>
+            <p className="mt-1 font-[family-name:var(--font-dm)] text-xs text-[var(--text3)]">
+              Only they can accept it — the link is locked to that email, so there&apos;s no harm in it going astray.
+              There&apos;s nothing else you need to do. If you&apos;d rather send it yourself, or it doesn&apos;t
+              arrive, here it is:
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="font-[family-name:var(--font-dm)] text-sm font-medium text-[var(--navy)]">
+              The transfer is live, but we couldn&apos;t email {buyerEmail}
+            </p>
+            {/* --text2, not the --text3 used for the reassuring branch
+                above. That one says "nothing else to do"; this one is an
+                instruction the transfer depends on, and it is the only
+                place the seller will ever be told. Copy it before you
+                leave — the old "shown once" warning was dropped for the
+                success case, where losing the link is harmless because
+                the buyer already has it, but here it is the whole
+                delivery mechanism. */}
+            <p className="mt-1 font-[family-name:var(--font-dm)] text-xs text-[var(--text2)]">
+              Nothing is wrong with the transfer itself — only the message failed to go out, so you&apos;ll need to
+              send this link yourself. Copy it before you leave this screen; it isn&apos;t shown again. Only{" "}
+              {buyerEmail} can accept it, so the link is safe to send however you like.
+            </p>
+          </>
+        )}
         <p className="mt-3 break-all rounded-lg border border-[var(--divider)] bg-[var(--cream)] px-3 py-2.5 font-mono text-xs text-[var(--navy)]">
           {generatedLink}
         </p>
@@ -220,6 +262,15 @@ export function TransferOwnershipPanel({ mxeId, activeTransfer }: { mxeId: strin
         storage details, and documents (insurance, boater card) stay yours and stop showing on this vessel once
         transferred. You&apos;ll pay the transfer fee once the buyer accepts — nothing is charged now.
       </p>
+      {/* Said before the address is submitted, not after. We email a
+          person who never signed up, on the strength of this seller
+          typing their address — they should know that is what the button
+          does before they press it. */}
+      <p className="font-[family-name:var(--font-dm)] text-xs text-[var(--text2)]">
+        Moxie emails the buyer directly with a link to accept — a message from us is easier for them to trust than a
+        link forwarded by someone they&apos;re mid-sale with. You&apos;ll get the link too, in case you&apos;d rather
+        send it yourself.
+      </p>
       <label className={labelClass}>
         Buyer&apos;s email
         <input
@@ -236,7 +287,7 @@ export function TransferOwnershipPanel({ mxeId, activeTransfer }: { mxeId: strin
           Cancel
         </button>
         <button type="button" onClick={onInitiate} disabled={pending} className={saveButtonClass}>
-          {pending ? "Creating link…" : "Create transfer link"}
+          {pending ? "Emailing the buyer…" : "Start transfer & email buyer"}
         </button>
       </div>
     </div>

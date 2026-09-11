@@ -41,7 +41,14 @@ export async function createTransferAndNotifyBuyer(input: {
   /** Already normalized and validated by the caller. */
   buyerEmail: string;
   baseUrl?: string;
-}): Promise<{ token?: string; transferId?: string; error?: string }> {
+}): Promise<{
+  token?: string;
+  transferId?: string;
+  error?: string;
+  /** Whether the buyer's invitation actually went out. False is not a failure of the transfer. */
+  emailed?: boolean;
+  emailFailureReason?: string;
+}> {
   const { service, vessel, buyerEmail } = input;
 
   const { token, tokenHash } = generateShareToken();
@@ -75,6 +82,12 @@ export async function createTransferAndNotifyBuyer(input: {
   // whether or not the email lands, the seller still has the link on
   // screen, and a provider outage must not fail an action the seller has
   // already completed.
+  //
+  // But best-effort is not the same as unknown. The result is returned
+  // rather than discarded, because the panel now tells the seller "we've
+  // emailed the buyer" — and it can only say that honestly if it knows.
+  // When the send fails the seller is the fallback, and they can only
+  // act as one if they are told.
   const origin = (input.baseUrl ?? process.env.NEXT_PUBLIC_BASE_URL ?? "https://moxieyacht.com").replace(/\/$/, "");
   const emailInput = {
     acceptUrl: `${origin}/transfer/accept?token=${encodeURIComponent(token)}`,
@@ -84,7 +97,7 @@ export async function createTransferAndNotifyBuyer(input: {
     sellerEmail: vessel.owner_email,
     expiresOn: expiresAt.toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" }),
   };
-  await notifyEmailAddress({
+  const invitation = await notifyEmailAddress({
     to: buyerEmail,
     subject: transferInvitationSubject(emailInput),
     html: renderTransferInvitationHtml(emailInput),
@@ -92,5 +105,5 @@ export async function createTransferAndNotifyBuyer(input: {
     context: `transfer invitation for ${vessel.mxe_id} (transfer ${transferId ?? "unknown"})`,
   });
 
-  return { token, transferId };
+  return { token, transferId, emailed: invitation.sent, emailFailureReason: invitation.reason };
 }

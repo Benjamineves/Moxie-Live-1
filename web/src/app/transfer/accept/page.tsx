@@ -49,7 +49,7 @@ export default async function AcceptTransferPage({ searchParams }: Props) {
     return (
       <TerminalMessage
         headline="Link not active."
-        body="This transfer link is missing or malformed. Ask the seller to resend it."
+        body="This transfer link is missing or malformed. Ask the seller to start the transfer again — Moxie will email you a fresh link."
       />
     );
   }
@@ -110,7 +110,7 @@ export default async function AcceptTransferPage({ searchParams }: Props) {
     return (
       <TerminalMessage
         headline="Link expired."
-        body="This transfer link is no longer active. Ask the seller to send a new one."
+        body="This transfer link is no longer active. Ask the seller to start a new transfer — Moxie will email you a fresh link."
       />
     );
   }
