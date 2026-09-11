@@ -55,10 +55,17 @@ export function DeleteUnactivatedVesselButton({
         <p className="mt-1 font-[family-name:var(--font-dm)] text-xs text-[var(--red-fg)]">{error}</p>
       ) : null}
 
+      {/* A hard delete whose confirm button read "Confirm & save" — the
+          dialog's default, written for the edit forms it was built for.
+          "Save" is the wrong verb for permanently destroying a vessel
+          and an MXE ID that will never be issued again. */}
       <ConfirmDialog
         open={confirming}
         title="Delete this vessel?"
         pending={pending}
+        destructive
+        confirmLabel="Delete permanently"
+        pendingLabel="Deleting…"
         onCancel={() => setConfirming(false)}
         onConfirm={onConfirm}
       >

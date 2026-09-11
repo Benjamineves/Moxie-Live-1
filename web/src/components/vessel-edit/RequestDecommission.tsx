@@ -103,9 +103,15 @@ export function RequestDecommission({
             Transfer Ownership keeps this vessel&apos;s badge and full document history with the new owner — no new
             sticker, nothing to re-upload — for a small one-time fee.
           </p>
+          {/* --gold measured 1.80:1 here — gold text on a gold tint,
+              effectively invisible, on the link whose whole job is to
+              steer a seller away from decommissioning and toward a
+              transfer. --gold-deep is 4.61:1 on this surface, and the
+              underline moves off --gold-line (1.22:1) for the same
+              reason. */}
           <a
             href="#transfer-ownership"
-            className="mt-2.5 inline-block font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.1em] text-[var(--gold)] underline decoration-[var(--gold-line)] underline-offset-2"
+            className="mt-2.5 inline-block font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.1em] text-[var(--gold-deep)] underline decoration-[var(--gold-deep)] underline-offset-2"
           >
             Transfer ownership instead
           </a>

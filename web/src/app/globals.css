@@ -7,6 +7,16 @@
   --navy-deep: #071020;
   --gold: #c9a84c;
   --gold-lt: #dfc06a;
+
+  /* Gold as TEXT on a LIGHT surface. --gold is a brand fill and reads
+     well on the dark cards (8.32:1 on --navy-deep), but as small text on
+     anything pale it fails everywhere it is used: 2.29:1 on white,
+     2.05:1 on cream, 1.99:1 on --gray-bg, 1.80:1 on a --gold-dim block.
+     Redefining --gold itself would break the dark surfaces, where it is
+     correct and is the brand's primary use — so this is its light-surface
+     counterpart. 5.84:1 on white, 5.23:1 on cream, 4.61:1 on gold-dim
+     over --gray-bg: AA at small sizes on all three. */
+  --gold-deep: #7d6119;
   --gold-dim: rgba(201, 168, 76, 0.15);
   --gold-line: rgba(201, 168, 76, 0.35);
   --cream: #f5f2ec;
