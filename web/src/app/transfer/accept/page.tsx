@@ -159,7 +159,7 @@ export default async function AcceptTransferPage({ searchParams }: Props) {
             Ownership transfer
           </p>
           <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-light text-[var(--navy)]">
-            You&apos;re being offered <em className="text-[var(--gold)] not-italic">{transfer.mxe_id}.</em>
+            You&apos;re being offered <em className="text-[var(--gold-deep)] not-italic">{transfer.mxe_id}.</em>
           </h1>
           {vessel ? (
             <p className="mt-2 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">

@@ -87,7 +87,7 @@ export function ForgotPasswordForm() {
           </svg>
         </div>
         <h1 className="mt-5 font-[family-name:var(--font-display)] text-3xl font-light text-[var(--navy)]">
-          Check your <em className="text-[var(--gold)] not-italic">inbox.</em>
+          Check your <em className="text-[var(--gold-deep)] not-italic">inbox.</em>
         </h1>
         <p className="mt-3 font-[family-name:var(--font-dm)] text-sm leading-relaxed text-[var(--text2)]">
           We sent a reset link to
@@ -116,7 +116,7 @@ export function ForgotPasswordForm() {
   return (
     <div className="mx-auto max-w-md px-6 py-16">
       <h1 className="font-[family-name:var(--font-display)] text-3xl font-light text-[var(--navy)]">
-        Locked out? <em className="text-[var(--gold)] not-italic">Let&apos;s fix that.</em>
+        Locked out? <em className="text-[var(--gold-deep)] not-italic">Let&apos;s fix that.</em>
       </h1>
       <p className="mt-2 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
         Enter the email on your account and we&apos;ll send a link to set a new password.

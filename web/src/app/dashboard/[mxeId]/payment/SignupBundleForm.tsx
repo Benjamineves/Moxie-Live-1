@@ -91,7 +91,7 @@ export function SignupBundleForm({ mxeId, vesselName, vesselTag, publishableKey 
             Final step · Choose your plan
           </p>
           <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-light text-[var(--navy)]">
-            One boat, <em className="text-[var(--gold)] not-italic">one identity.</em>
+            One boat, <em className="text-[var(--gold-deep)] not-italic">one identity.</em>
           </h1>
           <p className="mt-2 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
             Every Moxie account runs on a plan — pick the one that fits, and {vesselName}&apos;s badge and profile go

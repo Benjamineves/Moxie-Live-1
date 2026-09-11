@@ -695,7 +695,7 @@ function LockedDocumentRow({ label }: { label: string }) {
       </div>
       <Link
         href="/dashboard/upgrade"
-        className="shrink-0 rounded-md border border-[var(--gold-line)] px-3 py-2 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--gold)] transition hover:bg-[var(--gold-dim)]"
+        className="shrink-0 rounded-md border border-[var(--gold-line)] px-3 py-2 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--gold-deep)] transition hover:bg-[var(--gold-dim)]"
       >
         🔒 Unlock with Full Access
       </Link>

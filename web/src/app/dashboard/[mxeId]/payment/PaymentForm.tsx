@@ -90,7 +90,7 @@ export function PaymentForm({ mxeId, vesselName, vesselTag, publishableKey }: Pr
             Final step · Activate
           </p>
           <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-light text-[var(--navy)]">
-            One boat, <em className="text-[var(--gold)] not-italic">one identity.</em>
+            One boat, <em className="text-[var(--gold-deep)] not-italic">one identity.</em>
           </h1>
           <p className="mt-2 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
             Your badge prints and ships the moment this clears. {vesselName}&apos;s profile goes live at the same

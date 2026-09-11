@@ -28,7 +28,7 @@ export default async function ResetPasswordPage() {
             </svg>
           </div>
           <h1 className="mt-5 font-[family-name:var(--font-display)] text-3xl font-light text-[var(--navy)]">
-            Link <em className="text-[var(--gold)] not-italic">expired.</em>
+            Link <em className="text-[var(--gold-deep)] not-italic">expired.</em>
           </h1>
           <p className="mt-3 font-[family-name:var(--font-dm)] text-sm leading-relaxed text-[var(--text2)]">
             Reset links are only good for 15 minutes, and this one&apos;s past that — or it&apos;s already been used.

@@ -105,7 +105,7 @@ export function ResetPasswordForm() {
           </svg>
         </div>
         <h1 className="mt-5 font-[family-name:var(--font-display)] text-3xl font-light text-[var(--navy)]">
-          Password <em className="text-[var(--gold)] not-italic">updated.</em>
+          Password <em className="text-[var(--gold-deep)] not-italic">updated.</em>
         </h1>
         <p className="mt-3 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
           You&apos;re all set — sign in with your new password.
@@ -123,7 +123,7 @@ export function ResetPasswordForm() {
   return (
     <div className="mx-auto max-w-md px-6 py-16">
       <h1 className="font-[family-name:var(--font-display)] text-3xl font-light text-[var(--navy)]">
-        Choose a <em className="text-[var(--gold)] not-italic">new password.</em>
+        Choose a <em className="text-[var(--gold-deep)] not-italic">new password.</em>
       </h1>
       <p className="mt-2 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
         Make it something you&apos;ll remember — or better yet, save it somewhere you won&apos;t lose it this time.

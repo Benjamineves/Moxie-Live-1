@@ -74,7 +74,7 @@ export function UpgradeToFullForm({ publishableKey }: { publishableKey: string }
             Account &amp; Billing · Upgrade
           </p>
           <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-light text-[var(--navy)]">
-            Full <em className="text-[var(--gold)] not-italic">Access.</em>
+            Full <em className="text-[var(--gold-deep)] not-italic">Access.</em>
           </h1>
           <p className="mt-2 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
             You&apos;re on Basic — upgrading switches your whole account to Full Access immediately. Your billing date

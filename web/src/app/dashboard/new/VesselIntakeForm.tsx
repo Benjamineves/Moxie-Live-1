@@ -465,7 +465,7 @@ export function VesselIntakeForm() {
           {capReached ? (
             <Link
               href="/dashboard/upgrade"
-              className="mt-1.5 inline-flex items-center gap-1 font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--gold)] underline underline-offset-2"
+              className="mt-1.5 inline-flex items-center gap-1 font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--gold-deep)] underline underline-offset-2"
             >
               Upgrade to Full Access →
             </Link>

@@ -184,7 +184,7 @@ function IOSInstallCard({ onClose, onDone }: { onClose: () => void; onDone: () =
             </span>
           </li>
           <li className="flex items-center gap-3">
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[var(--gold-line)] font-[family-name:var(--font-dm)] text-lg leading-none text-[var(--gold)]">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-[var(--gold-line)] font-[family-name:var(--font-dm)] text-lg leading-none text-[var(--gold-deep)]">
               +
             </span>
             <span className="font-[family-name:var(--font-dm)] text-sm text-[var(--navy)]">

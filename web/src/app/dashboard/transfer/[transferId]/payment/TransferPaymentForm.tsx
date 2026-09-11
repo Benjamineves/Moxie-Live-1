@@ -106,7 +106,7 @@ export function TransferPaymentForm({ transferId, mxeId, buyerEmail, sellerTier,
             Final step · Transfer fee
           </p>
           <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-light text-[var(--navy)]">
-            {buyerEmail} <em className="text-[var(--gold)] not-italic">accepted.</em>
+            {buyerEmail} <em className="text-[var(--gold-deep)] not-italic">accepted.</em>
           </h1>
           <p className="mt-2 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
             Ownership of {mxeId} moves to their account the moment this clears. Nothing changes until then.

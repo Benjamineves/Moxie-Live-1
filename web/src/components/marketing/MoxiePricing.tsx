@@ -67,7 +67,7 @@ export function MoxiePricing({ isAuthenticated }: { isAuthenticated: boolean }) 
 
       <section className="bg-[var(--cream)] px-6 py-[100px] md:px-12">
         <div className="mx-auto max-w-[760px] text-center">
-          <p className="mb-4 flex items-center justify-center gap-3 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--gold)]">
+          <p className="mb-4 flex items-center justify-center gap-3 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--gold-deep)]">
             <span className="h-px w-6 bg-[var(--gold)]" />
             What Moxie is
             <span className="h-px w-6 bg-[var(--gold)]" />
@@ -75,7 +75,7 @@ export function MoxiePricing({ isAuthenticated }: { isAuthenticated: boolean }) 
           <h2 className="mb-7 font-[family-name:var(--font-display)] text-[clamp(32px,4.5vw,52px)] font-light leading-tight text-[var(--navy)]">
             A permanent identity
             <br />
-            for your <em className="text-[var(--gold)] not-italic">boat.</em>
+            for your <em className="text-[var(--gold-deep)] not-italic">boat.</em>
           </h2>
           <p className="mb-5 text-[15px] font-light leading-relaxed text-[var(--text2)]">
             Every vessel gets one badge and one MXE ID — assigned once, kept for the life of the hull. It&apos;s not a
@@ -120,12 +120,12 @@ export function MoxiePricing({ isAuthenticated }: { isAuthenticated: boolean }) 
 
       <section id="plans" className="bg-[var(--cream)] px-6 py-[100px] md:px-12">
         <div className="mx-auto max-w-[1160px]">
-          <p className="mb-4 flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--gold)]">
+          <p className="mb-4 flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--gold-deep)]">
             <span className="h-px w-6 bg-[var(--gold)]" />
             Plans
           </p>
           <h2 className="mb-8 font-[family-name:var(--font-display)] text-[clamp(36px,5vw,62px)] font-light leading-[1.05] text-[var(--navy)]">
-            Basic or <em className="text-[var(--gold)] not-italic">Full Access.</em>
+            Basic or <em className="text-[var(--gold-deep)] not-italic">Full Access.</em>
           </h2>
 
           <div className="mb-10 flex flex-col gap-2 border-l-2 border-[var(--gold)] bg-[var(--gold-dim)] p-5 sm:flex-row sm:items-center sm:justify-between">
@@ -206,7 +206,7 @@ export function MoxiePricing({ isAuthenticated }: { isAuthenticated: boolean }) 
                   <td className="px-4 pt-6">
                     <a
                       href="mailto:info@moxieyachting.com"
-                      className="inline-flex w-full items-center justify-center gap-2 border border-[var(--divider)] px-5 py-3 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text3)] no-underline transition hover:border-[var(--gold)] hover:text-[var(--gold)]"
+                      className="inline-flex w-full items-center justify-center gap-2 border border-[var(--divider)] px-5 py-3 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text3)] no-underline transition hover:border-[var(--gold)] hover:text-[var(--gold-deep)]"
                     >
                       Get in touch →
                     </a>

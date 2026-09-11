@@ -146,14 +146,14 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
 
       <section id="how" className="bg-[var(--cream)] px-6 py-[100px] md:px-12">
         <div className="mx-auto max-w-[1160px]">
-          <p className="mb-4 flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--gold)]">
+          <p className="mb-4 flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--gold-deep)]">
             <span className="h-px w-6 bg-[var(--gold)]" />
             How it works
           </p>
           <h2 className="mb-[72px] font-[family-name:var(--font-display)] text-[clamp(36px,5vw,62px)] font-light leading-[1.05] text-[var(--navy)]">
             Three steps.
             <br />
-            <em className="text-[var(--gold)] not-italic">Always working.</em>
+            <em className="text-[var(--gold-deep)] not-italic">Always working.</em>
           </h2>
           <div className="grid gap-0.5 bg-[var(--divider)] md:grid-cols-3">
             {[
@@ -329,14 +329,14 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
             </div>
           </div>
           <div>
-            <p className="mb-4 flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--gold)]">
+            <p className="mb-4 flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--gold-deep)]">
               <span className="h-px w-6 bg-[var(--gold)]" />
               The vessel profile
             </p>
             <h2 className="mb-6 font-[family-name:var(--font-display)] text-[clamp(32px,4.5vw,52px)] font-light leading-tight text-[var(--navy)]">
               What people see
               <br />
-              when they <em className="text-[var(--gold)] not-italic">scan.</em>
+              when they <em className="text-[var(--gold-deep)] not-italic">scan.</em>
             </h2>
             <p className="mb-9 text-[15px] font-light leading-relaxed text-[var(--text2)]">
               The mobile vessel profile is the #1 user-facing touchpoint. Clean, fast, and role-gated — it shows exactly
@@ -393,11 +393,11 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
 
       <section id="contact" className="bg-[var(--cream)] px-6 py-[100px] md:px-12">
         <div className="mx-auto max-w-[640px] text-center">
-          <p className="mb-4 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--gold)]">Get started</p>
+          <p className="mb-4 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--gold-deep)]">Get started</p>
           <h2 className="mb-6 font-[family-name:var(--font-display)] text-[clamp(36px,5vw,56px)] font-light leading-tight text-[var(--navy)]">
             Register today.
             <br />
-            <em className="text-[var(--gold)] not-italic">No marina required.</em>
+            <em className="text-[var(--gold-deep)] not-italic">No marina required.</em>
           </h2>
           <p className="mb-9 text-[15px] font-light leading-relaxed text-[var(--text2)]">
             Create an account and register your vessel — wherever it&apos;s docked, trailered, or moored. Your

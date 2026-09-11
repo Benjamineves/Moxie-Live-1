@@ -23,31 +23,31 @@ export function MarketingNav({ isAuthenticated }: { isAuthenticated: boolean }) 
       <div className="hidden items-center gap-8 md:flex">
         <Link
           href="/#qr-hero"
-          className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--text2)] no-underline transition hover:text-[var(--gold)]"
+          className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--text2)] no-underline transition hover:text-[var(--gold-deep)]"
         >
           The QR
         </Link>
         <Link
           href="/#how"
-          className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--text2)] no-underline transition hover:text-[var(--gold)]"
+          className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--text2)] no-underline transition hover:text-[var(--gold-deep)]"
         >
           How it works
         </Link>
         <Link
           href="/#who"
-          className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--text2)] no-underline transition hover:text-[var(--gold)]"
+          className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--text2)] no-underline transition hover:text-[var(--gold-deep)]"
         >
           Who it&apos;s for
         </Link>
         <Link
           href="/pricing"
-          className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--text2)] no-underline transition hover:text-[var(--gold)]"
+          className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--text2)] no-underline transition hover:text-[var(--gold-deep)]"
         >
           Pricing
         </Link>
         <Link
           href="/#contact"
-          className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--text2)] no-underline transition hover:text-[var(--gold)]"
+          className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--text2)] no-underline transition hover:text-[var(--gold-deep)]"
         >
           Contact
         </Link>
@@ -62,7 +62,7 @@ export function MarketingNav({ isAuthenticated }: { isAuthenticated: boolean }) 
           <div className="flex items-center gap-3">
             <a
               href={`${APP_ORIGIN}/login`}
-              className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--text2)] no-underline transition hover:text-[var(--gold)]"
+              className="text-[12px] font-medium uppercase tracking-[0.12em] text-[var(--text2)] no-underline transition hover:text-[var(--gold-deep)]"
             >
               Log in
             </a>

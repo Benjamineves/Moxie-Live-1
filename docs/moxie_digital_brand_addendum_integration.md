@@ -170,14 +170,23 @@ Measured, so the choice is checkable rather than a matter of taste:
 
 **Gold**
 
-| | `--gold` | `--gold-deep` |
-|---|---|---|
-| on `--navy-deep` | **8.32:1** ✓ | 3.26:1 ✗ |
-| on `--gold-dim` over `--navy-deep` | **6.60:1** ✓ | — |
-| on `--white` | 2.29:1 ✗ | **5.84:1** ✓ |
-| on `--cream` | 2.05:1 ✗ | **5.23:1** ✓ |
-| on `--gray-bg` | 1.99:1 ✗ | **5.08:1** ✓ |
-| on `--gold-dim` over `--gray-bg` | 1.80:1 ✗ | **4.61:1** ✓ |
+| | composites to | `--gold` | `--gold-deep` |
+|---|---|---|---|
+| on `--navy-deep` | `#071020` | **8.32:1** ✓ | 3.26:1 ✗ |
+| on `--gold-dim` over `--navy-deep` | `rgb(36,39,39)` | **6.60:1** ✓ | — |
+| on `--white` | `#ffffff` | 2.29:1 ✗ | **5.84:1** ✓ |
+| on `--cream` | `#f5f2ec` | 2.05:1 ✗ | **5.23:1** ✓ |
+| on `--cream2` | `#ede9e0` | 1.89:1 ✗ | **4.82:1** ✓ |
+| on `--gray-bg` | `#f1efe8` | 1.99:1 ✗ | **5.08:1** ✓ |
+| on the marketing nav (`--cream` at 92% over white) | `rgb(246,243,238)` | 2.06:1 ✗ | **5.28:1** ✓ |
+| on `--gold-dim` over `--white` | `rgb(247,242,228)` | 2.04:1 ✗ | **5.22:1** ✓ |
+| on `--gold-dim` over `--gray-bg` | `rgb(235,228,209)` | 1.80:1 ✗ | **4.60:1** ✓ |
+
+`--gold-deep` clears AA at small sizes on every light surface the app
+actually uses; its worst case is 4.60:1 on a `--gold-dim` panel over grey.
+`--gold` clears nothing lighter than navy — not even the 3:1 large-text
+floor, so a 62px display accent in `--gold` on cream fails as surely as a
+10px eyebrow does.
 
 **Danger**
 
@@ -208,15 +217,43 @@ darker one to be safe" is not a rule that works.
    surface need two variants and a name that says which is which —
    `editTriggerClass` / `editTriggerOnDarkClass`.
 
-3. **Hover states need checking too, and tend to be worse.** The edit
-   trigger's rest state was `--gold` at 2.29:1 on white; its hover was
-   `--gold-lt`, which is *lighter* — 1.77:1. The state a user enters
-   deliberately was the least readable one.
+3. **Hover states need checking too, and tend to be worse.** A hover is
+   a state the user enters *deliberately*, to read something; it is the
+   worst possible place for the least readable colour. It has gone wrong
+   here in all three available ways:
+
+   - **The text gets lighter.** The edit trigger rested at `--gold`,
+     2.29:1 on white, and hovered to `--gold-lt` — 1.77:1.
+   - **A readable rest state hovers into an unreadable one.** The six
+     marketing nav links rest at `--text2`, a comfortable 7.51:1, and
+     hovered to `--gold` at 2.06:1. Pointing at a link made it harder to
+     read than ignoring it, on the public site's primary navigation.
+   - **The background moves instead of the text.** `LockedDocumentRow`'s
+     upgrade CTA keeps its colour and hovers `bg-[var(--gold-dim)]`,
+     which lightens the surface under it. Checking the text token alone
+     would have missed this one.
+
+   So: check `hover:text-*`, `hover:bg-*`, and `hover:border-*` against
+   each other, not just the resting pair.
 
 ### The one genuine exemption
 
 The wordmark's gold **M** and aqua **.** are a logotype, and logotypes are
-exempt (WCAG 1.4.3). Eleven instances in the app. Nothing else is.
+exempt (WCAG 1.4.3). Twelve instances in the app — eleven `M` glyphs plus
+the one full "Moxie." on the shared profile's footer CTA.
+
+Two things that look like exemptions and are not, but which this sweep
+deliberately left alone:
+
+- The 24px gold hairlines beside the marketing eyebrows
+  (`<span className="h-px w-6 bg-[var(--gold)]" />`, eleven of them) are
+  decoration, conveying nothing, and exempt under 1.4.11. They stay
+  `--gold`, which is now slightly paler than the text beside them.
+- `⚓` (U+2693) has `Emoji_Presentation=Yes`, so browsers render it as a
+  colour emoji and ignore `color` entirely. The two photo-placeholder
+  anchors carry `text-[var(--gold)]` classes that have never had any
+  visual effect. Changing the token there would be a no-op, so they were
+  left as they are.
 
 ### Where the tokens live
 

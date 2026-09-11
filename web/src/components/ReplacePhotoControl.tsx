@@ -48,7 +48,7 @@ export function ReplacePhotoControl({ mxeId }: { mxeId: string }) {
 
   return (
     <div>
-      <label className="inline-flex cursor-pointer items-center gap-1.5 font-[family-name:var(--font-dm)] text-xs font-medium text-[var(--text3)] transition hover:text-[var(--gold)]">
+      <label className="inline-flex cursor-pointer items-center gap-1.5 font-[family-name:var(--font-dm)] text-xs font-medium text-[var(--text3)] transition hover:text-[var(--gold-deep)]">
         {uploading ? "Uploading…" : "Replace photo"}
         <input
           type="file"

@@ -35,7 +35,7 @@ export function PastDueBillingPrompt() {
             Account &amp; Billing
           </p>
           <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-light text-[var(--navy)]">
-            Payment <em className="text-[var(--gold)] not-italic">past due.</em>
+            Payment <em className="text-[var(--gold-deep)] not-italic">past due.</em>
           </h1>
           <p className="mt-2 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
             Your last payment didn&apos;t go through. Update your payment method to bring your account current — your

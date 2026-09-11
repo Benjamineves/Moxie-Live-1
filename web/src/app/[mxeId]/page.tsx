@@ -54,7 +54,7 @@ export default async function VesselPage({ params, searchParams }: Props) {
       return (
         <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[var(--cream)] px-6 text-center">
           <h1 className="font-[family-name:var(--font-display)] text-3xl font-light italic text-[var(--navy)]">
-            Link <em className="text-[var(--gold)] not-italic">no longer active.</em>
+            Link <em className="text-[var(--gold-deep)] not-italic">no longer active.</em>
           </h1>
           <p className="max-w-sm font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
             This share link has expired, been revoked, or already been used.

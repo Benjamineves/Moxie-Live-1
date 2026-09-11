@@ -60,7 +60,7 @@ export function ManageFleetForm({
             Manage fleet
           </p>
           <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-light text-[var(--navy)]">
-            Choose your <em className="text-[var(--gold)] not-italic">active vessels.</em>
+            Choose your <em className="text-[var(--gold-deep)] not-italic">active vessels.</em>
           </h1>
           <p className="mt-2 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
             Your {tierLabel} plan covers up to {limit} vessel{limit === 1 ? "" : "s"}. Pick which ones stay fully

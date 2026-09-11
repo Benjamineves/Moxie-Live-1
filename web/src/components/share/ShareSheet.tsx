@@ -135,7 +135,7 @@ export function ShareSheet({
 
             <div className="border-b border-[var(--divider)] px-5 pb-4 pt-4">
               <p className="font-[family-name:var(--font-display)] text-2xl font-light text-[var(--navy)]">
-                Share <em className="text-[var(--gold)] not-italic">{vesselName}</em>
+                Share <em className="text-[var(--gold-deep)] not-italic">{vesselName}</em>
               </p>
               <p className="mt-1 font-[family-name:var(--font-dm)] text-[13px] font-light text-[var(--text2)]">
                 Choose what to share and with whom. You control access — revoke any link instantly.

@@ -119,7 +119,7 @@ export default async function VesselQrPage({ params, searchParams }: Props) {
           </h1>
         </div>
 
-        <p className="mt-5 font-[family-name:var(--font-display)] text-4xl font-light italic text-[var(--gold)]">
+        <p className="mt-5 font-[family-name:var(--font-display)] text-4xl font-light italic text-[var(--gold-deep)]">
           {vessel.mxe_id}
         </p>
 
