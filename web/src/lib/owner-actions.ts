@@ -8,6 +8,7 @@ import { resolveOwnerIds, loadOwnedVessel } from "@/lib/vessel-ownership";
 import { normalizeStateCode } from "@/lib/us-states";
 import { isDecommissionReason, type DecommissionReason } from "@/lib/vessel-decommission";
 import { createTransferAndNotifyBuyer } from "@/lib/transfer-initiate";
+import { deleteUnpaidVessel } from "@/lib/unpaid-vessel-delete";
 import { FULL_STORAGE_CAP_BYTES } from "@/lib/tier-config";
 import { getAccountStorageUsageBytes } from "@/lib/storage-usage";
 
@@ -597,39 +598,6 @@ export async function cancelOwnershipTransfer(transferId: string): Promise<{ err
   return {};
 }
 
-const UPLOAD_BUCKETS = ["vessel-photos", "vessel-docs"] as const;
-
-/**
- * Every file this vessel could have — photo, registration, insurance,
- * correction-request attachments — lives under this one prefix in
- * either bucket (see vessel-uploads.ts's path convention). Walking one
- * level of subfolders (e.g. correction-requests/) catches everything
- * without needing to know every possible filename in advance, same
- * approach reset_test_vessel_files.mjs already uses for the same
- * reason.
- */
-async function collectVesselStoragePaths(
-  service: NonNullable<ReturnType<typeof createSupabaseServiceClient>>,
-  bucket: string,
-  prefix: string,
-): Promise<string[]> {
-  const { data: entries } = await service.storage.from(bucket).list(prefix, { limit: 1000 });
-  const paths: string[] = [];
-  for (const entry of entries ?? []) {
-    if (entry.id === null) {
-      // A folder (no object metadata) — one level deep is as far as
-      // this convention ever nests.
-      const { data: nested } = await service.storage.from(bucket).list(`${prefix}/${entry.name}`, { limit: 1000 });
-      for (const file of nested ?? []) {
-        if (file.id !== null) paths.push(`${prefix}/${entry.name}/${file.name}`);
-      }
-    } else {
-      paths.push(`${prefix}/${entry.name}`);
-    }
-  }
-  return paths;
-}
-
 /**
  * Owner-initiated hard delete, strictly for vessels that never
  * completed activation — decommission is the only removal path for an
@@ -639,38 +607,40 @@ async function collectVesselStoragePaths(
  * with a dead entry, or have to pay just to be allowed to ask for its
  * removal.
  *
- * Three independent layers confirm this can never reach an activated
- * vessel: the UI trigger only renders when the vessel is already
- * showing "needs activation"; this action re-checks qr_status before
- * attempting anything (a friendlier, earlier error); and
- * delete_unactivated_vessel itself re-verifies the same precondition
- * again and is the actual enforcement point, same as every other
- * mutating function this session (never trust the caller).
+ * THIS USED TO CALL A STALE FUNCTION. delete_unactivated_vessel(p_vessel_id,
+ * p_owner_id) from 20260909 survived as an overload when 20260927 added the
+ * current (p_vessel_id, p_reason, p_admin_email) version, and this action
+ * kept calling the old one. It checked no Stripe payment, deleted the
+ * vessel's payment records along with it, never returned the badge identity
+ * to stock — and, since 7a, failed with a raw foreign-key error on every
+ * vessel, because badge_identities.vessel_id still pointed at it.
  *
- * The DB deletion runs first, atomically, via that function — that's
- * the moment the vessel legally stops existing. Storage cleanup is a
- * separate, best-effort step after: Postgres has no access to Supabase
- * Storage's API, so it can't participate in that transaction. If a
- * storage delete fails here, the vessel is still correctly gone from
- * the database — a stray orphaned file is a minor, recoverable loose
- * end, not a broken vessel record, so this never turns a storage
- * hiccup into a user-facing failure.
+ * It now goes through deleteUnpaidVessel, exactly as the admin reclaim does:
+ * the Stripe check, then the current function (every precondition,
+ * refusing rather than cascading when payment or other records exist, and
+ * returning the badge to stock), then Storage. Authorization stays here —
+ * the helper does not know who is asking.
+ *
+ * Three layers still keep this away from an activated vessel: the button
+ * only renders for a vessel showing "needs activation"; this action re-checks
+ * qr_status for a friendlier error; and the function is the enforcement.
  */
 export async function deleteUnactivatedVessel(mxeId: string): Promise<{ error?: string }> {
   const authClient = await createSupabaseServerClient();
   if (!authClient) return { error: "Missing Supabase auth configuration." };
 
   const { user, ownerIds } = await resolveOwnerIds(authClient);
-  if (!user) return { error: "You must be signed in." };
+  if (!user?.email) return { error: "You must be signed in." };
 
   const service = createSupabaseServiceClient();
   if (!service) return { error: "Missing Supabase service role configuration." };
 
-  const { data: vesselRow } = await service
+  const { data: vesselRow, error: vesselError } = await service
     .from("vessels")
     .select("id, owner_id, mxe_id, qr_status")
     .eq("mxe_id", mxeId.toUpperCase())
     .maybeSingle();
+  if (vesselError) return { error: "Couldn't load this vessel. Please try again." };
   const vessel = vesselRow as { id: string; owner_id: string; mxe_id: string; qr_status: string | null } | null;
 
   if (!vessel || !ownerIds.includes(vessel.owner_id)) {
@@ -680,29 +650,45 @@ export async function deleteUnactivatedVessel(mxeId: string): Promise<{ error?: 
     return { error: "Only a vessel that hasn't been activated yet can be deleted. Use decommission instead." };
   }
 
-  const { error } = await service.rpc("delete_unactivated_vessel", {
-    p_vessel_id: vessel.id,
-    p_owner_id: vessel.owner_id,
+  const result = await deleteUnpaidVessel(service, {
+    vesselId: vessel.id,
+    reason: "Deleted by the owner before paying, from their dashboard.",
+    actor: { kind: "owner", email: user.email },
   });
-  if (error) return { error: error.message };
 
-  // Best-effort from here — the vessel is already gone in the database
-  // regardless of what happens below.
-  try {
-    for (const bucket of UPLOAD_BUCKETS) {
-      const paths = await collectVesselStoragePaths(service, bucket, `${vessel.owner_id}/${vessel.mxe_id}`);
-      if (paths.length > 0) {
-        const { error: removeError } = await service.storage.from(bucket).remove(paths);
-        if (removeError) {
-          console.error(`[delete-vessel] Failed to remove ${paths.length} file(s) from ${bucket} for ${vessel.mxe_id}:`, removeError);
-        }
-      }
+  if (result.ok) {
+    if (result.storageLeftovers.length > 0) {
+      // Not the owner's to fix, so logged for us rather than shown to them.
+      console.error(`[delete-vessel] ${result.mxeId} deleted, but Storage cleanup left: ${result.storageLeftovers.join("; ")}`);
     }
-  } catch (err) {
-    console.error(`[delete-vessel] Storage cleanup failed for ${vessel.mxe_id}:`, err);
+    return {};
   }
 
-  return {};
+  // Owner-facing wording. Every one of these leaves the vessel in place.
+  if (result.stage === "stripe") {
+    console.error(`[delete-vessel] ${vessel.mxe_id} refused by the Stripe check: ${result.check.detail}`);
+    return {
+      error:
+        result.check.reason === "payment_found"
+          ? "There's a payment on record for this vessel, so it can't be deleted here. Contact Moxie and we'll sort it out."
+          : "We couldn't confirm with our payment provider that this vessel was never paid for, so it hasn't been deleted. Please try again shortly.",
+    };
+  }
+  if (result.stage === "database") {
+    console.error(`[delete-vessel] ${vessel.mxe_id} refused by delete_unactivated_vessel [${result.code}]: ${result.message}`);
+    switch (result.code) {
+      case "MX002":
+      case "MX003":
+        return { error: "This vessel has been activated, so it can't be deleted. Use decommission instead." };
+      case "MX005":
+        return { error: "This vessel has a payment or other records attached, so it can't be deleted here. Contact Moxie." };
+      case "MX007":
+        return { error: "A badge has already been ordered for this vessel, so it can't be deleted here. Contact Moxie." };
+      default:
+        return { error: "This vessel couldn't be deleted. Contact Moxie and we'll take care of it." };
+    }
+  }
+  return { error: result.message };
 }
 
 /**

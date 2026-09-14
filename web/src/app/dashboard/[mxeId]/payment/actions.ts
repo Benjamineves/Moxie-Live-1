@@ -6,6 +6,7 @@ import { getStripe } from "@/lib/stripe/server";
 import { resolveOwnerIds } from "@/lib/vessel-ownership";
 import { isAdminEmail } from "@/lib/admin-verify";
 import { countActiveVessels, evaluateVesselCap } from "@/lib/vessel-cap";
+import { IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES } from "@/lib/stripe/payment-methods";
 import type { SubscriptionTier } from "@/lib/tier-config";
 
 /**
@@ -165,7 +166,11 @@ export async function createBadgeFeeIntent(mxeId: string): Promise<IntentResult>
       amount: price.unit_amount,
       currency: price.currency,
       customer: customerId,
-      automatic_payment_methods: { enabled: true },
+      // Immediate-settlement methods only, named explicitly — never
+      // automatic_payment_methods, which follows the Stripe dashboard and
+      // offered bank debit: while it settled the vessel stayed unpaid and
+      // the page offered checkout again. See lib/stripe/payment-methods.ts.
+      payment_method_types: [...IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES],
       metadata: { mxe_id: vessel.mxe_id, vessel_id: vessel.id, payment_type: "badge_fee" },
     });
 
@@ -329,7 +334,16 @@ export async function createSignupBundleIntent(mxeId: string, tier: Subscription
       items: [{ price: planPriceId }],
       add_invoice_items: [{ price: badgePriceId }],
       payment_behavior: "default_incomplete",
-      payment_settings: { save_default_payment_method: "on_subscription" },
+      // The subscription's invoices — including the first, which carries
+      // the badge fee — accept immediate-settlement methods only. While a
+      // bank debit settled, the subscription stayed incomplete and a second
+      // Pay click cancelled it to start another. This also applies to
+      // renewals, which charge the saved card. See
+      // lib/stripe/payment-methods.ts.
+      payment_settings: {
+        save_default_payment_method: "on_subscription",
+        payment_method_types: [...IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES],
+      },
       expand: ["latest_invoice", "latest_invoice.confirmation_secret"],
       metadata: { owner_id: owner.id, tier, vessel_id: vessel.id, mxe_id: vessel.mxe_id },
     });
@@ -350,21 +364,35 @@ export async function createSignupBundleIntent(mxeId: string, tier: Subscription
     // above for why this can't wait for invoice.paid.
     await service.from("users").update({ stripe_subscription_id: subscription.id }).eq("id", owner.id);
 
+    // The tag is REQUIRED, not best-effort. It used to be wrapped in a
+    // try/catch that only logged, which let the owner pay an untagged
+    // intent. Two things depend on these fields and both fail silently
+    // without them:
+    //  - the webhook routes on metadata.payment_type, so an untagged
+    //    payment is ignored entirely: charged, never activated;
+    //  - the Stripe check before deleting an unpaid vessel finds payments
+    //    by metadata.mxe_id, so an untagged payment is invisible to it and
+    //    the vessel it paid for could be deleted.
+    // So if the tag cannot be written, the client secret is withheld and
+    // nothing can be charged. The incomplete subscription left behind is
+    // cancelled by the next Pay click, same as any abandoned one.
     const paymentIntentId = clientSecret.split("_secret_")[0];
-    if (paymentIntentId) {
-      try {
-        await stripe.paymentIntents.update(paymentIntentId, {
-          metadata: {
-            mxe_id: vessel.mxe_id,
-            vessel_id: vessel.id,
-            owner_id: owner.id,
-            payment_type: "signup_bundle",
-            badge_fee_amount_cents: String(badgePrice.unit_amount),
-          },
-        });
-      } catch (err) {
-        console.error(`[payment] Failed to tag PaymentIntent ${paymentIntentId} with metadata:`, err);
-      }
+    if (!paymentIntentId) {
+      return { error: "Stripe returned a payment secret in an unexpected format. Nothing has been charged." };
+    }
+    try {
+      await stripe.paymentIntents.update(paymentIntentId, {
+        metadata: {
+          mxe_id: vessel.mxe_id,
+          vessel_id: vessel.id,
+          owner_id: owner.id,
+          payment_type: "signup_bundle",
+          badge_fee_amount_cents: String(badgePrice.unit_amount),
+        },
+      });
+    } catch (err) {
+      console.error(`[payment] Failed to tag PaymentIntent ${paymentIntentId} with metadata — withholding the client secret:`, err);
+      return { error: "Couldn't prepare the payment. Nothing has been charged — please try again." };
     }
 
     return { clientSecret };

@@ -4,7 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { getStripe } from "@/lib/stripe/server";
 import { resolveOwnerIds } from "@/lib/vessel-ownership";
-import { TRANSFER_FEE_PAYMENT_METHOD_TYPES } from "@/lib/stripe/payment-methods";
+import { IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES } from "@/lib/stripe/payment-methods";
 import type { SubscriptionTier } from "@/lib/tier-config";
 
 type IntentResult = { clientSecret: string } | { error: string };
@@ -127,7 +127,7 @@ export async function createTransferFeeIntent(transferId: string, expectedAmount
       // Immediate-settlement methods only, named explicitly — never
       // automatic_payment_methods, which follows the Stripe dashboard and
       // offered bank debit. See lib/stripe/payment-methods.ts.
-      payment_method_types: [...TRANSFER_FEE_PAYMENT_METHOD_TYPES],
+      payment_method_types: [...IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES],
       metadata: { transfer_id: transfer.id, vessel_id: transfer.vessel_id, mxe_id: transfer.mxe_id, payment_type: "transfer_fee" },
     });
 

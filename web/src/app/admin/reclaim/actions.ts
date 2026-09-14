@@ -3,16 +3,16 @@
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin-verify";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
-import { getStripe } from "@/lib/stripe/server";
-import { cleanupVesselStorage } from "@/lib/vessel-storage-cleanup";
+import { checkStripeForPayments, deleteUnpaidVessel } from "@/lib/unpaid-vessel-delete";
 
 /**
  * Reclaiming a badge from a checkout that was never completed (spec
  * §3.1 note, 20260927).
  *
- * The database function holds every precondition it can check. This
- * action adds the one it cannot: whether Stripe knows about a payment
- * Postgres does not.
+ * The database function holds every precondition it can check. The one it
+ * cannot — whether Stripe knows about a payment Postgres does not — lives
+ * in lib/unpaid-vessel-delete.ts, which the owner's delete button goes
+ * through too. It used to live here, in this action alone.
  */
 
 export type ReclaimPreview = {
@@ -26,50 +26,6 @@ export type ReclaimPreview = {
 };
 
 export type ReclaimResult = { ok?: true; mxeId?: string; warning?: string; error?: string };
-
-/** Intent states that mean no money moved and none is pending. */
-const HARMLESS_INTENT_STATUSES = new Set(["canceled", "requires_payment_method"]);
-
-/**
- * Asks Stripe whether any PaymentIntent exists for this MXE ID that is
- * not safely dead.
- *
- * FAILS CLOSED, deliberately and on Ben's instruction: if the lookup
- * errors, times out, or the client cannot even be constructed, this
- * refuses. An unreachable API is not evidence of no payment — and the
- * whole reason this check exists is that the database cannot tell an
- * abandoned checkout from a successful payment whose webhook never
- * arrived. Treating an outage as "probably fine" would reintroduce
- * exactly the case the check was added to close.
- */
-async function stripeSaysNoPayment(mxeId: string): Promise<{ safe: boolean; detail: string }> {
-  try {
-    const stripe = getStripe();
-    const found = await stripe.paymentIntents.search({
-      query: `metadata['mxe_id']:'${mxeId}'`,
-      limit: 20,
-    });
-
-    const alive = found.data.filter((intent) => !HARMLESS_INTENT_STATUSES.has(intent.status));
-    if (alive.length > 0) {
-      const summary = alive.map((i) => `${i.id}=${i.status}`).join(", ");
-      return { safe: false, detail: `Stripe has ${alive.length} live payment intent(s): ${summary}` };
-    }
-
-    return {
-      safe: true,
-      detail:
-        found.data.length === 0
-          ? "No payment intents in Stripe"
-          : `${found.data.length} intent(s), all canceled or unpaid`,
-    };
-  } catch (err) {
-    return {
-      safe: false,
-      detail: `Stripe lookup failed — refusing. ${err instanceof Error ? err.message : "unknown error"}`,
-    };
-  }
-}
 
 /**
  * Everything the confirmation screen shows, so an admin sees WHY a
@@ -94,14 +50,14 @@ export async function previewReclaim(mxeId: string): Promise<ReclaimPreview | { 
   const { data: vesselRow } = await service
     .from("vessels")
     .select(
-      "id, mxe_id, vessel_name, owner_email, created_at, qr_status, qr_generated_at, lifecycle_status, sticker_order_status, badge_identity_id",
+      "id, mxe_id, owner_id, vessel_name, owner_email, created_at, qr_status, qr_generated_at, lifecycle_status, sticker_order_status, badge_identity_id",
     )
     .eq("mxe_id", normalized)
     .maybeSingle();
 
   if (!vesselRow) return { error: `No vessel with MXE ID ${normalized}.` };
   const v = vesselRow as {
-    id: string; mxe_id: string; vessel_name: string | null; owner_email: string | null;
+    id: string; mxe_id: string; owner_id: string; vessel_name: string | null; owner_email: string | null;
     created_at: string | null; qr_status: string | null; qr_generated_at: string | null;
     lifecycle_status: string | null; sticker_order_status: string | null; badge_identity_id: string | null;
   };
@@ -134,7 +90,13 @@ export async function previewReclaim(mxeId: string): Promise<ReclaimPreview | { 
     identityDetail = i ? `${i.mxe_id} status=${i.status}, linked ${i.vessel_id === v.id ? "correctly" : "elsewhere"}` : "Identity row missing";
   }
 
-  const stripe = await stripeSaysNoPayment(v.mxe_id);
+  // Display only — deleteUnpaidVessel runs the same check again at the
+  // moment of deleting, and that one is the control.
+  const { data: previewOwner } = await service.from("users").select("stripe_customer_id").eq("id", v.owner_id).maybeSingle();
+  const stripe = await checkStripeForPayments(
+    v.mxe_id,
+    (previewOwner as { stripe_customer_id: string | null } | null)?.stripe_customer_id ?? null,
+  );
 
   const checks: ReclaimPreview["checks"] = [
     { label: "Awaiting payment", ok: v.qr_status === "pending_payment", detail: `qr_status = ${v.qr_status ?? "null"}` },
@@ -191,30 +153,20 @@ export async function reclaimUnactivatedVessel(
     return { error: `Confirmation did not match. Type ${vessel.mxe_id} exactly.` };
   }
 
-  // Re-run immediately before acting rather than trusting the preview
-  // the admin looked at, which may be minutes old — a payment can land
-  // in that window, and that is the exact window this guards.
-  const stripe = await stripeSaysNoPayment(vessel.mxe_id);
-  if (!stripe.safe) return { error: `Refused: ${stripe.detail}` };
-
-  const { data, error } = await service.rpc("delete_unactivated_vessel", {
-    p_vessel_id: vesselId,
-    p_reason: trimmedReason,
-    p_admin_email: admin.email,
+  // The Stripe check, the delete and the Storage cleanup, in that order,
+  // re-run now rather than trusting the preview the admin looked at.
+  const result = await deleteUnpaidVessel(service, {
+    vesselId,
+    reason: trimmedReason,
+    actor: { kind: "admin", email: admin.email },
   });
 
-  if (error) return { error: `[${error.code}] ${error.message}` };
-
-  // Storage cleanup runs AFTER the transaction commits, and cannot join
-  // it — see vessel-storage-cleanup.ts for why that order is the safe
-  // one. Extracted there rather than inlined here so the branch can be
-  // exercised against a fixture: it fires on nearly every real reclaim
-  // and it handles the customer's registration and insurance documents.
-  const result = data as { mxe_id: string; photo_url: string | null; doc_paths: (string | null)[] } | null;
-  const { leftovers } = await cleanupVesselStorage(service, {
-    photoUrl: result?.photo_url ?? null,
-    docPaths: result?.doc_paths ?? [],
-  });
+  if (!result.ok) {
+    if (result.stage === "stripe") return { error: `Refused: ${result.check.detail}` };
+    if (result.stage === "database") return { error: `[${result.code}] ${result.message}` };
+    return { error: result.message };
+  }
+  const leftovers = result.storageLeftovers;
 
   revalidatePath("/admin/badges");
   revalidatePath("/admin/stickers");

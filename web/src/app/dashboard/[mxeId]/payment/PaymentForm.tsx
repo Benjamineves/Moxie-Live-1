@@ -8,6 +8,7 @@ import { CapReachedNotice } from "./CapReachedNotice";
 import { createBadgeFeeIntent } from "./actions";
 import { BADGE_FEE_AMOUNT_USD, type SubscriptionTier } from "@/lib/tier-config";
 import type { BadgeFeeAmount } from "@/lib/stripe/checkout-amounts";
+import { IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES } from "@/lib/stripe/payment-methods";
 
 type Props = {
   mxeId: string;
@@ -90,7 +91,16 @@ export function PaymentForm({ mxeId, vesselName, vesselTag, publishableKey, amou
           {/* Deferred mode: amount and currency, no PaymentIntent. Nothing
               is created in Stripe by loading this page — the intent is
               created by the Pay click, after the vessel cap is checked. */}
-          <Elements stripe={stripe} options={{ mode: "payment", amount: amount.badgeCents, currency: amount.currency }}>
+          <Elements
+            stripe={stripe}
+            options={{
+              mode: "payment",
+              amount: amount.badgeCents,
+              currency: amount.currency,
+              // Must match the intent — see lib/stripe/payment-methods.ts.
+              paymentMethodTypes: [...IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES],
+            }}
+          >
             <CheckoutInner mxeId={mxeId} vesselName={vesselName} />
           </Elements>
         </div>
@@ -186,7 +196,9 @@ function CheckoutInner({ mxeId, vesselName }: { mxeId: string; vesselName: strin
       <p className="mb-4 font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
         Payment details
       </p>
-      <PaymentElement />
+      {/* Link off: it offers bank-funded payments that settle later,
+          which the card-only intent would refuse anyway. */}
+      <PaymentElement options={{ wallets: { link: "never" } }} />
       <p className="mt-4 flex items-center gap-2 font-[family-name:var(--font-dm)] text-[11px] leading-relaxed text-[var(--text3)]">
         Payment processed securely by Stripe. Moxie never sees or stores your card details.
       </p>

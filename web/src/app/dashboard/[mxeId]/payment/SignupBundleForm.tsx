@@ -8,6 +8,7 @@ import { CapReachedNotice } from "./CapReachedNotice";
 import { createSignupBundleIntent } from "./actions";
 import { SUBSCRIPTION_AMOUNT_USD, BADGE_FEE_AMOUNT_USD, type SubscriptionTier } from "@/lib/tier-config";
 import type { BundleAmounts } from "@/lib/stripe/checkout-amounts";
+import { IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES } from "@/lib/stripe/payment-methods";
 
 type Props = {
   mxeId: string;
@@ -174,6 +175,9 @@ export function SignupBundleForm({ mxeId, vesselName, vesselTag, publishableKey,
                 mode: "subscription",
                 amount: amounts.planCents[selectedTier] + amounts.badgeCents,
                 currency: amounts.currency,
+                // Must match the subscription's payment_settings — see
+                // lib/stripe/payment-methods.ts.
+                paymentMethodTypes: [...IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES],
               }}
             >
               <CheckoutInner
@@ -289,7 +293,9 @@ function CheckoutInner({
       <p className="mb-4 font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
         Payment details
       </p>
-      <PaymentElement />
+      {/* Link off: it offers bank-funded payments that settle later,
+          which the card-only subscription would refuse anyway. */}
+      <PaymentElement options={{ wallets: { link: "never" } }} />
       <p className="mt-4 flex items-center gap-2 font-[family-name:var(--font-dm)] text-[11px] leading-relaxed text-[var(--text3)]">
         Payment processed securely by Stripe. Moxie never sees or stores your card details.
       </p>

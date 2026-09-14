@@ -11,7 +11,7 @@ import { CancelTransferDialog } from "@/components/vessel-edit/CancelTransferDia
 import { cancelButtonClass, dangerButtonClass } from "@/components/vessel-edit/formStyles";
 import { TRANSFER_FEE_AMOUNT_USD } from "@/lib/tier-config";
 import type { TransferFeeAmount } from "@/lib/stripe/checkout-amounts";
-import { TRANSFER_FEE_PAYMENT_METHOD_TYPES } from "@/lib/stripe/payment-methods";
+import { IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES } from "@/lib/stripe/payment-methods";
 
 type Props = {
   transferId: string;
@@ -120,7 +120,7 @@ export function TransferPaymentForm({ transferId, mxeId, buyerEmail, sellerTier,
               mode: "payment",
               amount: amount.feeCents,
               currency: amount.currency,
-              paymentMethodTypes: [...TRANSFER_FEE_PAYMENT_METHOD_TYPES],
+              paymentMethodTypes: [...IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES],
             }}
           >
             <CheckoutInner transferId={transferId} expectedAmountCents={amount.feeCents} onPayingChange={setPaying} />
