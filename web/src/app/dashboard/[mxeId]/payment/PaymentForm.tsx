@@ -1,17 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { ShippingAddressSection, saveShippingAddress } from "./ShippingAddressSection";
+import { CapReachedNotice } from "./CapReachedNotice";
 import { createBadgeFeeIntent } from "./actions";
-import { BADGE_FEE_AMOUNT_USD } from "@/lib/tier-config";
+import { BADGE_FEE_AMOUNT_USD, type SubscriptionTier } from "@/lib/tier-config";
+import type { BadgeFeeAmount } from "@/lib/stripe/checkout-amounts";
 
 type Props = {
   mxeId: string;
   vesselName: string;
   vesselTag: string;
   publishableKey: string;
+  /** The real Stripe Price amount. Elements mounts with it before any intent exists. */
+  amount: BadgeFeeAmount;
 };
 
 // Placeholder amount, read from lib/tier-config.ts rather than hardcoded
@@ -34,52 +38,7 @@ function getStripeJs(publishableKey: string) {
   return stripePromise;
 }
 
-export function PaymentForm({ mxeId, vesselName, vesselTag, publishableKey }: Props) {
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
-
-  const attempt = useCallback(
-    (onCancelled: () => boolean) => {
-      startTransition(async () => {
-        // createBadgeFeeIntent catches its own Stripe/DB errors and
-        // returns {error} rather than throwing — but this try/catch is a
-        // second layer in case something still escapes (a network
-        // failure reaching the action at all, for instance). Without it,
-        // an uncaught rejection here left the UI stuck on "Loading…"
-        // forever with no visible error and no way to retry — confirmed
-        // live on the badge-fee checkout page.
-        try {
-          const result = await createBadgeFeeIntent(mxeId);
-          if (onCancelled()) return;
-          if ("error" in result) {
-            setError(result.error);
-            return;
-          }
-          setClientSecret(result.clientSecret);
-        } catch (err) {
-          if (onCancelled()) return;
-          setError(err instanceof Error ? err.message : "Could not start checkout. Please try again.");
-        }
-      });
-    },
-    [mxeId],
-  );
-
-  useEffect(() => {
-    let cancelled = false;
-    attempt(() => cancelled);
-    return () => {
-      cancelled = true;
-    };
-  }, [attempt]);
-
-  function retry() {
-    setError(null);
-    setClientSecret(null);
-    attempt(() => false);
-  }
-
+export function PaymentForm({ mxeId, vesselName, vesselTag, publishableKey, amount }: Props) {
   const stripe = getStripeJs(publishableKey);
 
   return (
@@ -128,30 +87,12 @@ export function PaymentForm({ mxeId, vesselName, vesselTag, publishableKey }: Pr
         </div>
 
         <div className="mt-8">
-          {error ? (
-            <div className="mb-4 rounded-xl border border-[var(--red-fg)] bg-[var(--red-bg)] p-4">
-              <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">
-                Couldn&apos;t start checkout: {error}
-              </p>
-              <button
-                type="button"
-                onClick={retry}
-                disabled={pending}
-                className="mt-3 rounded-lg border border-[var(--red-fg)] px-4 py-2 font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--red-fg)] disabled:opacity-50"
-              >
-                {pending ? "Retrying…" : "Try again"}
-              </button>
-            </div>
-          ) : null}
-          {clientSecret ? (
-            <Elements key={clientSecret} stripe={stripe} options={{ clientSecret }}>
-              <CheckoutInner mxeId={mxeId} vesselName={vesselName} />
-            </Elements>
-          ) : error ? null : (
-            <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--text3)]">
-              {pending ? "Preparing payment…" : "Loading…"}
-            </p>
-          )}
+          {/* Deferred mode: amount and currency, no PaymentIntent. Nothing
+              is created in Stripe by loading this page — the intent is
+              created by the Pay click, after the vessel cap is checked. */}
+          <Elements stripe={stripe} options={{ mode: "payment", amount: amount.badgeCents, currency: amount.currency }}>
+            <CheckoutInner mxeId={mxeId} vesselName={vesselName} />
+          </Elements>
         </div>
       </main>
     </div>
@@ -163,16 +104,29 @@ function CheckoutInner({ mxeId, vesselName }: { mxeId: string; vesselName: strin
   const elements = useElements();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [capRefusal, setCapRefusal] = useState<{ message: string; tier: SubscriptionTier } | null>(null);
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (!stripe || !elements) return;
     setSubmitting(true);
     setError(null);
+    setCapRefusal(null);
 
-    // Before the charge, never after: an owner should not be able to
-    // pay for a badge that has nowhere to ship to. A failure here stops
-    // the submission instead of charging and sorting it out later.
+    // Order matters, and each step can stop the charge:
+    //
+    // 1. elements.submit() — validates the fields, and must be the first
+    //    await so a wallet (Apple Pay, Google Pay) still has the user's
+    //    click to open its sheet from.
+    const { error: submitError } = await elements.submit();
+    if (submitError) {
+      setError(submitError.message ?? "Check your payment details and try again.");
+      setSubmitting(false);
+      return;
+    }
+
+    // 2. The shipping address. Before the charge, never after: an owner
+    //    should not be able to pay for a badge that has nowhere to ship to.
     const addressError = await saveShippingAddress(elements, mxeId);
     if (addressError) {
       setError(addressError);
@@ -180,10 +134,34 @@ function CheckoutInner({ mxeId, vesselName }: { mxeId: string; vesselName: strin
       return;
     }
 
+    // 3. The vessel cap, and only then the PaymentIntent. This is the
+    //    check that used to run as the page loaded, where five open
+    //    payment pages could each pass it. Here it runs a moment before
+    //    the charge. A refusal means nothing exists in Stripe.
+    let intent: Awaited<ReturnType<typeof createBadgeFeeIntent>>;
+    try {
+      intent = await createBadgeFeeIntent(mxeId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not start checkout. Please try again.");
+      setSubmitting(false);
+      return;
+    }
+    if ("error" in intent) {
+      if (intent.code === "VESSEL_CAP_REACHED" && intent.tier) {
+        setCapRefusal({ message: intent.error, tier: intent.tier });
+      } else {
+        setError(intent.error);
+      }
+      setSubmitting(false);
+      return;
+    }
+
+    // 4. The charge.
     const processingUrl = `${window.location.origin}/dashboard/${encodeURIComponent(mxeId)}/payment/processing`;
 
     const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
       elements,
+      clientSecret: intent.clientSecret,
       redirect: "if_required",
       confirmParams: { return_url: processingUrl },
     });
@@ -213,6 +191,11 @@ function CheckoutInner({ mxeId, vesselName }: { mxeId: string; vesselName: strin
         Payment processed securely by Stripe. Moxie never sees or stores your card details.
       </p>
       {error ? <p className="mt-3 font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">{error}</p> : null}
+      {capRefusal ? (
+        <div className="mt-4">
+          <CapReachedNotice message={capRefusal.message} tier={capRefusal.tier} />
+        </div>
+      ) : null}
       <button
         type="submit"
         disabled={!stripe || submitting}

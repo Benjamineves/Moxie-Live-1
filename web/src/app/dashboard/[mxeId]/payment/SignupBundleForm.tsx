@@ -1,17 +1,21 @@
 "use client";
 
-import { useCallback, useState, useTransition, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { ShippingAddressSection, saveShippingAddress } from "./ShippingAddressSection";
+import { CapReachedNotice } from "./CapReachedNotice";
 import { createSignupBundleIntent } from "./actions";
 import { SUBSCRIPTION_AMOUNT_USD, BADGE_FEE_AMOUNT_USD, type SubscriptionTier } from "@/lib/tier-config";
+import type { BundleAmounts } from "@/lib/stripe/checkout-amounts";
 
 type Props = {
   mxeId: string;
   vesselName: string;
   vesselTag: string;
   publishableKey: string;
+  /** The real Stripe Price amounts. Elements mounts with plan + badge before any subscription exists. */
+  amounts: BundleAmounts;
 };
 
 // Prices read from lib/tier-config.ts, the single numeric source — needs
@@ -46,37 +50,23 @@ function getStripeJs(publishableKey: string) {
   return stripePromise;
 }
 
-export function SignupBundleForm({ mxeId, vesselName, vesselTag, publishableKey }: Props) {
+export function SignupBundleForm({ mxeId, vesselName, vesselTag, publishableKey, amounts }: Props) {
   const [selectedTier, setSelectedTier] = useState<SubscriptionTier | null>(null);
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  // Lifted from the checkout so "Change plan" cannot unmount a form that
+  // is part-way through charging.
+  const [busy, setBusy] = useState(false);
 
-  const choosePlan = useCallback(
-    (tier: SubscriptionTier) => {
-      setSelectedTier(tier);
-      setClientSecret(null);
-      setError(null);
-      startTransition(async () => {
-        try {
-          const result = await createSignupBundleIntent(mxeId, tier);
-          if ("error" in result) {
-            setError(result.error);
-            return;
-          }
-          setClientSecret(result.clientSecret);
-        } catch (err) {
-          setError(err instanceof Error ? err.message : "Could not start checkout. Please try again.");
-        }
-      });
-    },
-    [mxeId],
-  );
+  // Choosing a plan is now purely a local selection. It used to create
+  // the Stripe subscription on the spot — and with it the intent — which
+  // is both where the missing cap check would have been too early, and
+  // why a plan change left an incomplete subscription behind. The
+  // subscription is created at the Pay click, after the cap check.
+  function choosePlan(tier: SubscriptionTier) {
+    setSelectedTier(tier);
+  }
 
   function changePlan() {
     setSelectedTier(null);
-    setClientSecret(null);
-    setError(null);
   }
 
   const stripe = getStripeJs(publishableKey);
@@ -162,7 +152,7 @@ export function SignupBundleForm({ mxeId, vesselName, vesselTag, publishableKey 
             <button
               type="button"
               onClick={changePlan}
-              disabled={pending}
+              disabled={busy}
               className="mt-3 font-[family-name:var(--font-dm)] text-xs font-medium text-[var(--text3)] underline underline-offset-2 disabled:opacity-50"
             >
               Change plan
@@ -172,30 +162,28 @@ export function SignupBundleForm({ mxeId, vesselName, vesselTag, publishableKey 
 
         {selectedTier ? (
           <div className="mt-6">
-            {error ? (
-              <div className="mb-4 rounded-xl border border-[var(--red-fg)] bg-[var(--red-bg)] p-4">
-                <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">
-                  Couldn&apos;t start checkout: {error}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => choosePlan(selectedTier)}
-                  disabled={pending}
-                  className="mt-3 rounded-lg border border-[var(--red-fg)] px-4 py-2 font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--red-fg)] disabled:opacity-50"
-                >
-                  {pending ? "Retrying…" : "Try again"}
-                </button>
-              </div>
-            ) : null}
-            {clientSecret ? (
-              <Elements key={clientSecret} stripe={stripe} options={{ clientSecret }}>
-                <CheckoutInner mxeId={mxeId} vesselName={vesselName} />
-              </Elements>
-            ) : error ? null : (
-              <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--text3)]">
-                {pending ? "Preparing payment…" : "Loading…"}
-              </p>
-            )}
+            {/* Deferred mode, keyed on the tier so a plan change remounts
+                Elements with the new total. mode "subscription" because
+                the intent confirmed into it is a subscription's first
+                invoice, which saves the card for renewals — a "payment"
+                mode Elements would not match it. */}
+            <Elements
+              key={selectedTier}
+              stripe={stripe}
+              options={{
+                mode: "subscription",
+                amount: amounts.planCents[selectedTier] + amounts.badgeCents,
+                currency: amounts.currency,
+              }}
+            >
+              <CheckoutInner
+                mxeId={mxeId}
+                vesselName={vesselName}
+                tier={selectedTier}
+                onBusyChange={setBusy}
+                onChooseFull={() => choosePlan("full")}
+              />
+            </Elements>
           </div>
         ) : null}
       </main>
@@ -203,21 +191,47 @@ export function SignupBundleForm({ mxeId, vesselName, vesselTag, publishableKey 
   );
 }
 
-function CheckoutInner({ mxeId, vesselName }: { mxeId: string; vesselName: string }) {
+function CheckoutInner({
+  mxeId,
+  vesselName,
+  tier,
+  onBusyChange,
+  onChooseFull,
+}: {
+  mxeId: string;
+  vesselName: string;
+  tier: SubscriptionTier;
+  onBusyChange: (busy: boolean) => void;
+  onChooseFull: () => void;
+}) {
   const stripe = useStripe();
   const elements = useElements();
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting, setSubmittingState] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [capRefusal, setCapRefusal] = useState<{ message: string; tier: SubscriptionTier } | null>(null);
+
+  function setSubmitting(value: boolean) {
+    setSubmittingState(value);
+    onBusyChange(value);
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     if (!stripe || !elements) return;
     setSubmitting(true);
     setError(null);
+    setCapRefusal(null);
 
-    // Before the charge, never after: an owner should not be able to
-    // pay for a badge that has nowhere to ship to. A failure here stops
-    // the submission instead of charging and sorting it out later.
+    // Same order as PaymentForm, for the same reasons — see the comments
+    // there. 1: validate, first await, so a wallet keeps the click.
+    const { error: submitError } = await elements.submit();
+    if (submitError) {
+      setError(submitError.message ?? "Check your payment details and try again.");
+      setSubmitting(false);
+      return;
+    }
+
+    // 2: the shipping address, before any charge.
     const addressError = await saveShippingAddress(elements, mxeId);
     if (addressError) {
       setError(addressError);
@@ -225,10 +239,32 @@ function CheckoutInner({ mxeId, vesselName }: { mxeId: string; vesselName: strin
       return;
     }
 
+    // 3: the vessel cap against the plan being chosen, then — only if it
+    //    passes — the subscription and its first invoice.
+    let intent: Awaited<ReturnType<typeof createSignupBundleIntent>>;
+    try {
+      intent = await createSignupBundleIntent(mxeId, tier);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not start checkout. Please try again.");
+      setSubmitting(false);
+      return;
+    }
+    if ("error" in intent) {
+      if (intent.code === "VESSEL_CAP_REACHED" && intent.tier) {
+        setCapRefusal({ message: intent.error, tier: intent.tier });
+      } else {
+        setError(intent.error);
+      }
+      setSubmitting(false);
+      return;
+    }
+
+    // 4: the charge.
     const processingUrl = `${window.location.origin}/dashboard/${encodeURIComponent(mxeId)}/payment/processing`;
 
     const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
       elements,
+      clientSecret: intent.clientSecret,
       redirect: "if_required",
       confirmParams: { return_url: processingUrl },
     });
@@ -258,6 +294,11 @@ function CheckoutInner({ mxeId, vesselName }: { mxeId: string; vesselName: strin
         Payment processed securely by Stripe. Moxie never sees or stores your card details.
       </p>
       {error ? <p className="mt-3 font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">{error}</p> : null}
+      {capRefusal ? (
+        <div className="mt-4">
+          <CapReachedNotice message={capRefusal.message} tier={capRefusal.tier} onChooseFull={onChooseFull} />
+        </div>
+      ) : null}
       <button
         type="submit"
         disabled={!stripe || submitting}

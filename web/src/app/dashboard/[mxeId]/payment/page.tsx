@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { PaymentForm } from "./PaymentForm";
 import { SignupBundleForm } from "./SignupBundleForm";
+import { getBadgeFeeAmount, getBundleAmounts } from "@/lib/stripe/checkout-amounts";
 
 type Props = {
   params: Promise<{ mxeId: string }>;
@@ -89,23 +90,54 @@ export default async function VesselPaymentPage({ params }: Props) {
 
   const vesselTag = [vessel.year, vessel.make, vessel.model].filter(Boolean).join(" ");
 
+  // Elements mounts before any intent exists, so it needs the real amounts
+  // up front — read from the Stripe Prices, and only the ones this
+  // checkout charges (see lib/stripe/checkout-amounts).
+  const unavailable = (err: unknown) => {
+    console.error(`[payment] Could not read checkout amounts for ${vessel.mxe_id}:`, err);
+    return (
+      <div className="min-h-screen bg-[var(--cream)] px-6 py-16">
+        <h1 className="font-[family-name:var(--font-display)] text-2xl font-light text-[var(--navy)]">
+          Checkout is unavailable right now
+        </h1>
+        <p className="mt-4 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
+          We couldn&apos;t load the price for this badge, so nothing can be charged. Try again in a moment.
+        </p>
+      </div>
+    );
+  };
+
   if (!hasActiveSubscription) {
+    let amounts;
+    try {
+      amounts = await getBundleAmounts();
+    } catch (err) {
+      return unavailable(err);
+    }
     return (
       <SignupBundleForm
         mxeId={vessel.mxe_id}
         vesselName={vessel.vessel_name}
         vesselTag={vesselTag}
         publishableKey={publishableKey}
+        amounts={amounts}
       />
     );
   }
 
+  let amount;
+  try {
+    amount = await getBadgeFeeAmount();
+  } catch (err) {
+    return unavailable(err);
+  }
   return (
     <PaymentForm
       mxeId={vessel.mxe_id}
       vesselName={vessel.vessel_name}
       vesselTag={vesselTag}
       publishableKey={publishableKey}
+      amount={amount}
     />
   );
 }

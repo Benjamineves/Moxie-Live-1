@@ -90,21 +90,65 @@ export async function POST(request: Request) {
 }
 
 /**
+ * THE VESSEL CAP'S ACTUAL ENFORCEMENT.
+ *
+ * Every check before a payment — createVessel, and both checkout actions
+ * at the Pay click — is a courtesy that keeps an owner from being charged
+ * for something their plan does not cover. None of them can be the
+ * guarantee: two submits in the same second both pass, a buyer can accept
+ * several transfers that each see the same count, and any future path
+ * that activates a vessel would never run them at all.
+ *
+ * This runs after the state has actually changed, against what actually
+ * resulted, in the database. Over the cap starts the 14-day grace window
+ * (users.downgrade_grace_until): the owner keeps the vessel they paid for
+ * and chooses what stays active, or upgrades. Under it, clears any window
+ * that no longer applies. Idempotent — the grace clock only starts if one
+ * is not already running.
+ *
+ * THROWN, NOT LOGGED. POST turns a throw into a 500, Stripe redelivers,
+ * and every step before this is safe to repeat (payment-row inserts are
+ * guarded, activation is guarded on qr_status, completion returns early
+ * when already completed, notifications dedupe on the transfer id). A
+ * logged-and-swallowed failure here would leave an account over its cap
+ * with nothing left that would ever reconcile it — which is the bug.
+ */
+async function reconcileVesselOverflow(service: ServiceClient, ownerId: string, context: string) {
+  const { error } = await service.rpc("reconcile_vessel_overflow", { p_owner_id: ownerId });
+  if (error) {
+    throw new Error(`reconcile_vessel_overflow failed for owner ${ownerId} (${context}): ${error.message}`);
+  }
+}
+
+/**
  * Attempts the qr_status activation and logs the outcome explicitly —
  * success, zero-row match, or DB error — so a no-op is never
  * indistinguishable from a real activation purely by the webhook returning
  * 200. Idempotent via the WHERE qr_status='pending_payment' guard: calling
  * this again on an already-active vessel is always a harmless zero-row match.
+ *
+ * Returns whether the vessel is active once this is done — true for a
+ * redelivery that finds it already active, too, because that is exactly
+ * the retry that follows a reconcile failure and it must reconcile again.
+ *
+ * updated_at: this UPDATE bumps vessels.updated_at through the
+ * vessels_updated_at BEFORE UPDATE trigger (supabase/seed.sql — the base
+ * schema, not supabase/migrations/). apply_overflow_fallback keeps the
+ * most recently updated vessels, so that bump is what stops a vessel the
+ * owner has just paid for losing its slot to an older one they happened to
+ * edit. Setting updated_at here as well would change nothing — the
+ * trigger overwrites it — but if that trigger is ever removed, this is the
+ * line that has to start setting it.
  */
 async function activateVessel(
   service: ServiceClient,
   vessel: { id: string; qr_status: string | null },
   mxeId: string,
   sourceDescription: string,
-) {
+): Promise<boolean> {
   if (vessel.qr_status !== "pending_payment") {
     console.log(`[stripe-webhook] ${sourceDescription}: vessel ${mxeId} already qr_status=${vessel.qr_status}, nothing to do.`);
-    return;
+    return vessel.qr_status === "active";
   }
 
   const { data: updated, error: updateError } = await service
@@ -116,14 +160,18 @@ async function activateVessel(
 
   if (updateError) {
     console.error(`[stripe-webhook] ${sourceDescription}: activation update for vessel ${mxeId} failed:`, updateError);
+    return false;
   } else if (!updated || updated.length === 0) {
+    // A concurrent delivery activated it between the read and this
+    // update. That delivery reconciles; this one does not need to.
     console.error(
       `[stripe-webhook] ${sourceDescription}: activation update for vessel ${mxeId} matched zero rows — ` +
         `qr_status likely changed concurrently between the read above and this update.`,
     );
-  } else {
-    console.log(`[stripe-webhook] ${sourceDescription}: activated vessel ${mxeId} (${vessel.id}).`);
+    return false;
   }
+  console.log(`[stripe-webhook] ${sourceDescription}: activated vessel ${mxeId} (${vessel.id}).`);
+  return true;
 }
 
 /**
@@ -139,8 +187,8 @@ async function activateFromBadgeFee(service: ServiceClient, intent: Stripe.Payme
     return;
   }
 
-  const { data: vesselRow } = await service.from("vessels").select("id, qr_status").eq("mxe_id", mxeId).maybeSingle();
-  const vessel = vesselRow as { id: string; qr_status: string | null } | null;
+  const { data: vesselRow } = await service.from("vessels").select("id, qr_status, owner_id").eq("mxe_id", mxeId).maybeSingle();
+  const vessel = vesselRow as { id: string; qr_status: string | null; owner_id: string } | null;
   if (!vessel) {
     console.error(`[stripe-webhook] payment_intent.succeeded ${intent.id}: no vessel found for mxe_id=${mxeId}.`);
     return;
@@ -169,7 +217,10 @@ async function activateFromBadgeFee(service: ServiceClient, intent: Stripe.Payme
     });
   }
 
-  await activateVessel(service, vessel, mxeId, `payment_intent.succeeded ${intent.id}`);
+  const active = await activateVessel(service, vessel, mxeId, `payment_intent.succeeded ${intent.id}`);
+  // Paid is paid. An owner who lands over the cap keeps this vessel and
+  // gets the grace window, never a refusal after the charge.
+  if (active) await reconcileVesselOverflow(service, vessel.owner_id, `badge fee ${intent.id}, ${mxeId}`);
 }
 
 /**
@@ -197,8 +248,8 @@ async function completeSignupBundle(service: ServiceClient, intent: Stripe.Payme
     return;
   }
 
-  const { data: vesselRow } = await service.from("vessels").select("id, qr_status").eq("mxe_id", mxeId).maybeSingle();
-  const vessel = vesselRow as { id: string; qr_status: string | null } | null;
+  const { data: vesselRow } = await service.from("vessels").select("id, qr_status, owner_id").eq("mxe_id", mxeId).maybeSingle();
+  const vessel = vesselRow as { id: string; qr_status: string | null; owner_id: string } | null;
   if (!vessel) {
     console.error(`[stripe-webhook] payment_intent.succeeded ${intent.id}: no vessel found for mxe_id=${mxeId}.`);
     return;
@@ -222,7 +273,15 @@ async function completeSignupBundle(service: ServiceClient, intent: Stripe.Payme
     });
   }
 
-  await activateVessel(service, vessel, mxeId, `payment_intent.succeeded ${intent.id}`);
+  const active = await activateVessel(service, vessel, mxeId, `payment_intent.succeeded ${intent.id}`);
+  // Same as the badge fee. One ordering caveat specific to a bundle: the
+  // plan's tier is written by invoice.paid / customer.subscription.updated,
+  // which can arrive AFTER this event. Until one does, the account still
+  // carries its old subscription_tier (Basic by default), so an account
+  // that already held vessels and chose Full can briefly look over the cap
+  // and start a grace window here. The tier-writing events reconcile too,
+  // and clear it the moment the real tier lands.
+  if (active) await reconcileVesselOverflow(service, vessel.owner_id, `signup bundle ${intent.id}, ${mxeId}`);
 }
 
 /**
@@ -300,7 +359,24 @@ async function completeOwnershipTransferFromPayment(service: ServiceClient, inte
   const done = doneRow as
     | { id: string; seller_id: string; buyer_id: string | null; mxe_id: string; vessel_id: string; buyer_email: string }
     | null;
-  if (!done) return;
+  if (!done) {
+    // Completion succeeded but the row can't be read back, so the buyer
+    // can't be reconciled. Throw for a redelivery rather than return 200:
+    // completion is idempotent, and a silent return here is an account
+    // over its cap that nothing will ever look at again.
+    throw new Error(`transfer ${transferId} completed but could not be read back to reconcile the buyer.`);
+  }
+
+  // The same enforcement as activation. accept_ownership_transfer checks
+  // the buyer's cap — properly, in SQL, under a lock — but at ACCEPTANCE,
+  // and ownership only moves here, when the seller pays, possibly days
+  // later. A buyer on Basic who accepts three transfers passes three
+  // checks that each see one vessel, and holds four once all three sellers
+  // have paid. The seller has paid, so this does not refuse either: the
+  // transfer completes, and the buyer gets the grace window.
+  if (done.buyer_id) {
+    await reconcileVesselOverflow(service, done.buyer_id, `transfer ${transferId} completed`);
+  }
 
   // Keyed on the transfer id, which is also what makes this safe against
   // Stripe redelivering payment_intent.succeeded: the completion RPC is
@@ -429,6 +505,15 @@ async function recordAccountSubscriptionInvoice(service: ServiceClient, invoice:
       stripe_subscription_id: subscription.id,
     })
     .eq("id", owner.id);
+
+  // This writes subscription_tier and, until now, never reconciled —
+  // it relied on customer.subscription.updated arriving too. It matters
+  // more now that activation reconciles: a bundled signup can be activated
+  // (and reconciled against the account's OLD tier) before the new tier
+  // lands, and this is one of the two events that land it. Reconciling
+  // after every tier write means a window started against a stale tier is
+  // cleared as soon as the real one is known, whichever event is first.
+  await reconcileVesselOverflow(service, owner.id, `invoice.paid ${invoice.id}`);
 }
 
 /**

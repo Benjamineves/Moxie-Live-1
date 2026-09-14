@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { isValidStateCode, normalizeStateCode } from "@/lib/us-states";
 import { VESSEL_LIMIT, type SubscriptionTier } from "@/lib/tier-config";
+import { countActiveVessels, evaluateVesselCap } from "@/lib/vessel-cap";
 import { isAdminEmail } from "@/lib/admin-verify";
 
 const STORAGE_TYPES = ["marina", "mooring", "trailer", "home", "yard", "other"] as const;
@@ -139,16 +140,19 @@ export async function createVessel(
   // dealer/broker tier with its own higher cap is a separate decision for
   // later, not something this should be mistaken for.
   const capExempt = isAdminEmail(ownerDisplayEmail);
-  const { count: vesselCount, error: countError } = await service
-    .from("vessels")
-    .select("id", { count: "exact", head: true })
-    .eq("owner_id", ownerId)
-    .eq("qr_status", "active")
-    .eq("lifecycle_status", "active");
-  if (countError) {
-    return { error: `Unable to check vessel count: ${countError.message}` };
+  // The count and the decision are shared with both checkout actions
+  // (lib/vessel-cap.ts), so the three places that ask this question
+  // cannot drift onto different filters.
+  //
+  // This check runs at creation, when the new vessel is still unpaid and
+  // does not count. On its own it could be walked past by registering
+  // several vessels before paying for any — which is why checkout checks
+  // again at the Pay click, and the webhook reconciles after activation.
+  const active = await countActiveVessels(service, ownerId);
+  if ("error" in active) {
+    return { error: `Unable to check vessel count: ${active.error}` };
   }
-  if (!capExempt && (vesselCount ?? 0) >= vesselLimit) {
+  if (!evaluateVesselCap({ activeCount: active.count, tier: ownerTier, capExempt }).allowed) {
     return {
       error: `You've reached the ${vesselLimit}-vessel limit on your current plan.`,
       // Only actionable for Basic — Full is already the highest tier

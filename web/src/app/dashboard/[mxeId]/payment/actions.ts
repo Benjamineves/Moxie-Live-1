@@ -4,12 +4,45 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { getStripe } from "@/lib/stripe/server";
 import { resolveOwnerIds } from "@/lib/vessel-ownership";
+import { isAdminEmail } from "@/lib/admin-verify";
+import { countActiveVessels, evaluateVesselCap } from "@/lib/vessel-cap";
 import type { SubscriptionTier } from "@/lib/tier-config";
 
-type IntentResult = { clientSecret: string } | { error: string };
+/**
+ * `code: "VESSEL_CAP_REACHED"` means the cap refused this checkout before
+ * anything was sent to Stripe — no intent, no subscription, no charge.
+ * `tier` is the plan the refusal was measured against, so the form can
+ * offer the right way forward (Full Access, or the fleet).
+ */
+type IntentResult =
+  | { clientSecret: string }
+  | { error: string; code?: "VESSEL_CAP_REACHED"; tier?: SubscriptionTier };
 
 /**
- * Creates (or reuses) the client secret for a vessel's one-time badge fee
+ * WHY THESE RUN AT THE PAY CLICK, NOT WHEN THE PAGE LOADS
+ *
+ * Both actions below used to be called from a useEffect as the payment
+ * page mounted, and neither checked the vessel cap. A cap check added at
+ * that moment would not have closed anything: an owner can open the
+ * payment page for five unpaid vessels before paying for any of them, and
+ * all five checks would see the same one active vessel. That is the
+ * original bypass, one step later, through the ordinary flow.
+ *
+ * So Elements now mounts in deferred mode (amount and currency, no
+ * intent), and these are called from the form's submit handler, after
+ * elements.submit() and the shipping address, immediately before
+ * stripe.confirmPayment. The cap is measured about a second before the
+ * card is charged, against the vessels that are actually active by then.
+ *
+ * This is still not the enforcement — see lib/vessel-cap.ts. Two submits
+ * in the same second both pass. What catches that is
+ * reconcile_vessel_overflow in the webhook, after activation.
+ */
+
+/**
+ * Creates the PaymentIntent for a vessel's one-time badge fee, at the Pay
+ * click — refusing first if the account's plan has no room for another
+ * active vessel
  * — the physical badge's real per-unit cost, charged for every vessel
  * regardless of the account's subscription tier. Full Access is a
  * separate, account-level subscription now (build spec §9 item 16 —
@@ -61,10 +94,26 @@ export async function createBadgeFeeIntent(mxeId: string): Promise<IntentResult>
 
   const { data: ownerRow } = await service
     .from("users")
-    .select("id, email, stripe_customer_id")
+    .select("id, email, stripe_customer_id, subscription_tier")
     .eq("id", vessel.owner_id)
     .maybeSingle();
-  const owner = ownerRow as { id: string; email: string; stripe_customer_id: string | null } | null;
+  const owner = ownerRow as
+    | { id: string; email: string; stripe_customer_id: string | null; subscription_tier: string | null }
+    | null;
+
+  // The cap, before a single Stripe call. Measured against the vessel's
+  // owner_id — the id every SQL cap check and reconcile_vessel_overflow
+  // key on — not the session user, which can differ.
+  const tier: SubscriptionTier = owner?.subscription_tier === "full" ? "full" : "basic";
+  const active = await countActiveVessels(service, vessel.owner_id);
+  if ("error" in active) {
+    // Fail closed. An unreadable count is not evidence of room.
+    return { error: `Couldn't check your plan's vessel limit: ${active.error}` };
+  }
+  const cap = evaluateVesselCap({ activeCount: active.count, tier, capExempt: isAdminEmail(owner?.email) });
+  if (!cap.allowed) {
+    return { error: cap.message, code: "VESSEL_CAP_REACHED", tier };
+  }
 
   const stripe = getStripe();
 
@@ -143,6 +192,13 @@ export async function createBadgeFeeIntent(mxeId: string): Promise<IntentResult>
  * confirmation step needed.
  */
 export async function createSignupBundleIntent(mxeId: string, tier: SubscriptionTier): Promise<IntentResult> {
+  // A server action's arguments come from the client. The cap is measured
+  // against this tier, so an unrecognised value must not fall through to
+  // anything — it used to be silently treated as Basic.
+  if (tier !== "basic" && tier !== "full") {
+    return { error: "Choose a plan." };
+  }
+
   const authClient = await createSupabaseServerClient();
   if (!authClient) return { error: "Missing Supabase auth configuration." };
 
@@ -187,6 +243,21 @@ export async function createSignupBundleIntent(mxeId: string, tier: Subscription
     return { error: "Your account already has an active plan — this vessel only needs its badge fee. Refresh the page." };
   }
 
+  // The cap, against the plan being CHOSEN — this account has no plan yet,
+  // so the stored subscription_tier describes nothing. It is not always
+  // zero vessels: a buyer who received boats by transfer can arrive here
+  // already holding some. Checked before any Stripe call, including the
+  // cancellation of an abandoned incomplete subscription below, so a
+  // refusal has no side effects in Stripe at all.
+  const active = await countActiveVessels(service, vessel.owner_id);
+  if ("error" in active) {
+    return { error: `Couldn't check the plan's vessel limit: ${active.error}` };
+  }
+  const cap = evaluateVesselCap({ activeCount: active.count, tier, capExempt: isAdminEmail(owner.email) });
+  if (!cap.allowed) {
+    return { error: cap.message, code: "VESSEL_CAP_REACHED", tier };
+  }
+
   const stripe = getStripe();
 
   let customerId = owner.stripe_customer_id;
@@ -201,9 +272,12 @@ export async function createSignupBundleIntent(mxeId: string, tier: Subscription
 
   try {
     // stripe_subscription_id is set immediately after creating a
-    // subscription (below), before payment even completes — so picking
-    // Full and then changing to Basic before paying leaves a real but
-    // still-unpaid ("incomplete") subscription behind. That's not the
+    // subscription (below), before payment even completes — so a Pay
+    // click that does not finish (a declined card, a closed tab, or a
+    // plan change followed by a second Pay) leaves a real but
+    // still-unpaid ("incomplete") subscription behind. Since the
+    // subscription is only created at the Pay click, merely choosing and
+    // changing a plan no longer creates one. That's not the
     // same case the guard below exists for (two tabs racing to create a
     // subscription for the SAME pick): here, cancel the abandoned
     // incomplete one and let this request proceed with the new tier,
