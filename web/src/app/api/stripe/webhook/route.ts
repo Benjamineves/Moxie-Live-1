@@ -122,6 +122,59 @@ async function reconcileVesselOverflow(service: ServiceClient, ownerId: string, 
 }
 
 /**
+ * Records a vessel-scoped charge (badge fee or transfer fee) — once.
+ *
+ * These inserts used to ignore their result. A failure returned 200 and the
+ * charge went unrecorded forever: the service may still have been delivered,
+ * but the payment was invisible to anything that reconciles money later.
+ *
+ * WHY THROWING IS SAFE TO RETRY. vessel_payments.stripe_payment_intent_id
+ * has a unique index (20260827). A retry finds the row and returns; two
+ * deliveries racing both try the insert and the loser gets 23505
+ * unique_violation, which means the charge IS recorded — treated as success,
+ * not as a failure to retry.
+ *
+ * WHY IT RUNS BEFORE THE SERVICE, and so can hold it up for one retry. A
+ * transient write failure here delays activation or completion until Stripe
+ * redelivers. The other order would never delay the service, but would lose
+ * the record in the one case it matters most: when the service can NEVER
+ * succeed. A transfer paid for after it was cancelled fails completion on
+ * every attempt, and that charge needs a refund — which starts from knowing
+ * it was taken. Recording first means every charge Stripe reports is on
+ * file whether or not what it paid for happened.
+ *
+ * Note the row existing must never skip the service — only this insert.
+ * An earlier delivery can record the charge and then fail before
+ * activating; the retry has to carry on past this point.
+ */
+async function recordVesselPayment(
+  service: ServiceClient,
+  row: {
+    vessel_id: string;
+    payment_type: "badge_fee" | "transfer_fee";
+    stripe_payment_intent_id: string;
+    amount_cents: number;
+  },
+) {
+  const { data: existing, error: readError } = await service
+    .from("vessel_payments")
+    .select("id")
+    .eq("stripe_payment_intent_id", row.stripe_payment_intent_id)
+    .maybeSingle();
+  if (readError) {
+    throw new Error(`could not check vessel_payments for ${row.stripe_payment_intent_id}: ${readError.message}`);
+  }
+  if (existing) return;
+
+  const { error: insertError } = await service
+    .from("vessel_payments")
+    .insert({ ...row, status: "paid", paid_at: new Date().toISOString() });
+  if (insertError && insertError.code !== "23505") {
+    throw new Error(`could not record ${row.payment_type} ${row.stripe_payment_intent_id}: ${insertError.message}`);
+  }
+}
+
+/**
  * Attempts the qr_status activation and logs the outcome explicitly —
  * success, zero-row match, or DB error — so a no-op is never
  * indistinguishable from a real activation purely by the webhook returning
@@ -220,28 +273,14 @@ async function activateFromBadgeFee(service: ServiceClient, intent: Stripe.Payme
     return;
   }
 
-  // Payment-record idempotency is separate from activation idempotency
-  // below — this only guards against inserting the same charge twice. It
-  // must NOT gate the activation attempt: an earlier delivery could have
-  // inserted this row and then failed or been interrupted before ever
-  // reaching activateVessel, which would otherwise leave the vessel stuck
-  // pending on every subsequent retry, silently, forever.
-  const { data: existingPayment } = await service
-    .from("vessel_payments")
-    .select("id")
-    .eq("stripe_payment_intent_id", intent.id)
-    .maybeSingle();
-
-  if (!existingPayment) {
-    await service.from("vessel_payments").insert({
-      vessel_id: vessel.id,
-      payment_type: "badge_fee",
-      stripe_payment_intent_id: intent.id,
-      amount_cents: intent.amount,
-      status: "paid",
-      paid_at: new Date().toISOString(),
-    });
-  }
+  // Recorded before activating, and never skips activation when the row
+  // already exists — see recordVesselPayment.
+  await recordVesselPayment(service, {
+    vessel_id: vessel.id,
+    payment_type: "badge_fee",
+    stripe_payment_intent_id: intent.id,
+    amount_cents: intent.amount,
+  });
 
   const active = await activateVessel(service, vessel, mxeId, `payment_intent.succeeded ${intent.id}`);
   // Paid is paid. An owner who lands over the cap keeps this vessel and
@@ -294,23 +333,15 @@ async function completeSignupBundle(service: ServiceClient, intent: Stripe.Payme
     return;
   }
 
-  // Same idempotency-guards-the-log-insert-only rule as activateFromBadgeFee.
-  const { data: existingPayment } = await service
-    .from("vessel_payments")
-    .select("id")
-    .eq("stripe_payment_intent_id", intent.id)
-    .maybeSingle();
-
-  if (!existingPayment) {
-    await service.from("vessel_payments").insert({
-      vessel_id: vessel.id,
-      payment_type: "badge_fee",
-      stripe_payment_intent_id: intent.id,
-      amount_cents: badgeAmountCents,
-      status: "paid",
-      paid_at: new Date().toISOString(),
-    });
-  }
+  // The badge portion only — the plan portion of this same charge is
+  // recorded against the account by invoice.paid. Same rules as the badge
+  // fee: see recordVesselPayment.
+  await recordVesselPayment(service, {
+    vessel_id: vessel.id,
+    payment_type: "badge_fee",
+    stripe_payment_intent_id: intent.id,
+    amount_cents: badgeAmountCents,
+  });
 
   const active = await activateVessel(service, vessel, mxeId, `payment_intent.succeeded ${intent.id}`);
   // Same as the badge fee. One ordering caveat specific to a bundle: the
@@ -354,23 +385,35 @@ async function completeOwnershipTransferFromPayment(service: ServiceClient, inte
     return;
   }
 
-  // Same idempotency-guards-the-log-insert-only rule as activateFromBadgeFee:
-  // this must never gate the actual completion attempt below.
-  const { data: existingPayment } = await service
-    .from("vessel_payments")
-    .select("id")
-    .eq("stripe_payment_intent_id", intent.id)
-    .maybeSingle();
-
-  if (!existingPayment && vesselId) {
-    await service.from("vessel_payments").insert({
-      vessel_id: vesselId,
+  // Recorded BEFORE completion, which matters most here: if the transfer
+  // was cancelled after the seller paid, completion fails on every attempt
+  // and this row is the record a refund starts from.
+  //
+  // This used to be skipped silently when metadata carried no vessel_id.
+  // createTransferFeeIntent always sets it, but the transfer row is the
+  // authority, so fall back to it rather than lose the charge.
+  let paymentVesselId: string | null = vesselId || null;
+  if (!paymentVesselId) {
+    const { data: tRow, error: tError } = await service
+      .from("ownership_transfers")
+      .select("vessel_id")
+      .eq("id", transferId)
+      .maybeSingle();
+    if (tError) throw new Error(`could not read transfer ${transferId} to record its fee: ${tError.message}`);
+    paymentVesselId = (tRow as { vessel_id: string } | null)?.vessel_id ?? null;
+  }
+  if (paymentVesselId) {
+    await recordVesselPayment(service, {
+      vessel_id: paymentVesselId,
       payment_type: "transfer_fee",
       stripe_payment_intent_id: intent.id,
       amount_cents: intent.amount,
-      status: "paid",
-      paid_at: new Date().toISOString(),
     });
+  } else {
+    // No such transfer. Permanent — a retry cannot create one — so logged
+    // rather than thrown; complete_ownership_transfer below raises "not
+    // found" and that failure is thrown, which is what surfaces it.
+    console.error(`[stripe-webhook] payment_intent.succeeded ${intent.id}: transfer ${transferId} not found; fee not recorded.`);
   }
 
   const { error } = await service.rpc("complete_ownership_transfer", {
@@ -532,46 +575,96 @@ async function recordAccountSubscriptionInvoice(service: ServiceClient, invoice:
   // this codebase uses, and doesn't depend on metadata having survived
   // (metadata is still set at creation for traceability in the Stripe
   // dashboard, just not relied on here).
-  const { data: ownerRow } = await service
+  const { data: ownerRow, error: ownerError } = await service
     .from("users")
     .select("id")
     .eq("stripe_customer_id", customerId)
     .maybeSingle();
+  // A failed read is not a missing owner. Treating it as one returned 200
+  // and the invoice was never recorded or applied. Nothing is written yet,
+  // so the retry is trivially safe. A genuinely unknown customer stays a
+  // logged 200: no retry will make one appear.
+  if (ownerError) {
+    throw new Error(`invoice.paid ${invoice.id}: could not look up the owner for ${customerId}: ${ownerError.message}`);
+  }
   const owner = ownerRow as { id: string } | null;
   if (!owner) {
     console.error(`[stripe-webhook] invoice.paid ${invoice.id}: no user found for stripe_customer_id=${customerId}.`);
     return;
   }
 
-  // Invoice.payment_intent was also removed — the real PaymentIntent now
-  // sits behind invoice.payments, a paginated list needing its own expand
-  // + fetch. Not worth the extra round-trip purely for a dedup key: the
-  // invoice's own id is unique per invoice and equally good for idempotency.
-  const { data: existingPayment } = await service
+  // THE RECORD. Invoice.payment_intent was also removed — the real
+  // PaymentIntent now sits behind invoice.payments, a paginated list needing
+  // its own expand + fetch. Not worth the extra round-trip purely for a dedup
+  // key: the invoice's own id is unique per invoice and equally good.
+  //
+  // This insert used to ignore its result, so a failure lost the record of a
+  // paid invoice with a 200. It now throws. Retry-safe for the same reason as
+  // recordVesselPayment: account_payments.stripe_invoice_id is a unique index
+  // (20260905), a retry finds the row, and a racing duplicate's 23505 means
+  // the invoice IS recorded. Recorded whatever the subscription's state is
+  // below — Stripe says this was paid, and that is the fact being filed.
+  const { data: existingPayment, error: paymentReadError } = await service
     .from("account_payments")
     .select("id")
     .eq("stripe_invoice_id", invoice.id)
     .maybeSingle();
-
+  if (paymentReadError) {
+    throw new Error(`invoice.paid ${invoice.id}: could not check account_payments: ${paymentReadError.message}`);
+  }
   if (!existingPayment) {
-    await service.from("account_payments").insert({
+    const { error: insertError } = await service.from("account_payments").insert({
       owner_id: owner.id,
       stripe_invoice_id: invoice.id,
       amount_cents: subscriptionOnlyAmountCents,
       status: "paid",
       paid_at: new Date().toISOString(),
     });
+    if (insertError && insertError.code !== "23505") {
+      throw new Error(`invoice.paid ${invoice.id}: could not record the payment: ${insertError.message}`);
+    }
   }
 
-  await service
-    .from("users")
-    .update({
-      subscription_status: "active",
-      ...(tier ? { subscription_tier: tier } : {}),
-      stripe_customer_id: customerId,
-      stripe_subscription_id: subscription.id,
-    })
-    .eq("id", owner.id);
+  // THE ACCOUNT UPDATE — and the reason this handler was not safe to retry
+  // until now, even though the record above is.
+  //
+  // It wrote subscription_status 'active' unconditionally. That was merely
+  // wrong on an out-of-order delivery before; with failures now thrown,
+  // Stripe redelivers this event for up to ~3 days, and an invoice.paid for
+  // a renewal can land after the subscription was cancelled — setting a
+  // lapsed account back to 'active', repointing stripe_subscription_id at a
+  // dead subscription, and passing the entitlement check in
+  // choose_active_vessels. Same hazard, and the same rule, as
+  // syncSubscriptionStatus (lib/subscription-sync.ts): act on the
+  // subscription's CURRENT state, which `subscription` already is (it was
+  // retrieved above, not read from the event).
+  //
+  // If it is not active now, the account is left to syncSubscriptionStatus,
+  // which is driven by the status events and applies lapses and restores.
+  // That also covers the brief lag where an invoice is paid before Stripe
+  // has moved the subscription to active: customer.subscription.updated
+  // follows and applies it.
+  if (subscription.status === "active") {
+    const { error: updateError } = await service
+      .from("users")
+      .update({
+        subscription_status: "active",
+        ...(tier ? { subscription_tier: tier } : {}),
+        stripe_customer_id: customerId,
+        stripe_subscription_id: subscription.id,
+      })
+      .eq("id", owner.id);
+    // Used to be ignored: a failure left a paying owner on their old tier
+    // or status with a 200. The update writes the same values every time,
+    // so a retry is safe.
+    if (updateError) {
+      throw new Error(`invoice.paid ${invoice.id}: could not update account ${owner.id}: ${updateError.message}`);
+    }
+  } else {
+    console.log(
+      `[stripe-webhook] invoice.paid ${invoice.id}: recorded, but subscription ${subscription.id} is '${subscription.status}' now — leaving the account to the subscription status events.`,
+    );
+  }
 
   // This writes subscription_tier and, until now, never reconciled —
   // it relied on customer.subscription.updated arriving too. It matters

@@ -56,3 +56,17 @@ export async function getBundleAmounts(): Promise<BundleAmounts> {
   }
   return { currency: badge.currency, badgeCents: badge.cents, planCents: { basic: basic.cents, full: full.cents } };
 }
+
+export type TransferFeeAmount = { currency: string; feeCents: number };
+
+/**
+ * For TransferPaymentForm: the seller's transfer fee, which depends on the
+ * seller's tier — so, unlike the badge fee, it can change between the page
+ * loading and the Pay click. createTransferFeeIntent is given this amount
+ * back and refuses if the fee has moved, rather than charging a figure the
+ * seller was not shown.
+ */
+export async function getTransferFeeAmount(sellerTier: SubscriptionTier): Promise<TransferFeeAmount> {
+  const fee = await priceCents(sellerTier === "full" ? "STRIPE_PRICE_ID_TRANSFER_FULL" : "STRIPE_PRICE_ID_TRANSFER_BASIC");
+  return { currency: fee.currency, feeCents: fee.cents };
+}

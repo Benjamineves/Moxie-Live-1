@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { resolveOwnerIds } from "@/lib/vessel-ownership";
 import { TransferPaymentForm } from "./TransferPaymentForm";
+import { getTransferFeeAmount } from "@/lib/stripe/checkout-amounts";
 
 type Props = {
   params: Promise<{ transferId: string }>;
@@ -71,6 +72,27 @@ export default async function TransferPaymentPage({ params }: Props) {
     );
   }
 
+  // Elements mounts before any intent exists (the intent is created by the
+  // Pay click — see createTransferFeeIntent), so it needs the real amount
+  // now. Read from the Stripe Price, not tier-config.
+  let amount;
+  try {
+    amount = await getTransferFeeAmount(sellerTier);
+  } catch (err) {
+    console.error(`[transfer-payment] Could not read the transfer fee for transfer ${transfer.id}:`, err);
+    return (
+      <div className="min-h-screen bg-[var(--cream)] px-6 py-16">
+        <h1 className="font-[family-name:var(--font-display)] text-2xl font-light text-[var(--navy)]">
+          Checkout is unavailable right now
+        </h1>
+        <p className="mt-4 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
+          We couldn&apos;t load the transfer fee, so nothing can be charged. The transfer is still open — try again in a
+          moment.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <TransferPaymentForm
       transferId={transfer.id}
@@ -78,6 +100,7 @@ export default async function TransferPaymentPage({ params }: Props) {
       buyerEmail={transfer.buyer_email}
       sellerTier={sellerTier}
       publishableKey={publishableKey}
+      amount={amount}
     />
   );
 }

@@ -11,12 +11,32 @@ type IntentResult = { clientSecret: string } | { error: string };
 /**
  * Transfer fee — one-time, charged to the SELLER, on-session, only once
  * the buyer has already accepted (status='awaiting_payment'). Reuses
- * the exact badge-fee/Full-upgrade checkout pattern deliberately
- * (payment-failure option (c), chosen over an off-session charge):
- * no new payment code path, no saved-card requirement, same
- * already-fixed retry-on-failure UI.
+ * the exact badge-fee checkout pattern deliberately (payment-failure
+ * option (c), chosen over an off-session charge): no new payment code
+ * path, no saved-card requirement.
+ *
+ * CALLED AT THE PAY CLICK, NOT WHEN THE PAGE LOADS.
+ *
+ * This used to run from a useEffect as the payment page mounted, and the
+ * page carries a "Cancel this transfer" button. A seller could load the
+ * page — creating a live intent — cancel the transfer, and still pay. The
+ * webhook then fails on every delivery (complete_ownership_transfer
+ * refuses a cancelled transfer), because no retry can make a cancelled
+ * transfer payable: the seller has been charged for nothing and needs a
+ * manual refund.
+ *
+ * Now Elements mounts in deferred mode and this runs from the submit
+ * handler immediately before stripe.confirmPayment, so the status check
+ * below is a moment old when the card is charged, and the form disables
+ * the cancel button while a payment is in flight. See the page's note on
+ * the window this does NOT close: payment methods that settle days later.
+ *
+ * `expectedAmountCents` is the fee the page loaded with and the seller was
+ * shown. The fee follows the seller's tier, which can change in between;
+ * if it has, this refuses instead of charging a different figure. A client
+ * can only make that comparison fail, never change what is charged.
  */
-export async function createTransferFeeIntent(transferId: string): Promise<IntentResult> {
+export async function createTransferFeeIntent(transferId: string, expectedAmountCents: number): Promise<IntentResult> {
   const authClient = await createSupabaseServerClient();
   if (!authClient) return { error: "Missing Supabase auth configuration." };
 
@@ -38,8 +58,15 @@ export async function createTransferFeeIntent(transferId: string): Promise<Inten
   if (!transfer || !ownerIds.includes(transfer.seller_id)) {
     return { error: "Transfer not found." };
   }
+  // Before any Stripe call, including the customer creation below, so a
+  // transfer cancelled after the page loaded creates nothing in Stripe.
   if (transfer.status !== "awaiting_payment") {
-    return { error: `This transfer isn't awaiting payment (status: ${transfer.status}).` };
+    return {
+      error:
+        transfer.status === "canceled"
+          ? "This transfer has been cancelled, so there is nothing to pay. Nothing has been charged."
+          : `This transfer isn't awaiting payment (status: ${transfer.status}). Nothing has been charged.`,
+    };
   }
 
   const { data: ownerRow } = await service
@@ -84,6 +111,11 @@ export async function createTransferFeeIntent(transferId: string): Promise<Inten
 
     const price = await stripe.prices.retrieve(priceId);
     if (!price.unit_amount) return { error: "Transfer fee price has no unit amount configured." };
+    if (price.unit_amount !== expectedAmountCents) {
+      return {
+        error: "The transfer fee has changed since this page loaded. Reload the page to see the current amount. Nothing has been charged.",
+      };
+    }
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: price.unit_amount,
