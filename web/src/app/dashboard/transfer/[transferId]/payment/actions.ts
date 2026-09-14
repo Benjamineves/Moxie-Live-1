@@ -4,6 +4,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { getStripe } from "@/lib/stripe/server";
 import { resolveOwnerIds } from "@/lib/vessel-ownership";
+import { TRANSFER_FEE_PAYMENT_METHOD_TYPES } from "@/lib/stripe/payment-methods";
 import type { SubscriptionTier } from "@/lib/tier-config";
 
 type IntentResult = { clientSecret: string } | { error: string };
@@ -28,8 +29,10 @@ type IntentResult = { clientSecret: string } | { error: string };
  * Now Elements mounts in deferred mode and this runs from the submit
  * handler immediately before stripe.confirmPayment, so the status check
  * below is a moment old when the card is charged, and the form disables
- * the cancel button while a payment is in flight. See the page's note on
- * the window this does NOT close: payment methods that settle days later.
+ * the cancel button while a payment is in flight. The fee accepts only
+ * payment methods that settle immediately, so no payment can sit
+ * "processing" for days while the seller cancels from the vessel page —
+ * see lib/stripe/payment-methods.ts.
  *
  * `expectedAmountCents` is the fee the page loaded with and the seller was
  * shown. The fee follows the seller's tier, which can change in between;
@@ -121,7 +124,10 @@ export async function createTransferFeeIntent(transferId: string, expectedAmount
       amount: price.unit_amount,
       currency: price.currency,
       customer: customerId,
-      automatic_payment_methods: { enabled: true },
+      // Immediate-settlement methods only, named explicitly — never
+      // automatic_payment_methods, which follows the Stripe dashboard and
+      // offered bank debit. See lib/stripe/payment-methods.ts.
+      payment_method_types: [...TRANSFER_FEE_PAYMENT_METHOD_TYPES],
       metadata: { transfer_id: transfer.id, vessel_id: transfer.vessel_id, mxe_id: transfer.mxe_id, payment_type: "transfer_fee" },
     });
 

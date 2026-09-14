@@ -11,6 +11,7 @@ import { CancelTransferDialog } from "@/components/vessel-edit/CancelTransferDia
 import { cancelButtonClass, dangerButtonClass } from "@/components/vessel-edit/formStyles";
 import { TRANSFER_FEE_AMOUNT_USD } from "@/lib/tier-config";
 import type { TransferFeeAmount } from "@/lib/stripe/checkout-amounts";
+import { TRANSFER_FEE_PAYMENT_METHOD_TYPES } from "@/lib/stripe/payment-methods";
 
 type Props = {
   transferId: string;
@@ -106,16 +107,22 @@ export function TransferPaymentForm({ transferId, mxeId, buyerEmail, sellerTier,
               this page creates nothing in Stripe; the Pay click does, after
               checking the transfer is still awaiting payment.
 
-              WHAT THIS DOES NOT CLOSE. Some payment methods the Payment
-              Element offers (US bank debit is the clear one) confirm as
-              "processing" and settle days later. The transfer stays
-              awaiting_payment until the webhook hears it succeeded, and
-              the seller can still cancel from the vessel page in that
-              gap — then the settled payment has no transfer to complete.
-              Closing that needs either cancellation to check Stripe for a
-              processing payment first, or this fee to accept only methods
-              that settle immediately. Both are decisions, not done here. */}
-          <Elements stripe={stripe} options={{ mode: "payment", amount: amount.feeCents, currency: amount.currency }}>
+              Immediate-settlement methods only. The transfer stays
+              awaiting_payment until the webhook hears the payment
+              succeeded, and the seller can cancel from the vessel page
+              until then. A method that settles days later (bank debit was
+              on offer) left a payment processing against a transfer the
+              seller could cancel underneath it. The same list goes to the
+              intent, which must match — see lib/stripe/payment-methods. */}
+          <Elements
+            stripe={stripe}
+            options={{
+              mode: "payment",
+              amount: amount.feeCents,
+              currency: amount.currency,
+              paymentMethodTypes: [...TRANSFER_FEE_PAYMENT_METHOD_TYPES],
+            }}
+          >
             <CheckoutInner transferId={transferId} expectedAmountCents={amount.feeCents} onPayingChange={setPaying} />
           </Elements>
         </div>
@@ -244,7 +251,12 @@ function CheckoutInner({
       <p className="mb-4 font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
         Payment details
       </p>
-      <PaymentElement />
+      {/* Link off. With card as the only method, Link still rides along on
+          the card option and offers its own bank and Klarna payments —
+          bank-funded Link settles later, which is exactly what this fee
+          excludes. The intent is card-only, so those would be refused at
+          confirmation anyway; this stops the form offering them. */}
+      <PaymentElement options={{ wallets: { link: "never" } }} />
       <p className="mt-4 flex items-center gap-2 font-[family-name:var(--font-dm)] text-[11px] leading-relaxed text-[var(--text3)]">
         Payment processed securely by Stripe. Moxie never sees or stores your card details.
       </p>
