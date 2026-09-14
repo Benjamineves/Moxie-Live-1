@@ -2,10 +2,11 @@ import { NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
-import type { SubscriptionTier } from "@/lib/tier-config";
 import { DORMANCY } from "@/lib/tier-config";
 import { notifyOwner } from "@/lib/notify";
 import { decideSubscriptionSync } from "@/lib/subscription-sync";
+import { tierForPriceId } from "@/lib/stripe/tiers";
+import { notifyDowngradeGraceIfDue, notifyVesselsRestored } from "@/lib/dormancy-notify";
 
 export const runtime = "nodejs";
 
@@ -115,10 +116,26 @@ export async function POST(request: Request) {
  * with nothing left that would ever reconcile it — which is the bug.
  */
 async function reconcileVesselOverflow(service: ServiceClient, ownerId: string, context: string) {
-  const { error } = await service.rpc("reconcile_vessel_overflow", { p_owner_id: ownerId });
+  const { data, error } = await service.rpc("reconcile_vessel_overflow", { p_owner_id: ownerId });
   if (error) {
     throw new Error(`reconcile_vessel_overflow failed for owner ${ownerId} (${context}): ${error.message}`);
   }
+  // {started, running, ...} since 20261002; NULL before it. Logged, not
+  // acted on — see below for why the notification does not key off it.
+  const result = data as { started?: boolean; grace_until?: string } | null;
+  if (result?.started) {
+    console.log(`[stripe-webhook] ${context}: started a downgrade grace clock for owner ${ownerId}, until ${result.grace_until}.`);
+  }
+
+  // downgrade_grace_started. Evaluated after EVERY reconcile, not only the
+  // one whose result says it started a clock, and confirmed against the tier
+  // Stripe reports rather than the stored one — so the signup-bundle race (a
+  // clock started against a tier seconds out of date, then cleared by the
+  // tier event) never emails, and a redelivery re-asks the same question
+  // instead of losing the moment. Throws on a failed Stripe lookup, which
+  // redelivers this event; everything above is idempotent.
+  // lib/dormancy-notifications.ts has the full reasoning.
+  await notifyDowngradeGraceIfDue(service, ownerId);
 }
 
 /**
@@ -354,18 +371,6 @@ async function completeSignupBundle(service: ServiceClient, intent: Stripe.Payme
   if (active) await reconcileVesselOverflow(service, vessel.owner_id, `signup bundle ${intent.id}, ${mxeId}`);
 }
 
-/**
- * Which tier (if either) a Stripe Price id corresponds to — the single
- * place both recordAccountSubscriptionInvoice and syncSubscriptionStatus
- * ask this question, now that Basic is a real recurring price and no
- * longer a safe hardcoded default.
- */
-function tierForPriceId(priceId: string | null | undefined): SubscriptionTier | null {
-  if (!priceId) return null;
-  if (priceId === process.env.STRIPE_PRICE_ID_FULL?.trim()) return "full";
-  if (priceId === process.env.STRIPE_PRICE_ID_BASIC_SUBSCRIPTION?.trim()) return "basic";
-  return null;
-}
 
 /**
  * Ownership Transfer fee — one-time, charged to the seller, only once
@@ -847,8 +852,18 @@ async function syncSubscriptionStatus(service: ServiceClient, eventSubscription:
     // (it only restores rows still dormant_cause = 'lapsed', and reconcile
     // only starts a grace clock that is not already running).
     for (const row of (updatedRows ?? []) as { id: string }[]) {
-      const { error } = await service.rpc("clear_vessels_lapsed", { p_owner_id: row.id });
+      const { data: restored, error } = await service.rpc("clear_vessels_lapsed", { p_owner_id: row.id });
       if (error) throw new Error(`clear_vessels_lapsed failed for owner ${row.id}: ${error.message}`);
+
+      // vessel_reactivated, once for the account. clear_vessels_lapsed returns
+      // the restored ids only to the call that restored them (NULL before
+      // 20261002), so a redelivery of this event sends nothing twice.
+      await notifyVesselsRestored(row.id, restored);
+
+      // clear_vessels_lapsed reconciles inside SQL, which may start a grace
+      // clock — resubscribing to Basic after being on Full is exactly how.
+      // Same state-driven, Stripe-confirmed check as every other reconcile.
+      await notifyDowngradeGraceIfDue(service, row.id);
     }
   }
 }

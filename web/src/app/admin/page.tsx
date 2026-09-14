@@ -6,6 +6,7 @@ import { AdminNav } from "@/components/AdminNav";
 import { AdminGeoMap } from "@/components/AdminGeoMap";
 import { GEO_REGIONS, classifyRegion, resolveVesselLocationSource } from "@/lib/vessel-geo";
 import { readBadgePoolStatus, POOL_AMBER_THRESHOLD, POOL_RED_THRESHOLD } from "@/lib/badge-pool";
+import { notifyVesselsLocked } from "@/lib/dormancy-notify";
 
 function startOfMonth(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -49,7 +50,13 @@ export default async function AdminOverviewPage() {
   // page self-heals on every load instead of drifting between visits.
   // Still not real-time — correct as of the last /admin load, not the
   // instant a grace period actually expires.
-  await service.rpc("reconcile_all_dormancy");
+  const { data: lockedByOwner } = await service.rpc("reconcile_all_dormancy");
+  // For an owner who never logs in and whose badge is never scanned, this
+  // admin load is when their vessels lock — and so when they are told. One
+  // row per owner that had vessels locked by THIS call (none before 20261002).
+  for (const row of (Array.isArray(lockedByOwner) ? lockedByOwner : []) as { owner_id: string; locked_ids: string[] }[]) {
+    await notifyVesselsLocked(row.owner_id, row.locked_ids);
+  }
 
   const now = new Date();
   const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);

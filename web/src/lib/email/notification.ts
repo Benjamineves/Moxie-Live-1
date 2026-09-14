@@ -13,7 +13,6 @@
  */
 import { button, notice, paragraph, renderEmailLayout, escapeHtml } from "./layout.ts";
 import { renderPlainText } from "./plain-text.ts";
-import { DORMANCY } from "../tier-config.ts";
 import type { EmailableNotificationType } from "../notification-policy.ts";
 
 export type { EmailableNotificationType };
@@ -76,9 +75,11 @@ const COPY: Record<EmailableNotificationType, Copy> = {
     subject: "Action needed on your Moxie account",
     title: "More vessels than your plan covers",
     detail: [
-      `You have ${DORMANCY.DOWNGRADE_GRACE_DAYS} days to either upgrade or decommission the extra vessels. If nothing changes, the vessels beyond your plan's limit pause automatically, newest first.`,
+      // The deadline is in the lead line, read from the stored clock — not
+      // restated here as a day count that is wrong by the time it is read.
+      "If nothing changes by then, the vessels you have used most recently stay active up to your plan's limit, and the rest pause.",
     ],
-    cta: { label: "Review your fleet", path: "/dashboard/manage-fleet" },
+    cta: { label: "Choose which stay active", path: "/dashboard/manage-fleet" },
     reassurance:
       "A paused vessel is not a deleted one. It keeps its MXE ID and its record, and it comes back the moment there is room on your plan.",
   },
@@ -131,14 +132,27 @@ const COPY: Record<EmailableNotificationType, Copy> = {
     },
   },
   vessel_locked: {
-    subject: "A vessel on your Moxie account is locked",
-    title: "A vessel is locked",
+    // Once per account, however many vessels, so the wording does not
+    // assume one. The count is in the lead line.
+    subject: "Vessels on your Moxie account are paused",
+    title: "Some of your vessels are paused",
     detail: [
-      "Its public profile and badge still work, so anyone scanning it still reaches the vessel. Document access, sharing and editing are what pause.",
+      "Their public profiles and badges still work, so anyone scanning one still reaches the vessel. Document access, sharing and editing are what pause.",
     ],
-    cta: { label: "Open your dashboard", path: "/dashboard" },
+    cta: { label: "Choose which stay active", path: "/dashboard/manage-fleet" },
     reassurance:
-      "The vessel's MXE identity is permanent and unaffected. Unlocking restores everything exactly as it was.",
+      "Each vessel's MXE identity is permanent and unaffected. Unpausing restores everything exactly as it was.",
+  },
+  vessel_reactivated_by_moxie: {
+    subject: "Your vessel is active again",
+    title: "Your vessel is active again",
+    detail: [
+      "Its public profile, documents and editing work as they did before it was decommissioned. Share links that were revoked when it was decommissioned stay revoked — create new ones if you need them.",
+    ],
+    cta: {
+      label: "Open your vessel",
+      path: (mxeId) => (mxeId ? `/${encodeURIComponent(mxeId)}?role=owner` : "/dashboard"),
+    },
   },
 };
 

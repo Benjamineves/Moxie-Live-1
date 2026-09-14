@@ -24,6 +24,7 @@ const ALL: NotificationType[] = [
   "downgrade_grace_started",
   "vessel_locked",
   "vessel_reactivated",
+  "vessel_reactivated_by_moxie",
   "transfer_accepted",
   "transfer_declined_or_expired",
   "transfer_completed_seller",
@@ -46,15 +47,17 @@ test("every notification type has a policy", () => {
   assert.equal(Object.keys(NOTIFICATION_POLICY).length, ALL.length, "policy map has an entry for an unknown type");
 });
 
-test("four types email and vessel_reactivated does not", () => {
+test("every type emails except the owner's own resubscription restore", () => {
   for (const type of EMAILING) {
     assert.equal(NOTIFICATION_POLICY[type].email, true, `${type} should email`);
   }
   assert.equal(
     NOTIFICATION_POLICY.vessel_reactivated.email,
     false,
-    "reactivation fires while the owner is watching it happen; emailing it is noise",
+    "a resubscription restore fires while the owner is watching it happen; emailing it is noise",
   );
+  // The owner was not there when an admin reactivated their vessel.
+  assert.equal(NOTIFICATION_POLICY.vessel_reactivated_by_moxie.email, true);
 });
 
 test("account-level dedupe windows match the grace period each message quotes", () => {
@@ -65,12 +68,26 @@ test("account-level dedupe windows match the grace period each message quotes", 
     mode: "window",
     windowMs: DORMANCY.PAST_DUE_GRACE_DAYS * DAY,
   });
-  assert.deepEqual(NOTIFICATION_POLICY.downgrade_grace_started.dedupe, {
-    mode: "window",
-    windowMs: DORMANCY.DOWNGRADE_GRACE_DAYS * DAY,
-  });
   assert.deepEqual(NOTIFICATION_POLICY.vessel_lapsed.dedupe, { mode: "window", windowMs: 7 * DAY });
-  assert.deepEqual(NOTIFICATION_POLICY.vessel_locked.dedupe, { mode: "window", windowMs: 7 * DAY });
+});
+
+test("dormancy events that fire once by construction do not use a window", () => {
+  // downgrade_grace_started is claimed per clock in the database; vessel_locked
+  // and both reactivations are reported only by the call that made the change.
+  // A window would wrongly suppress a genuine second episode — a grace clock
+  // that cleared and restarted, or a second downgrade.
+  for (const type of ["downgrade_grace_started", "vessel_locked", "vessel_reactivated", "vessel_reactivated_by_moxie"] as const) {
+    assert.deepEqual(NOTIFICATION_POLICY[type].dedupe, { mode: "none" }, type);
+  }
+});
+
+test("no dormancy email restates a grace period as a day count", () => {
+  // The deadline comes from the stored clock, in the lead line. A fixed
+  // "14 days" in the body is wrong by the time the email is read.
+  for (const type of ["downgrade_grace_started", "vessel_locked"] as const) {
+    const text = renderNotificationEmailText({ type, message: "x", mxeId: null });
+    assert.doesNotMatch(text, new RegExp(`${DORMANCY.DOWNGRADE_GRACE_DAYS} days`), type);
+  }
 });
 
 /**

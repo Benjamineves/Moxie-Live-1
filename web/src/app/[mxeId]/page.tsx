@@ -16,6 +16,7 @@ import { getOwnerBillingSummary } from "@/lib/billing-service";
 import { resolveShareByToken } from "@/lib/share-resolve";
 import { getDormantInfo, DORMANT_PUBLIC_COPY } from "@/lib/vessel-dormancy";
 import { MARKETING_ORIGIN } from "@/lib/site-domains";
+import { notifyVesselsLocked } from "@/lib/dormancy-notify";
 
 const MXE_RE = /^MXE-\d{5}$/i;
 
@@ -93,7 +94,11 @@ export default async function VesselPage({ params, searchParams }: Props) {
   if (vessel.qr_status === "active") {
     const reconcileService = createSupabaseServiceClient();
     if (reconcileService) {
-      await reconcileService.rpc("reconcile_owner_dormancy", { p_owner_id: vessel.owner_id });
+      const { data: lockedIds } = await reconcileService.rpc("reconcile_owner_dormancy", { p_owner_id: vessel.owner_id });
+      // This can be the moment the lock happens — including on a stranger's
+      // badge scan. The owner is told, once: the ids come back only to the
+      // call that locked them, so the next scan finds nothing to report.
+      await notifyVesselsLocked(vessel.owner_id, lockedIds);
       const { data: freshLifecycle } = await reconcileService
         .from("vessels")
         .select("lifecycle_status, dormant_cause")

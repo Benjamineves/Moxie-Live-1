@@ -5,6 +5,7 @@ import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { requireAdmin } from "@/lib/admin-verify";
 import { DeleteUnactivatedVesselButton } from "@/components/vessel-edit/DeleteUnactivatedVesselButton";
+import { notifyVesselsLocked } from "@/lib/dormancy-notify";
 import { NotificationBanner } from "@/components/NotificationBanner";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { SignOutFormButton } from "@/components/SignOutFormButton";
@@ -72,7 +73,11 @@ export default async function DashboardPage({ searchParams }: Props) {
   // them on a timer — same reconciliation the public [mxeId] page also
   // triggers for whichever owner's vessel is being viewed.
   for (const ownerId of ownerIds) {
-    await service.rpc("reconcile_owner_dormancy", { p_owner_id: ownerId });
+    const { data: lockedIds } = await service.rpc("reconcile_owner_dormancy", { p_owner_id: ownerId });
+    // vessel_locked, once for the account. The ids come back only to the
+    // call that locked them (and as NULL before 20261002), so a reload sends
+    // nothing twice.
+    await notifyVesselsLocked(ownerId, lockedIds);
   }
 
   const { data: vessels, error } = await service

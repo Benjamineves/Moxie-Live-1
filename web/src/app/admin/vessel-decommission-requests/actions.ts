@@ -2,6 +2,8 @@
 
 import { requireAdmin } from "@/lib/admin-verify";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { notifyOwner } from "@/lib/notify";
+import { vesselReactivatedByMoxieMessage } from "@/lib/dormancy-notifications";
 
 /**
  * Applies the decommission and resolves the request in one atomic step,
@@ -69,11 +71,29 @@ export async function reactivateVessel(vesselId: string): Promise<{ error?: stri
   const service = createSupabaseServiceClient();
   if (!service) return { error: "Missing Supabase service role configuration." };
 
+  // Read first: after reactivation the owner is emailed, and the owner id
+  // and MXE ID are needed to do it.
+  const { data: vesselRow } = await service.from("vessels").select("owner_id, mxe_id").eq("id", vesselId).maybeSingle();
+  const vessel = vesselRow as { owner_id: string; mxe_id: string } | null;
+
   const { error } = await service.rpc("reactivate_vessel", {
     p_vessel_id: vesselId,
     p_admin_email: admin.email,
   });
 
   if (error) return { error: error.message };
+
+  // The owner was not there, and something changed on their account.
+  // reactivate_vessel refuses a vessel that is not decommissioned, so a
+  // repeat click fails above and cannot send this twice. notifyOwner never
+  // throws, so a failed email cannot turn a completed reactivation into an
+  // error for the admin.
+  if (vessel) {
+    await notifyOwner(vessel.owner_id, "vessel_reactivated_by_moxie", vesselReactivatedByMoxieMessage(vessel.mxe_id), {
+      vesselId,
+    });
+  } else {
+    console.error(`[reactivate] ${vesselId} reactivated, but the vessel could not be read beforehand; owner not notified.`);
+  }
   return {};
 }
