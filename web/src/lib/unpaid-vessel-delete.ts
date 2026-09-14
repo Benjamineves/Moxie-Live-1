@@ -37,7 +37,9 @@ import { cleanupVesselStorage, sweepVesselStoragePrefix } from "./vessel-storage
  *
  * Never destroyed here. delete_unactivated_vessel refuses (MX005) when any
  * vessel_payments row exists for the vessel, so a vessel with a recorded
- * charge is not deleted by this path at all.
+ * charge is not deleted by this path at all. Since 20261001 the database
+ * enforces the same thing for every path: vessel_payments and
+ * ownership_history reference vessels ON DELETE RESTRICT, not CASCADE.
  */
 
 /** Intent states that mean no money moved and none is pending. */
