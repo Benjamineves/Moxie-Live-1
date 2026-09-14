@@ -5,6 +5,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import type { SubscriptionTier } from "@/lib/tier-config";
 import { DORMANCY } from "@/lib/tier-config";
 import { notifyOwner } from "@/lib/notify";
+import { decideSubscriptionSync } from "@/lib/subscription-sync";
 
 export const runtime = "nodejs";
 
@@ -159,8 +160,20 @@ async function activateVessel(
     .select("id");
 
   if (updateError) {
-    console.error(`[stripe-webhook] ${sourceDescription}: activation update for vessel ${mxeId} failed:`, updateError);
-    return false;
+    // Thrown, not logged. The owner has paid; a 200 here left the vessel
+    // pending with no retry, and the processing page polling forever.
+    //
+    // WHY A RETRY IS SAFE, for both callers (badge fee, signup bundle):
+    //  - The payment-row insert before this is skipped when the row
+    //    exists, backed by the unique index on stripe_payment_intent_id.
+    //  - The caller re-reads qr_status on every delivery, and this UPDATE
+    //    is guarded on qr_status = 'pending_payment'. If an earlier
+    //    attempt's UPDATE actually committed and only the error response
+    //    was spurious, the retry reads 'active', skips the update, and
+    //    returns true — which still reconciles, as it must.
+    //  - Reconcile, the only step after this, has not run yet, and is
+    //    idempotent when it does.
+    throw new Error(`activation update failed for vessel ${mxeId} (${sourceDescription}): ${updateError.message}`);
   } else if (!updated || updated.length === 0) {
     // A concurrent delivery activated it between the read and this
     // update. That delivery reconciles; this one does not need to.
@@ -187,7 +200,20 @@ async function activateFromBadgeFee(service: ServiceClient, intent: Stripe.Payme
     return;
   }
 
-  const { data: vesselRow } = await service.from("vessels").select("id, qr_status, owner_id").eq("mxe_id", mxeId).maybeSingle();
+  const { data: vesselRow, error: vesselError } = await service
+    .from("vessels")
+    .select("id, qr_status, owner_id")
+    .eq("mxe_id", mxeId)
+    .maybeSingle();
+  // A failed read is not a missing vessel. Treating it as one returned 200
+  // for a transient database error, and the paid activation it was about
+  // was never attempted again — the same silent outcome as a failed
+  // update, one step earlier. Nothing has been written yet, so retrying
+  // is trivially safe. A vessel that genuinely is not there stays a 200:
+  // retrying cannot conjure it.
+  if (vesselError) {
+    throw new Error(`could not read vessel ${mxeId} for payment_intent ${intent.id}: ${vesselError.message}`);
+  }
   const vessel = vesselRow as { id: string; qr_status: string | null; owner_id: string } | null;
   if (!vessel) {
     console.error(`[stripe-webhook] payment_intent.succeeded ${intent.id}: no vessel found for mxe_id=${mxeId}.`);
@@ -248,7 +274,20 @@ async function completeSignupBundle(service: ServiceClient, intent: Stripe.Payme
     return;
   }
 
-  const { data: vesselRow } = await service.from("vessels").select("id, qr_status, owner_id").eq("mxe_id", mxeId).maybeSingle();
+  const { data: vesselRow, error: vesselError } = await service
+    .from("vessels")
+    .select("id, qr_status, owner_id")
+    .eq("mxe_id", mxeId)
+    .maybeSingle();
+  // A failed read is not a missing vessel. Treating it as one returned 200
+  // for a transient database error, and the paid activation it was about
+  // was never attempted again — the same silent outcome as a failed
+  // update, one step earlier. Nothing has been written yet, so retrying
+  // is trivially safe. A vessel that genuinely is not there stays a 200:
+  // retrying cannot conjure it.
+  if (vesselError) {
+    throw new Error(`could not read vessel ${mxeId} for payment_intent ${intent.id}: ${vesselError.message}`);
+  }
   const vessel = vesselRow as { id: string; qr_status: string | null; owner_id: string } | null;
   if (!vessel) {
     console.error(`[stripe-webhook] payment_intent.succeeded ${intent.id}: no vessel found for mxe_id=${mxeId}.`);
@@ -339,8 +378,36 @@ async function completeOwnershipTransferFromPayment(service: ServiceClient, inte
     p_stripe_payment_intent_id: intent.id,
   });
   if (error) {
-    console.error(`[stripe-webhook] payment_intent.succeeded ${intent.id}: complete_ownership_transfer failed for transfer ${transferId}:`, error);
-    return;
+    // Thrown, not logged. The seller has been charged at this point; a
+    // 200 here meant ownership never moved, Stripe never retried, and
+    // nothing anywhere recorded that it hadn't.
+    //
+    // WHY A RETRY IS SAFE, specifically for this handler:
+    //  - The payment-row insert above is skipped when the row exists, and
+    //    vessel_payments.stripe_payment_intent_id is a unique index
+    //    (20260827), so a retry, or two deliveries at once, cannot
+    //    record the charge twice.
+    //  - complete_ownership_transfer is one function call, so one
+    //    transaction: when it raises, every write it made (history rows,
+    //    the owner change, share revocation, the status flip) rolls back
+    //    and a retry starts clean. If an earlier attempt actually
+    //    committed and only the response was lost, the function sees
+    //    status 'completed' and returns without doing anything twice.
+    //  - Nothing after this point has run yet, so no notification or
+    //    reconcile is repeated by the retry.
+    //
+    // NOT EVERY FAILURE HERE IS TRANSIENT. If the seller cancelled the
+    // transfer after the payment intent was created — the transfer
+    // payment page creates it on load, and carries a cancel link — the
+    // function raises "not awaiting payment (status: canceled)" on every
+    // attempt. Retrying that is harmless and will not resolve it: the
+    // seller has paid for a transfer that no longer exists and needs a
+    // refund, which is a person's decision. Failing loudly is still
+    // right, because it is the only thing that puts it in front of one —
+    // Stripe shows the failing delivery and the logs carry the ids.
+    throw new Error(
+      `complete_ownership_transfer failed for transfer ${transferId} (payment_intent ${intent.id}): ${error.message}`,
+    );
   }
   console.log(`[stripe-webhook] payment_intent.succeeded ${intent.id}: completed transfer ${transferId}.`);
 
@@ -535,59 +602,118 @@ async function recordAccountSubscriptionInvoice(service: ServiceClient, invoice:
  * covers both "recovered from past_due" and "downgraded to Basic" with
  * one call.
  */
-async function syncSubscriptionStatus(service: ServiceClient, subscription: Stripe.Subscription) {
+async function syncSubscriptionStatus(service: ServiceClient, eventSubscription: Stripe.Subscription) {
+  // RETRY SAFETY IS NOT THE SAME HERE AS IN THE OTHER HANDLERS — see
+  // lib/subscription-sync.ts for the full reasoning. In short: vessel
+  // activation and transfer completion are one-way and guarded, so a late
+  // retry finds the work done. Subscription status goes back and forth, and
+  // this handler used to write the status the EVENT carried. Failing loudly
+  // means Stripe may redeliver this event up to ~3 days later, so first:
+  //
+  // Act on the subscription as it is NOW, not as the event described it.
+  // Both calls are reads. If either fails, the throw becomes a 500 and the
+  // delivery is retried, having written nothing.
+  const stripe = getStripe();
+  const subscription = await stripe.subscriptions.retrieve(eventSubscription.id);
   const customerId = typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id;
+  const siblings = await stripe.subscriptions.list({ customer: customerId, status: "all", limit: 100 });
 
-  if (subscription.status === "canceled" || subscription.status === "unpaid") {
+  const action = decideSubscriptionSync({
+    currentStatus: subscription.status,
+    otherSubscriptions: siblings.data.filter((s) => s.id !== subscription.id).map((s) => ({ id: s.id, status: s.status })),
+  });
+
+  if (eventSubscription.status !== subscription.status) {
+    console.log(
+      `[stripe-webhook] subscription ${subscription.id}: event said '${eventSubscription.status}', Stripe now says '${subscription.status}' — acting on the current status.`,
+    );
+  }
+
+  if (action.kind === "superseded") {
+    // Not live, and another subscription on this customer is. This one no
+    // longer describes the account, and account writes are scoped by
+    // customer — applying it would lapse or grace an owner who is paying.
+    console.log(
+      `[stripe-webhook] subscription ${subscription.id} is '${subscription.status}' but ${action.by} is live on customer ${customerId} — not applying.`,
+    );
+    return;
+  }
+
+  if (action.kind === "lapse") {
     // The tier/status downgrade is scoped by customer alone, same as every
     // other branch here — that must land regardless of what
     // stripe_subscription_id currently holds, so a stuck "full" tier is
-    // never possible even if the ID column is somehow out of sync.
-    const { data: updatedRows } = await service
+    // never possible even if the ID column is somehow out of sync. (The
+    // "superseded" check above is what stops customer scoping from
+    // clobbering a newer subscription.)
+    const { data: updatedRows, error: updateError } = await service
       .from("users")
       .update({ subscription_status: "canceled", subscription_tier: "basic", past_due_since: null })
       .eq("stripe_customer_id", customerId)
       .select("id");
+    // Checked, because an unread error here meant zero rows, so the loop
+    // below never ran set_vessels_lapsed — the same silent 200 one step
+    // earlier. Retry-safe: nothing has been written yet.
+    if (updateError) throw new Error(`lapse: users update failed for customer ${customerId}: ${updateError.message}`);
 
-    // Clearing the ID is a separate, best-effort statement, scoped to
-    // exactly the subscription that just ended — keeps the column meaning
-    // "the currently active subscription, if any" without risking, in
-    // some future world with more than one subscription in play, clearing
-    // a different (possibly still-active) subscription's ID than the one
-    // this event is actually about.
-    await service
+    // Clearing the ID is a separate statement, scoped to exactly the
+    // subscription that just ended — keeps the column meaning "the
+    // currently active subscription, if any". Idempotent, so a failure is
+    // thrown and simply repeated on retry.
+    const { error: clearError } = await service
       .from("users")
       .update({ stripe_subscription_id: null })
       .eq("stripe_customer_id", customerId)
       .eq("stripe_subscription_id", subscription.id);
+    if (clearError) throw new Error(`lapse: clearing stripe_subscription_id failed for ${subscription.id}: ${clearError.message}`);
 
-    for (const row of (updatedRows ?? []) as { id: string }[]) {
-      const { error } = await service.rpc("set_vessels_lapsed", { p_owner_id: row.id });
-      if (error) console.error(`[stripe-webhook] set_vessels_lapsed failed for owner ${row.id}:`, error);
+    const owners = (updatedRows ?? []) as { id: string }[];
+
+    // Every lapse first, every notification after. set_vessels_lapsed used
+    // to fail with a log line and a 200, leaving a cancelled account's
+    // vessels fully active with nothing to retry it.
+    //
+    // WHY A RETRY IS SAFE: both updates above rewrite the same values;
+    // set_vessels_lapsed only touches vessels still lifecycle_status =
+    // 'active', so repeating it lapses nothing twice and shares already
+    // revoked stay revoked. And because all lapses run before any
+    // notification, a retry caused by a lapse failure has not written an
+    // in-app notification row yet — notifyOwner always writes that row,
+    // and only the EMAIL is deduplicated.
+    for (const owner of owners) {
+      const { error } = await service.rpc("set_vessels_lapsed", { p_owner_id: owner.id });
+      if (error) throw new Error(`set_vessels_lapsed failed for owner ${owner.id}: ${error.message}`);
+    }
+    for (const owner of owners) {
       await notifyOwner(
-        row.id,
+        owner.id,
         "vessel_lapsed",
         "Your Moxie subscription has ended. Your vessels keep their permanent identity, but document access, sharing, and editing are paused until you resubscribe.",
       );
     }
-  } else if (subscription.status === "past_due") {
-    const { data: updatedRows } = await service
+    return;
+  }
+
+  if (action.kind === "past_due") {
+    const { data: updatedRows, error: updateError } = await service
       .from("users")
       .update({ subscription_status: "past_due" })
       .eq("stripe_customer_id", customerId)
       .select("id");
+    if (updateError) throw new Error(`past_due: users update failed for customer ${customerId}: ${updateError.message}`);
 
     // Only stamp past_due_since the FIRST time this account goes
     // past_due for the current failure — a repeat past_due delivery for
     // the same ongoing issue (Stripe retries several times) must not
     // reset the grace-period clock. is("past_due_since", null) guards
     // that; this is a separate, narrower statement from the one above
-    // for exactly that reason.
-    await service
+    // for exactly that reason. The same guard is what makes a retry safe.
+    const { error: stampError } = await service
       .from("users")
       .update({ past_due_since: new Date().toISOString() })
       .eq("stripe_customer_id", customerId)
       .is("past_due_since", null);
+    if (stampError) throw new Error(`past_due: stamping past_due_since failed for customer ${customerId}: ${stampError.message}`);
 
     for (const row of (updatedRows ?? []) as { id: string }[]) {
       await notifyOwner(
@@ -596,7 +722,10 @@ async function syncSubscriptionStatus(service: ServiceClient, subscription: Stri
         `Your last payment didn't go through. You have ${DORMANCY.PAST_DUE_GRACE_DAYS} days to update your payment method before your vessels' document access, sharing, and editing pause.`,
       );
     }
-  } else if (subscription.status === "active") {
+    return;
+  }
+
+  if (action.kind === "active") {
     const planItem = subscription.items.data[0];
     const planPrice = planItem?.price;
     const tier = tierForPriceId(typeof planPrice === "string" ? planPrice : planPrice?.id);
@@ -605,15 +734,28 @@ async function syncSubscriptionStatus(service: ServiceClient, subscription: Stri
         `[stripe-webhook] customer.subscription.updated ${subscription.id}: price ${typeof planPrice === "string" ? planPrice : planPrice?.id} matches neither STRIPE_PRICE_ID_BASIC_SUBSCRIPTION nor STRIPE_PRICE_ID_FULL — leaving subscription_tier untouched.`,
       );
     }
-    const { data: updatedRows } = await service
+    const { data: updatedRows, error: updateError } = await service
       .from("users")
       .update({ subscription_status: "active", ...(tier ? { subscription_tier: tier } : {}) })
       .eq("stripe_customer_id", customerId)
       .select("id");
+    if (updateError) throw new Error(`active: users update failed for customer ${customerId}: ${updateError.message}`);
 
+    // clear_vessels_lapsed used to fail with a log line and a 200: an owner
+    // who had just paid to resubscribe kept every vessel paused, and
+    // nothing retried it.
+    //
+    // WHY A RETRY IS SAFE: the status is Stripe's current one, so a retry
+    // landing after a later cancellation takes the lapse branch instead
+    // of restoring anything. The users update rewrites the same values.
+    // clear_vessels_lapsed is one transaction — restore lapsed vessels,
+    // clear past_due_since, reconcile the cap — so a failure rolls all of
+    // it back, and every part of it is idempotent when it does commit
+    // (it only restores rows still dormant_cause = 'lapsed', and reconcile
+    // only starts a grace clock that is not already running).
     for (const row of (updatedRows ?? []) as { id: string }[]) {
       const { error } = await service.rpc("clear_vessels_lapsed", { p_owner_id: row.id });
-      if (error) console.error(`[stripe-webhook] clear_vessels_lapsed failed for owner ${row.id}:`, error);
+      if (error) throw new Error(`clear_vessels_lapsed failed for owner ${row.id}: ${error.message}`);
     }
   }
 }
