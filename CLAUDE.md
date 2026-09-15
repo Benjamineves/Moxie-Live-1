@@ -3,6 +3,12 @@
 Read `docs/moxie_digital_START_HERE.md` for what the project is, where
 things live, and which specs are current. This file is how to work in it.
 
+`docs/moxie_roadmap.md` is the running list of open work and what blocks
+what. Keep it current in the same commit as the work: when an item closes,
+move it to Done; when a new open item or dependency turns up, add it; bump
+the "Last updated" date. Where it disagrees with the code, the code wins —
+fix the roadmap.
+
 ## Standing rules
 
 When a prompt says **"Standing rules apply"**, it means all of these. They
