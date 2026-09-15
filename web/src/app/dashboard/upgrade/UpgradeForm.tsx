@@ -1,10 +1,12 @@
 "use client";
 
-import { useCallback, useState, useTransition, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { loadStripe, type Stripe as StripeJs } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { createPlanSubscriptionIntent } from "./actions";
 import { SUBSCRIPTION_AMOUNT_USD, type SubscriptionTier } from "@/lib/tier-config";
+import type { PlanAmounts } from "@/lib/stripe/checkout-amounts";
+import { IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES } from "@/lib/stripe/payment-methods";
 
 // Prices read from lib/tier-config.ts, the single numeric source — needs
 // to match whatever STRIPE_PRICE_ID_BASIC_SUBSCRIPTION /
@@ -42,34 +44,21 @@ function getStripeJs(publishableKey: string) {
   return stripePromise;
 }
 
-export function UpgradeForm({ publishableKey }: { publishableKey: string }) {
+export function UpgradeForm({ publishableKey, amounts }: { publishableKey: string; amounts: PlanAmounts }) {
   const [selectedTier, setSelectedTier] = useState<SubscriptionTier | null>(null);
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
+  // Lifted from the checkout so "Change plan" cannot unmount a form that
+  // is part-way through charging.
+  const [busy, setBusy] = useState(false);
 
-  const choosePlan = useCallback((tier: SubscriptionTier) => {
+  // Choosing a plan is purely a local selection. It used to create the
+  // Stripe subscription on the spot, so every "Change plan" left one
+  // behind. The subscription is created at the Pay click.
+  function choosePlan(tier: SubscriptionTier) {
     setSelectedTier(tier);
-    setClientSecret(null);
-    setError(null);
-    startTransition(async () => {
-      try {
-        const result = await createPlanSubscriptionIntent(tier);
-        if ("error" in result) {
-          setError(result.error);
-          return;
-        }
-        setClientSecret(result.clientSecret);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "Could not start checkout. Please try again.");
-      }
-    });
-  }, []);
+  }
 
   function changePlan() {
     setSelectedTier(null);
-    setClientSecret(null);
-    setError(null);
   }
 
   const stripe = getStripeJs(publishableKey);
@@ -133,7 +122,7 @@ export function UpgradeForm({ publishableKey }: { publishableKey: string }) {
             <button
               type="button"
               onClick={changePlan}
-              disabled={pending}
+              disabled={busy}
               className="mt-3 font-[family-name:var(--font-dm)] text-xs font-medium text-[var(--text3)] underline underline-offset-2 disabled:opacity-50"
             >
               Change plan
@@ -143,30 +132,24 @@ export function UpgradeForm({ publishableKey }: { publishableKey: string }) {
 
         {selectedTier ? (
           <div className="mt-6">
-            {error ? (
-              <div className="mb-4 rounded-xl border border-[var(--red-fg)] bg-[var(--red-bg)] p-4">
-                <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">
-                  Couldn&apos;t start checkout: {error}
-                </p>
-                <button
-                  type="button"
-                  onClick={() => choosePlan(selectedTier)}
-                  disabled={pending}
-                  className="mt-3 rounded-lg border border-[var(--red-fg)] px-4 py-2 font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--red-fg)] disabled:opacity-50"
-                >
-                  {pending ? "Retrying…" : "Try again"}
-                </button>
-              </div>
-            ) : null}
-            {clientSecret ? (
-              <Elements key={clientSecret} stripe={stripe} options={{ clientSecret }}>
-                <CheckoutInner planLabel={plan?.label ?? "plan"} />
-              </Elements>
-            ) : error ? null : (
-              <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--text3)]">
-                {pending ? "Preparing payment…" : "Loading…"}
-              </p>
-            )}
+            {/* Deferred mode, keyed on the tier so a plan change remounts
+                Elements with the new amount. Nothing exists in Stripe until
+                the Pay click. mode "subscription" because the intent
+                confirmed into it is a subscription's first invoice. */}
+            <Elements
+              key={selectedTier}
+              stripe={stripe}
+              options={{
+                mode: "subscription",
+                amount: amounts.planCents[selectedTier],
+                currency: amounts.currency,
+                // Must match the subscription's payment_settings — see
+                // lib/stripe/payment-methods.ts.
+                paymentMethodTypes: [...IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES],
+              }}
+            >
+              <CheckoutInner tier={selectedTier} planLabel={plan?.label ?? "plan"} onBusyChange={setBusy} />
+            </Elements>
           </div>
         ) : null}
       </main>
@@ -174,11 +157,24 @@ export function UpgradeForm({ publishableKey }: { publishableKey: string }) {
   );
 }
 
-function CheckoutInner({ planLabel }: { planLabel: string }) {
+function CheckoutInner({
+  tier,
+  planLabel,
+  onBusyChange,
+}: {
+  tier: SubscriptionTier;
+  planLabel: string;
+  onBusyChange: (busy: boolean) => void;
+}) {
   const stripe = useStripe();
   const elements = useElements();
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting, setSubmittingState] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  function setSubmitting(value: boolean) {
+    setSubmittingState(value);
+    onBusyChange(value);
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -186,10 +182,36 @@ function CheckoutInner({ planLabel }: { planLabel: string }) {
     setSubmitting(true);
     setError(null);
 
+    // 1: validate. First await, so a wallet (Apple Pay, Google Pay) still
+    //    has the user's click to open its sheet from.
+    const { error: submitError } = await elements.submit();
+    if (submitError) {
+      setError(submitError.message ?? "Check your payment details and try again.");
+      setSubmitting(false);
+      return;
+    }
+
+    // 2: only now the subscription and its first invoice.
+    let intent: Awaited<ReturnType<typeof createPlanSubscriptionIntent>>;
+    try {
+      intent = await createPlanSubscriptionIntent(tier);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Could not start checkout. Please try again.");
+      setSubmitting(false);
+      return;
+    }
+    if ("error" in intent) {
+      setError(intent.error);
+      setSubmitting(false);
+      return;
+    }
+
+    // 3: the charge.
     const processingUrl = `${window.location.origin}/dashboard/upgrade/processing`;
 
     const { error: confirmError, paymentIntent } = await stripe.confirmPayment({
       elements,
+      clientSecret: intent.clientSecret,
       redirect: "if_required",
       confirmParams: { return_url: processingUrl },
     });
@@ -213,7 +235,9 @@ function CheckoutInner({ planLabel }: { planLabel: string }) {
       <p className="mb-4 font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
         Payment details
       </p>
-      <PaymentElement />
+      {/* Link off: it offers bank-funded payments that settle later,
+          which the card-only subscription would refuse anyway. */}
+      <PaymentElement options={{ wallets: { link: "never" } }} />
       <p className="mt-4 flex items-center gap-2 font-[family-name:var(--font-dm)] text-[11px] leading-relaxed text-[var(--text3)]">
         Payment processed securely by Stripe. Moxie never sees or stores your card details.
       </p>

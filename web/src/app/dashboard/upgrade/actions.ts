@@ -3,30 +3,39 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { getStripe } from "@/lib/stripe/server";
+import { IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES } from "@/lib/stripe/payment-methods";
+import { releaseAbandonedSubscription } from "@/lib/stripe/abandoned-subscription";
 import type { SubscriptionTier } from "@/lib/tier-config";
 
 type IntentResult = { clientSecret: string } | { error: string };
 
 /**
- * Creates the client secret for the account's plan subscription — Basic
- * or Full, both real recurring Stripe Subscriptions now (tier structure
- * build). Account-level, not tied to any vessel (build spec §9 item 16 —
- * confirmed live that the old version created a new Stripe subscription
- * per vessel an owner upgraded, instead of one plan covering the whole
- * account).
+ * Creates the account's plan subscription — Basic or Full — and returns
+ * the client secret of its first invoice. Account-level, not tied to any
+ * vessel (build spec §9 item 16).
  *
- * This is the "pick or change your plan outside the bundled first-vessel
- * checkout" path: an account with no active plan yet reaching this page
- * directly, or one switching tiers. Switching FROM an already-active plan
- * (e.g. Full back down to Basic) isn't handled here — that's a proration
- * question best left to Stripe's own Billing Portal (openBillingPortal),
- * already the designated "manage billing" surface for anyone with an
- * active subscription. This action only ever creates a plan for an
- * account that doesn't have one, mirroring the guard the old Full-only
- * version already had, just generalized from "already Full" to "already
- * has any active subscription."
+ * This is the plan picker for an account with no plan: one that never had
+ * one, or a cancelled owner resubscribing. Switching FROM an active plan
+ * isn't handled here — Full → Basic is the Billing Portal, Basic → Full is
+ * upgradeToFullAccess below.
+ *
+ * CALLED AT THE PAY CLICK, like every other checkout (see the note at the
+ * top of dashboard/[mxeId]/payment/actions.ts). It used to run when a plan
+ * was chosen, so every plan pick created a subscription and every "Change
+ * plan" orphaned one: the stored id was overwritten and nothing cancelled
+ * the old subscription. UpgradeForm now mounts Elements in deferred mode
+ * and calls this from its submit handler.
+ *
+ * CARD ONLY. It used Stripe's automatic payment methods, which offered
+ * bank debit on the path a cancelled owner comes back through. See
+ * lib/stripe/payment-methods.ts.
  */
 export async function createPlanSubscriptionIntent(tier: SubscriptionTier): Promise<IntentResult> {
+  // A server action's arguments come from the client.
+  if (tier !== "basic" && tier !== "full") {
+    return { error: "Choose a plan." };
+  }
+
   const authClient = await createSupabaseServerClient();
   if (!authClient) return { error: "Missing Supabase auth configuration." };
 
@@ -43,6 +52,7 @@ export async function createPlanSubscriptionIntent(tier: SubscriptionTier): Prom
     email: string;
     stripe_customer_id: string | null;
     subscription_status: string | null;
+    stripe_subscription_id: string | null;
   };
 
   const normalizedEmail = user.email?.trim().toLowerCase();
@@ -51,7 +61,7 @@ export async function createPlanSubscriptionIntent(tier: SubscriptionTier): Prom
   if (normalizedEmail) {
     const { data: ownerRow } = await service
       .from("users")
-      .select("id, email, stripe_customer_id, subscription_status")
+      .select("id, email, stripe_customer_id, subscription_status, stripe_subscription_id")
       .eq("email", normalizedEmail)
       .maybeSingle();
     owner = ownerRow as OwnerRow | null;
@@ -60,7 +70,7 @@ export async function createPlanSubscriptionIntent(tier: SubscriptionTier): Prom
   if (!owner) {
     const { data: ownerRow } = await service
       .from("users")
-      .select("id, email, stripe_customer_id, subscription_status")
+      .select("id, email, stripe_customer_id, subscription_status, stripe_subscription_id")
       .eq("id", user.id)
       .maybeSingle();
     owner = ownerRow as OwnerRow | null;
@@ -70,6 +80,12 @@ export async function createPlanSubscriptionIntent(tier: SubscriptionTier): Prom
 
   if (owner.subscription_status === "active") {
     return { error: "Your account already has an active plan. Use Manage Billing to change or cancel it." };
+  }
+  // The page sends past_due to PastDueBillingPrompt and never offers this
+  // form, but the action is callable directly. A delinquent subscription
+  // still exists; a second one would bill the account twice.
+  if (owner.subscription_status === "past_due") {
+    return { error: "Your plan has a failed payment. Update your payment method in Manage Billing to restore it." };
   }
 
   const stripe = getStripe();
@@ -99,6 +115,16 @@ export async function createPlanSubscriptionIntent(tier: SubscriptionTier): Prom
   // server action error down to a generic message in production; a
   // returned {error} string reaches the client's UI verbatim instead.
   try {
+    // A subscription left on file by an earlier Pay click that didn't
+    // finish is cancelled and cleared; a live one refuses. Shared with the
+    // signup bundle — see lib/stripe/abandoned-subscription.ts.
+    const blocked = await releaseAbandonedSubscription(stripe, service, owner);
+    if (blocked) return blocked;
+
+    const priceEnvVar = tier === "full" ? "STRIPE_PRICE_ID_FULL" : "STRIPE_PRICE_ID_BASIC_SUBSCRIPTION";
+    const priceId = process.env[priceEnvVar]?.trim();
+    if (!priceId) return { error: `Missing ${priceEnvVar}.` };
+
     if (!customerId) {
       const customer = await stripe.customers.create({
         email: owner.email ?? user.email ?? undefined,
@@ -108,15 +134,17 @@ export async function createPlanSubscriptionIntent(tier: SubscriptionTier): Prom
       await service.from("users").update({ stripe_customer_id: customerId }).eq("id", owner.id);
     }
 
-    const priceEnvVar = tier === "full" ? "STRIPE_PRICE_ID_FULL" : "STRIPE_PRICE_ID_BASIC_SUBSCRIPTION";
-    const priceId = process.env[priceEnvVar]?.trim();
-    if (!priceId) return { error: `Missing ${priceEnvVar}.` };
-
     const subscription = await stripe.subscriptions.create({
       customer: customerId,
       items: [{ price: priceId }],
       payment_behavior: "default_incomplete",
-      payment_settings: { save_default_payment_method: "on_subscription" },
+      // The first invoice and every renewal accept immediate-settlement
+      // methods only. Must match UpgradeForm's Elements — see
+      // lib/stripe/payment-methods.ts.
+      payment_settings: {
+        save_default_payment_method: "on_subscription",
+        payment_method_types: [...IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES],
+      },
       // See dashboard/[mxeId]/payment/actions.ts's original comment on this
       // exact expand path — same Stripe API-version reasoning applies here.
       expand: ["latest_invoice", "latest_invoice.confirmation_secret"],

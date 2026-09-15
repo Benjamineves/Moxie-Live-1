@@ -7,6 +7,7 @@ import { resolveOwnerIds } from "@/lib/vessel-ownership";
 import { isAdminEmail } from "@/lib/admin-verify";
 import { countActiveVessels, evaluateVesselCap } from "@/lib/vessel-cap";
 import { IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES } from "@/lib/stripe/payment-methods";
+import { releaseAbandonedSubscription } from "@/lib/stripe/abandoned-subscription";
 import type { SubscriptionTier } from "@/lib/tier-config";
 
 /**
@@ -276,39 +277,12 @@ export async function createSignupBundleIntent(mxeId: string, tier: Subscription
   }
 
   try {
-    // stripe_subscription_id is set immediately after creating a
-    // subscription (below), before payment even completes — so a Pay
-    // click that does not finish (a declined card, a closed tab, or a
-    // plan change followed by a second Pay) leaves a real but
-    // still-unpaid ("incomplete") subscription behind. Since the
-    // subscription is only created at the Pay click, merely choosing and
-    // changing a plan no longer creates one. That's not the
-    // same case the guard below exists for (two tabs racing to create a
-    // subscription for the SAME pick): here, cancel the abandoned
-    // incomplete one and let this request proceed with the new tier,
-    // rather than treating a plan change as a collision. Only a
-    // genuinely active/paid subscription (or one still mid-flight from a
-    // concurrent request) blocks outright.
-    if (owner.stripe_subscription_id) {
-      try {
-        const existingSub = await stripe.subscriptions.retrieve(owner.stripe_subscription_id);
-        if (existingSub.status === "incomplete") {
-          await stripe.subscriptions.cancel(owner.stripe_subscription_id).catch(() => {});
-          await service.from("users").update({ stripe_subscription_id: null }).eq("id", owner.id);
-        } else if (existingSub.status === "incomplete_expired") {
-          // Stripe already auto-expired it (23h with no payment) — nothing
-          // to cancel, just clear the stale id.
-          await service.from("users").update({ stripe_subscription_id: null }).eq("id", owner.id);
-        } else {
-          return { error: "A subscription is already being set up for this account. Refresh the page and try again." };
-        }
-      } catch {
-        // Retrieval failed — id is stale (deleted, wrong Stripe mode,
-        // etc.). Clear it and proceed rather than blocking forever on a
-        // subscription that no longer exists.
-        await service.from("users").update({ stripe_subscription_id: null }).eq("id", owner.id);
-      }
-    }
+    // A subscription left on file by an earlier Pay click that didn't
+    // finish is cancelled and cleared; a live one refuses. Shared with the
+    // plan picker on /dashboard/upgrade — see
+    // lib/stripe/abandoned-subscription.ts.
+    const blocked = await releaseAbandonedSubscription(stripe, service, owner);
+    if (blocked) return blocked;
 
     if (!customerId) {
       const customer = await stripe.customers.create({
@@ -360,8 +334,8 @@ export async function createSignupBundleIntent(mxeId: string, tier: Subscription
       return { error: "Stripe did not return a payment client secret for the subscription." };
     }
 
-    // Set immediately, ahead of the webhook — see the race-guard comment
-    // above for why this can't wait for invoice.paid.
+    // Set immediately, ahead of the webhook, so the next Pay click finds
+    // it — see lib/stripe/abandoned-subscription.ts.
     await service.from("users").update({ stripe_subscription_id: subscription.id }).eq("id", owner.id);
 
     // The tag is REQUIRED, not best-effort. It used to be wrapped in a

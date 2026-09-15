@@ -72,11 +72,27 @@ The Full plan list and badge checkout both mention email reminders. The
 template exists; nothing sends it. Direct violation of the standing copy
 rule. Either remove the claims or wait for the scheduler.
 
-### `/dashboard/upgrade` doesn't follow checkout conventions
-Creates the subscription when a plan is chosen, and uses automatic
-payment methods so bank debit is offered. It's the path a cancelled owner
-resubscribes through. Every other checkout is card-only with
-intent-at-click.
+### Basic → Full upgrade doesn't follow checkout conventions
+`upgradeToFullAccess` swaps the subscription item to the Full price,
+invoices the proration and mints its PaymentIntent when the owner clicks
+"See my upgrade total" — before any payment. Elements mounts on that
+intent's client secret (not deferred), Link is not turned off, and the
+intent's methods follow the subscription's `payment_settings`, which are
+unset on all three active subscriptions.
+
+**Likely grants Full without paying.** The swap is sent without
+`payment_behavior: "pending_if_incomplete"`; Stripe's docs say only that
+mode holds a change until payment, and the code comment claiming
+otherwise is wrong. Observed on `sub_1UBJeT…` (test mode): Full price,
+`pending_update` null, the two proration items still uninvoiced, only the
+Basic signup invoice ever paid. That run predates the current three-call
+version, but step 1 is the same call. `customer.subscription.updated` then
+writes `subscription_tier = full`. Not demonstrated against current code
+— that needs a Stripe write.
+
+A deferred version needs the amount before the swap:
+`invoices.createPreview` (a read) on load, then swap + invoice at the Pay
+click, with `pending_if_incomplete`.
 
 ### Upgrading to Full doesn't restore locked vessels
 `clear_vessels_lapsed` only restores `dormant_cause = 'lapsed'`. An owner
@@ -120,6 +136,13 @@ Wants a scheduled reconciliation. Recorded in dormant identity spec §8.
 - **`shipped_at` / `received_at` renames** + per-identity despatch
   timestamp. From the provisioning build; do together.
 - **Confirm `ben@` removed from `ADMIN_EMAILS`** in Vercel.
+- **No vessel cap check on the plan picker.** A cancelled owner
+  resubscribing to Basic with more lapsed vessels than Basic allows isn't
+  warned at the Pay click; `reconcile_vessel_overflow` still enforces it
+  after payment.
+- **Account `2255a040…` is active/Full with no Stripe subscription.** Has a
+  customer id, no subscription on it, `stripe_subscription_id` null. Seen
+  while auditing checkouts; not investigated.
 
 ---
 
@@ -140,4 +163,5 @@ badge · PWA dead ends · document viewing, metadata, expiry badges · photo
 and document stale-cache fixes · gold contrast sweep · vessel cap bypass
 · webhook log-and-succeed failures · `choose_active_vessels` constraints ·
 payment/title records RESTRICT · card-only checkout · owner delete path ·
-all dormancy notifications
+all dormancy notifications · plan picker on `/dashboard/upgrade` card-only,
+created at the Pay click

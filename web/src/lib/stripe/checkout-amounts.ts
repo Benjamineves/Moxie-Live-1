@@ -57,6 +57,22 @@ export async function getBundleAmounts(): Promise<BundleAmounts> {
   return { currency: badge.currency, badgeCents: badge.cents, planCents: { basic: basic.cents, full: full.cents } };
 }
 
+export type PlanAmounts = { currency: string; planCents: Record<SubscriptionTier, number> };
+
+/** For UpgradeForm on /dashboard/upgrade: a plan on its own, no badge. */
+export async function getPlanAmounts(): Promise<PlanAmounts> {
+  const [basic, full] = await Promise.all([
+    priceCents("STRIPE_PRICE_ID_BASIC_SUBSCRIPTION"),
+    priceCents("STRIPE_PRICE_ID_FULL"),
+  ]);
+  // Same reason as getBundleAmounts: one Elements instance, one currency,
+  // and a plan change remounts it with the other price.
+  if (basic.currency !== full.currency) {
+    throw new Error(`Stripe prices disagree on currency (basic ${basic.currency}, full ${full.currency}).`);
+  }
+  return { currency: basic.currency, planCents: { basic: basic.cents, full: full.cents } };
+}
+
 export type TransferFeeAmount = { currency: string; feeCents: number };
 
 /**

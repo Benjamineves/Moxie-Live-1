@@ -15,6 +15,7 @@ const CHECKOUTS = [
   { name: "transfer fee", action: "dashboard/transfer/[transferId]/payment/actions.ts", form: "dashboard/transfer/[transferId]/payment/TransferPaymentForm.tsx" },
   { name: "badge fee", action: "dashboard/[mxeId]/payment/actions.ts", form: "dashboard/[mxeId]/payment/PaymentForm.tsx" },
   { name: "signup bundle", action: "dashboard/[mxeId]/payment/actions.ts", form: "dashboard/[mxeId]/payment/SignupBundleForm.tsx" },
+  { name: "plan picker", action: "dashboard/upgrade/actions.ts", form: "dashboard/upgrade/UpgradeForm.tsx" },
 ];
 
 const LIST = /payment_method_types:\s*\[\.\.\.IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES\]/;
@@ -42,6 +43,12 @@ test("each checkout action names the shared list on what it creates", () => {
   assert.equal(uses.length, 2, "badge fee intent and bundle subscription must both name the list");
   assert.match(badgeAndBundle, /payment_settings:\s*\{[^}]*payment_method_types:\s*\[\.\.\.IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES\]/);
   assert.match(source("dashboard/transfer/[transferId]/payment/actions.ts"), LIST);
+  // Plan picker: on the subscription's payment_settings, like the bundle.
+  assert.match(
+    source("dashboard/upgrade/actions.ts"),
+    /payment_settings:\s*\{[^}]*payment_method_types:\s*\[\.\.\.IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES\]/,
+    "plan picker subscription must name the list",
+  );
 });
 
 test("each checkout form mounts Elements with the same list, and without Link", () => {
@@ -51,5 +58,26 @@ test("each checkout form mounts Elements with the same list, and without Link", 
     assert.match(text, /paymentMethodTypes:\s*\[\.\.\.IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES\]/, `${name}: Elements list`);
     // Card alone still let Link offer bank-funded payments inside the element.
     assert.match(text, /wallets:\s*\{\s*link:\s*"never"\s*\}/, `${name}: Link must be off`);
+  }
+});
+
+test("each checkout form mounts deferred and creates its intent only at the Pay click", () => {
+  // Creating the intent (or subscription) on page load or plan choice is
+  // what let checks be defeated by opening several pages, and what left an
+  // incomplete subscription behind on every plan change.
+  for (const { name, form, action } of CHECKOUTS) {
+    const text = source(form);
+    const elements = text.match(/<Elements[\s\S]*?>/)?.[0] ?? "";
+    assert.match(elements, /mode:\s*"(payment|subscription)"/, `${name}: Elements must mount in deferred mode`);
+    assert.doesNotMatch(elements, /clientSecret/, `${name}: Elements must not be given an intent's client secret`);
+
+    const actionNames = [...source(action).matchAll(/export async function (\w+)/g)].map((m) => m[1]);
+    const called = actionNames.filter((fn) => new RegExp(`\\b${fn}\\(`).test(text));
+    assert.equal(called.length, 1, `${name}: form should call exactly one creating action, found ${called.join(", ")}`);
+    const calls = [...text.matchAll(new RegExp(`\\b${called[0]}\\(`, "g"))];
+    assert.equal(calls.length, 1, `${name}: ${called[0]} must be called from one place only`);
+    const submitAt = text.indexOf("await elements.submit()");
+    assert.ok(submitAt >= 0, `${name}: submit handler must validate with elements.submit()`);
+    assert.ok(calls[0].index! > submitAt, `${name}: ${called[0]} must be called after elements.submit(), in the Pay handler`);
   }
 });

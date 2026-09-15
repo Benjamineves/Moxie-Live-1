@@ -279,10 +279,15 @@ reminder has a template (`lib/email/expiry-reminder.ts`) and **no sender**.
   Element. Delayed-settlement methods let state change under a processing
   payment. The form and the intent must use the same list, and
   `lib/stripe/payment-methods.test.mts` checks each checkout it lists.
-- **Known exception:** the plan checkout in `dashboard/upgrade`
-  (`createPlanSubscriptionIntent`) predates both rules — it creates the
-  subscription when a plan is chosen and uses automatic payment methods.
-  New checkouts follow the rules above; that one is an open item.
+- A checkout that creates a plan subscription stores its id before the
+  first invoice is paid, so the next Pay click has to deal with the one on
+  file. Both do it through `lib/stripe/abandoned-subscription.ts`.
+- **Known exception:** the Basic → Full upgrade in `dashboard/upgrade`
+  (`upgradeToFullAccess`) predates both rules. It swaps the price and
+  creates the invoice's PaymentIntent at "See my upgrade total", and the
+  intent's methods follow the subscription's `payment_settings`, which are
+  unset on subscriptions created before the card-only change. Open item in
+  the roadmap.
 - Tier numbers and prices live in `lib/tier-config.ts`. Several are mirrored
   by hand as literals in SQL functions (vessel limits, the 7- and 14-day grace
   periods) — change both.

@@ -4,6 +4,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { UpgradeForm } from "./UpgradeForm";
 import { UpgradeToFullForm } from "./UpgradeToFullForm";
 import { PastDueBillingPrompt } from "./PastDueBillingPrompt";
+import { getPlanAmounts } from "@/lib/stripe/checkout-amounts";
 
 /**
  * Account-level plan picker, or Basic → Full upgrade confirm screen —
@@ -102,5 +103,25 @@ export default async function UpgradePage() {
     return <UpgradeToFullForm publishableKey={publishableKey} />;
   }
 
-  return <UpgradeForm publishableKey={publishableKey} />;
+  // Elements mounts in deferred mode, before any subscription exists, so
+  // it needs the real plan amounts up front. Reads the two Stripe Prices;
+  // nothing is created by loading this page.
+  let amounts;
+  try {
+    amounts = await getPlanAmounts();
+  } catch (err) {
+    console.error("[upgrade] Could not read plan amounts:", err);
+    return (
+      <div className="min-h-screen bg-[var(--cream)] px-6 py-16">
+        <h1 className="font-[family-name:var(--font-display)] text-2xl font-light text-[var(--navy)]">
+          Checkout is unavailable right now
+        </h1>
+        <p className="mt-4 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
+          We couldn&apos;t load the plan prices, so nothing can be charged. Try again in a moment.
+        </p>
+      </div>
+    );
+  }
+
+  return <UpgradeForm publishableKey={publishableKey} amounts={amounts} />;
 }
