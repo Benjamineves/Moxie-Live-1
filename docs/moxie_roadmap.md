@@ -10,10 +10,7 @@ _Last updated 15 September 2026_
 ## Tier 1 — Blocks taking money at all
 
 ### Vercel Pro upgrade
-**Blocks:** legal operation, the scheduler, cron frequency
-Hobby prohibits commercial use, so this is required the moment a real
-payment is taken — not just a scheduler dependency. Hobby also caps cron
-at one run per day.
+**Done** (live by 2026-09-15). Cron is available; see the scheduler spec.
 
 ### Stripe live keys
 **Blocks:** real payments, first customer
@@ -52,12 +49,13 @@ question.
 
 ## Tier 3 — Unblocked once Tier 1 lands
 
-### Expiry reminder scheduler
-**Depends on:** Vercel Pro
-**Releases:** the reminder copy constraint
-Daily cron, idempotent sends, owner opt-out. Templates are built and
-unwired. Dormancy reconciliation should move into the same job — it
-currently runs lazily on page loads, including a stranger's badge scan.
+### Scheduler (tier reconciliation, transfer window, dormancy, reminders)
+**Unblocked** (Vercel Pro live). **Spec proposed, not built:**
+`docs/moxie_digital_scheduler_spec.md` — nine decisions in its §12.
+One daily cron route running a per-account pipeline: tier reconciliation →
+transfer-buyer window → dormancy → expiry reminders. Replaces the
+page-load dormancy calls (including a stranger's badge scan) and closes
+the transfer-buyer and stored-tier items below once built.
 
 ### DMARC tightening
 **Depends on:** a few weeks of consistent sending
