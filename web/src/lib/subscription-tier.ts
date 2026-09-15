@@ -80,3 +80,26 @@ export function tierForPaidInvoice(invoice: Stripe.Invoice, subscription: Stripe
   if (charged.length > 0) return single(charged.map((l) => l.tier));
   return null;
 }
+
+export type PaidInvoiceAccountAction =
+  /**
+   * A first invoice paid before Stripe moved its subscription out of
+   * 'incomplete'. The webhook throws, POST returns 500, and Stripe
+   * redelivers — by then the subscription is active and the tier lands.
+   * Nothing else would land it: status events no longer write a tier.
+   */
+  | "retry_until_active"
+  /** Recorded; the account's plan was set by hand (lib/billing-exempt.ts). */
+  | "exempt"
+  /** Write status, the paid tier, and the subscription id. */
+  | "update"
+  /** Recorded; the subscription isn't active now — its status events decide. */
+  | "leave_to_status_events";
+
+/** What invoice.paid does to the account, after the payment is recorded. */
+export function decidePaidInvoiceAccountAction(input: { subscriptionStatus: string; exempt: boolean }): PaidInvoiceAccountAction {
+  if (input.subscriptionStatus === "incomplete") return "retry_until_active";
+  if (input.exempt) return "exempt";
+  if (input.subscriptionStatus === "active") return "update";
+  return "leave_to_status_events";
+}

@@ -6,7 +6,8 @@ import { DORMANCY } from "@/lib/tier-config";
 import { notifyOwner } from "@/lib/notify";
 import { decideSubscriptionSync } from "@/lib/subscription-sync";
 import { isTierReconciliationExempt } from "@/lib/billing-exempt";
-import { accountUpdateForActiveSubscription, tierForPaidInvoice } from "@/lib/subscription-tier";
+import { accountUpdateForActiveSubscription, decidePaidInvoiceAccountAction, tierForPaidInvoice } from "@/lib/subscription-tier";
+import { decideTierUpgradeCompletion, TIER_UPGRADE_PAYMENT_TYPE } from "@/lib/stripe/tier-upgrade";
 import { notifyDowngradeGraceIfDue, notifyVesselsRestored } from "@/lib/dormancy-notify";
 
 export const runtime = "nodejs";
@@ -70,7 +71,11 @@ export async function POST(request: Request) {
 
       case "invoice.paid": {
         const invoice = event.data.object as Stripe.Invoice;
-        await recordAccountSubscriptionInvoice(service, invoice);
+        if (invoice.metadata?.payment_type === TIER_UPGRADE_PAYMENT_TYPE) {
+          await completeTierUpgrade(service, invoice);
+        } else {
+          await recordAccountSubscriptionInvoice(service, invoice);
+        }
         break;
       }
 
@@ -517,6 +522,136 @@ async function completeOwnershipTransferFromPayment(service: ServiceClient, inte
 }
 
 /**
+ * Records a paid account-level invoice (a plan charge or a tier upgrade) — once.
+ *
+ * THE RECORD. Invoice.payment_intent was removed from the Stripe API — the
+ * real PaymentIntent now sits behind invoice.payments, a paginated list
+ * needing its own expand + fetch. Not worth the extra round-trip purely for
+ * a dedup key: the invoice's own id is unique per invoice and equally good.
+ *
+ * This insert used to ignore its result, so a failure lost the record of a
+ * paid invoice with a 200. It now throws. Retry-safe for the same reason as
+ * recordVesselPayment: account_payments.stripe_invoice_id is a unique index
+ * (20260905), a retry finds the row, and a racing duplicate's 23505 means
+ * the invoice IS recorded. Recorded whatever state the account or
+ * subscription is in — Stripe says this was paid, and that is the fact
+ * being filed.
+ */
+async function recordAccountPayment(
+  service: ServiceClient,
+  row: { ownerId: string; invoiceId: string; amountCents: number | null },
+) {
+  const { data: existingPayment, error: paymentReadError } = await service
+    .from("account_payments")
+    .select("id")
+    .eq("stripe_invoice_id", row.invoiceId)
+    .maybeSingle();
+  if (paymentReadError) {
+    throw new Error(`invoice.paid ${row.invoiceId}: could not check account_payments: ${paymentReadError.message}`);
+  }
+  if (!existingPayment) {
+    const { error: insertError } = await service.from("account_payments").insert({
+      owner_id: row.ownerId,
+      stripe_invoice_id: row.invoiceId,
+      amount_cents: row.amountCents,
+      status: "paid",
+      paid_at: new Date().toISOString(),
+    });
+    if (insertError && insertError.code !== "23505") {
+      throw new Error(`invoice.paid ${row.invoiceId}: could not record the payment: ${insertError.message}`);
+    }
+  }
+}
+
+/**
+ * Basic -> Full, after the upgrade invoice is paid. See
+ * lib/stripe/tier-upgrade.ts: the checkout charged the proration as a
+ * standalone invoice and left the subscription alone; this is where it
+ * changes.
+ *
+ * Order, and why each step is safe to repeat on redelivery:
+ *  1. Record the payment first (guarded insert), so a paid upgrade that can
+ *     never be applied is still on file for a refund.
+ *  2. Swap the item to the Full price with proration_behavior 'none' — the
+ *     proration was the invoice just paid. Skipped when the item is already
+ *     on Full, and sent with an idempotency key on the invoice id.
+ *  3. Write subscription_tier = 'full' (same value every time), then
+ *     reconcile the cap.
+ *
+ * A subscription that is no longer live, or an item that isn't what was
+ * quoted, is logged as an error and left: the payment is recorded, and no
+ * retry can make the upgrade applicable.
+ */
+async function completeTierUpgrade(service: ServiceClient, invoice: Stripe.Invoice) {
+  const meta = invoice.metadata ?? {};
+  const subscriptionId = meta.subscription_id;
+  const itemId = meta.subscription_item_id;
+  const customerId = typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
+  if (!subscriptionId || !itemId || !customerId) {
+    console.error(`[stripe-webhook] invoice.paid ${invoice.id}: tier_upgrade invoice missing subscription_id, subscription_item_id or customer — not applied.`);
+    return;
+  }
+
+  const { data: ownerRow, error: ownerError } = await service
+    .from("users")
+    .select("id")
+    .eq("stripe_customer_id", customerId)
+    .maybeSingle();
+  if (ownerError) {
+    throw new Error(`invoice.paid ${invoice.id}: could not look up the owner for ${customerId}: ${ownerError.message}`);
+  }
+  const owner = ownerRow as { id: string } | null;
+  if (!owner) {
+    console.error(`[stripe-webhook] invoice.paid ${invoice.id}: tier_upgrade paid, but no user has stripe_customer_id=${customerId}. Refund by hand.`);
+    return;
+  }
+
+  await recordAccountPayment(service, { ownerId: owner.id, invoiceId: invoice.id, amountCents: invoice.amount_paid });
+
+  if (isTierReconciliationExempt(owner.id)) {
+    console.log(`[stripe-webhook] invoice.paid ${invoice.id}: tier_upgrade recorded; account ${owner.id} is exempt from Stripe tier sync — not applied.`);
+    return;
+  }
+
+  const stripe = getStripe();
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  const item = subscription.items.data.find((i) => i.id === itemId) ?? null;
+  const decision = decideTierUpgradeCompletion({
+    subscriptionStatus: subscription.status,
+    itemPriceId: item?.price.id ?? null,
+    toPriceId: meta.to_price ?? null,
+  });
+
+  if (decision.kind === "not_live") {
+    console.error(
+      `[stripe-webhook] invoice.paid ${invoice.id}: tier_upgrade paid for subscription ${subscriptionId}, which is '${subscription.status}' now. Recorded; not applied — refund by hand.`,
+    );
+    return;
+  }
+  if (decision.kind === "mismatch") {
+    console.error(`[stripe-webhook] invoice.paid ${invoice.id}: tier_upgrade not applied — ${decision.reason}. Recorded; resolve by hand.`);
+    return;
+  }
+
+  if (decision.kind === "swap") {
+    await stripe.subscriptions.update(
+      subscriptionId,
+      {
+        items: [{ id: itemId, price: meta.to_price }],
+        proration_behavior: "none",
+        metadata: { tier: "full", upgraded_by_invoice: invoice.id },
+      },
+      { idempotencyKey: `tier-upgrade-swap-${invoice.id}` },
+    );
+  }
+
+  const { error: tierError } = await service.from("users").update({ subscription_tier: "full" }).eq("id", owner.id);
+  if (tierError) throw new Error(`invoice.paid ${invoice.id}: could not write Full for ${owner.id}: ${tierError.message}`);
+
+  await reconcileVesselOverflow(service, owner.id, `tier upgrade ${invoice.id}`);
+}
+
+/**
  * Account-level subscription — Basic or Full, both real recurring Stripe
  * Subscriptions now (tier structure build). One subscription per account,
  * covering every vessel that account owns. Unlike the old per-vessel
@@ -609,37 +744,7 @@ async function recordAccountSubscriptionInvoice(service: ServiceClient, invoice:
     return;
   }
 
-  // THE RECORD. Invoice.payment_intent was also removed — the real
-  // PaymentIntent now sits behind invoice.payments, a paginated list needing
-  // its own expand + fetch. Not worth the extra round-trip purely for a dedup
-  // key: the invoice's own id is unique per invoice and equally good.
-  //
-  // This insert used to ignore its result, so a failure lost the record of a
-  // paid invoice with a 200. It now throws. Retry-safe for the same reason as
-  // recordVesselPayment: account_payments.stripe_invoice_id is a unique index
-  // (20260905), a retry finds the row, and a racing duplicate's 23505 means
-  // the invoice IS recorded. Recorded whatever the subscription's state is
-  // below — Stripe says this was paid, and that is the fact being filed.
-  const { data: existingPayment, error: paymentReadError } = await service
-    .from("account_payments")
-    .select("id")
-    .eq("stripe_invoice_id", invoice.id)
-    .maybeSingle();
-  if (paymentReadError) {
-    throw new Error(`invoice.paid ${invoice.id}: could not check account_payments: ${paymentReadError.message}`);
-  }
-  if (!existingPayment) {
-    const { error: insertError } = await service.from("account_payments").insert({
-      owner_id: owner.id,
-      stripe_invoice_id: invoice.id,
-      amount_cents: subscriptionOnlyAmountCents,
-      status: "paid",
-      paid_at: new Date().toISOString(),
-    });
-    if (insertError && insertError.code !== "23505") {
-      throw new Error(`invoice.paid ${invoice.id}: could not record the payment: ${insertError.message}`);
-    }
-  }
+  await recordAccountPayment(service, { ownerId: owner.id, invoiceId: invoice.id, amountCents: subscriptionOnlyAmountCents });
 
   // THE ACCOUNT UPDATE — and the reason this handler was not safe to retry
   // until now, even though the record above is.
@@ -664,19 +769,22 @@ async function recordAccountSubscriptionInvoice(service: ServiceClient, invoice:
   // writes a tier at all, so this is now the only event that lands a new
   // subscription's tier. Thrown, so Stripe redelivers once the status has
   // moved. Retry-safe: the payment record above is guarded.
-  if (subscription.status === "incomplete") {
+  const accountAction = decidePaidInvoiceAccountAction({
+    subscriptionStatus: subscription.status,
+    exempt: isTierReconciliationExempt(owner.id),
+  });
+  if (accountAction === "retry_until_active") {
     throw new Error(
       `invoice.paid ${invoice.id}: subscription ${subscription.id} is still 'incomplete' — retrying so the paid tier lands once it is active.`,
     );
   }
-
   // Set by hand; nothing driven by Stripe writes its plan (lib/billing-exempt.ts).
-  if (isTierReconciliationExempt(owner.id)) {
+  if (accountAction === "exempt") {
     console.log(`[stripe-webhook] invoice.paid ${invoice.id}: recorded; account ${owner.id} is exempt from Stripe tier sync — not updated.`);
     return;
   }
 
-  if (subscription.status === "active") {
+  if (accountAction === "update") {
     const { error: updateError } = await service
       .from("users")
       .update({

@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import type Stripe from "stripe";
-import { accountUpdateForActiveSubscription, tierForPaidInvoice } from "./subscription-tier.ts";
+import { accountUpdateForActiveSubscription, decidePaidInvoiceAccountAction, tierForPaidInvoice } from "./subscription-tier.ts";
 
 // Real test-mode ids, read from Stripe on 2026-09-15.
 const BASIC = "price_1UBJBvF2ijdqsFlLI53vIrU5";
@@ -124,4 +124,31 @@ test("an older invoice delivered after a newer one decides nothing", () => {
   const renewal = invoice("in_old_renewal", "subscription_cycle", [{ amount: 5900, price: BASIC, proration: false }]);
   const afterUpgrade = { ...sub1UBJeT, latest_invoice: "in_upgrade" } as unknown as Stripe.Subscription;
   assert.equal(tierForPaidInvoice(renewal, afterUpgrade), null);
+});
+
+test("a first invoice paid while its subscription is still incomplete is retried, not left", () => {
+  // Status events no longer write a tier, so if invoice.paid gave up here a
+  // new subscriber's tier would never be written. The webhook throws on
+  // this, POST returns 500, and Stripe redelivers.
+  assert.equal(decidePaidInvoiceAccountAction({ subscriptionStatus: "incomplete", exempt: false }), "retry_until_active");
+  // Checked before the exemption: an exempt account's retry is harmless and still records the payment.
+  assert.equal(decidePaidInvoiceAccountAction({ subscriptionStatus: "incomplete", exempt: true }), "retry_until_active");
+  assert.equal(decidePaidInvoiceAccountAction({ subscriptionStatus: "active", exempt: false }), "update");
+  assert.equal(decidePaidInvoiceAccountAction({ subscriptionStatus: "active", exempt: true }), "exempt");
+  for (const status of ["canceled", "past_due", "unpaid", "incomplete_expired"]) {
+    assert.equal(decidePaidInvoiceAccountAction({ subscriptionStatus: status, exempt: false }), "leave_to_status_events", status);
+  }
+});
+
+test("the webhook throws on retry_until_active, before the account update", async () => {
+  const { readFileSync } = await import("node:fs");
+  const { fileURLToPath } = await import("node:url");
+  const route = readFileSync(fileURLToPath(new URL("../app/api/stripe/webhook/route.ts", import.meta.url)), "utf8");
+  const handler = route.slice(route.indexOf("async function recordAccountSubscriptionInvoice"), route.indexOf("async function syncSubscriptionStatus"));
+  const branch = handler.indexOf('accountAction === "retry_until_active"');
+  assert.ok(branch >= 0, "invoice.paid must act on decidePaidInvoiceAccountAction");
+  assert.match(handler.slice(branch, branch + 300), /throw new Error\(/, "retry_until_active must throw so POST returns 500");
+  assert.ok(branch < handler.indexOf('accountAction === "update"'));
+  // And a throw anywhere in a handler becomes a 500.
+  assert.match(route, /catch \(err\) \{\s*console\.error\(`\[stripe-webhook\] Failed handling[^]*?status: 500/);
 });

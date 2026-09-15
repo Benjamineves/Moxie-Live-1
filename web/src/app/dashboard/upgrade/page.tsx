@@ -5,6 +5,14 @@ import { UpgradeForm } from "./UpgradeForm";
 import { UpgradeToFullForm } from "./UpgradeToFullForm";
 import { PastDueBillingPrompt } from "./PastDueBillingPrompt";
 import { getPlanAmounts } from "@/lib/stripe/checkout-amounts";
+import { getStripe } from "@/lib/stripe/server";
+import { quoteTierUpgrade } from "@/lib/stripe/tier-upgrade";
+
+/** The Basic -> Full quote as of this moment. Reads only. */
+async function quoteUpgradeAsOfNow(subscriptionId: string) {
+  const now = Math.floor(Date.now() / 1000);
+  return quoteTierUpgrade(getStripe(), { subscriptionId, prorationDate: now, now });
+}
 
 /**
  * Account-level plan picker, or Basic → Full upgrade confirm screen —
@@ -19,7 +27,8 @@ import { getPlanAmounts } from "@/lib/stripe/checkout-amounts";
  *    back to /dashboard with no way to actually fix the payment — found
  *    live testing the dormant-vessel "Choose a plan" link.
  *  - Active, already Full → nothing to do, back to /dashboard.
- *  - Active on Basic → the upgrade confirm screen (UpgradeToFullForm) —
+ *  - Active on Basic → the upgrade confirm screen (UpgradeToFullForm), with
+ *    the prorated total quoted on load (a read) —
  *    a real, contextual "upgrade to Full" path that didn't exist before
  *    (Manage Billing/the Stripe Portal has no concept of our tiers, so
  *    it couldn't offer this).
@@ -47,7 +56,7 @@ export default async function UpgradePage() {
     redirect("/dashboard");
   }
 
-  type OwnerRow = { subscription_status: string | null; subscription_tier: string | null };
+  type OwnerRow = { subscription_status: string | null; subscription_tier: string | null; stripe_subscription_id: string | null };
 
   const normalizedEmail = user.email?.trim().toLowerCase();
   let ownerRow: OwnerRow | null = null;
@@ -55,7 +64,7 @@ export default async function UpgradePage() {
   if (normalizedEmail) {
     const { data } = await service
       .from("users")
-      .select("subscription_status, subscription_tier")
+      .select("subscription_status, subscription_tier, stripe_subscription_id")
       .eq("email", normalizedEmail)
       .maybeSingle();
     ownerRow = data as OwnerRow | null;
@@ -63,7 +72,7 @@ export default async function UpgradePage() {
   if (!ownerRow) {
     const { data } = await service
       .from("users")
-      .select("subscription_status, subscription_tier")
+      .select("subscription_status, subscription_tier, stripe_subscription_id")
       .eq("id", user.id)
       .maybeSingle();
     ownerRow = data as OwnerRow | null;
@@ -99,8 +108,38 @@ export default async function UpgradePage() {
     );
   }
 
+  const unavailable = (message: string) => (
+    <div className="min-h-screen bg-[var(--cream)] px-6 py-16">
+      <h1 className="font-[family-name:var(--font-display)] text-2xl font-light text-[var(--navy)]">
+        Checkout is unavailable right now
+      </h1>
+      <p className="mt-4 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">{message}</p>
+    </div>
+  );
+
   if (isActive && ownerRow?.subscription_tier === "basic") {
-    return <UpgradeToFullForm publishableKey={publishableKey} />;
+    // The prorated total, quoted as of now. Reads only (subscriptions.retrieve,
+    // invoices.createPreview) — loading this page changes nothing in Stripe.
+    // The Pay click re-quotes with this same proration_date and must match.
+    if (!ownerRow.stripe_subscription_id) {
+      return unavailable("We couldn't find the subscription on your account, so nothing can be charged.");
+    }
+    let quote;
+    try {
+      quote = await quoteUpgradeAsOfNow(ownerRow.stripe_subscription_id);
+    } catch (err) {
+      console.error("[upgrade] Could not quote the Basic -> Full upgrade:", err);
+      return unavailable("We couldn't calculate your upgrade total, so nothing can be charged. Try again in a moment.");
+    }
+    if ("error" in quote) return unavailable(quote.error);
+    return (
+      <UpgradeToFullForm
+        publishableKey={publishableKey}
+        amountCents={quote.amountCents}
+        currency={quote.currency}
+        prorationDate={quote.prorationDate}
+      />
+    );
   }
 
   // Elements mounts in deferred mode, before any subscription exists, so
@@ -111,16 +150,7 @@ export default async function UpgradePage() {
     amounts = await getPlanAmounts();
   } catch (err) {
     console.error("[upgrade] Could not read plan amounts:", err);
-    return (
-      <div className="min-h-screen bg-[var(--cream)] px-6 py-16">
-        <h1 className="font-[family-name:var(--font-display)] text-2xl font-light text-[var(--navy)]">
-          Checkout is unavailable right now
-        </h1>
-        <p className="mt-4 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
-          We couldn&apos;t load the plan prices, so nothing can be charged. Try again in a moment.
-        </p>
-      </div>
-    );
+    return unavailable("We couldn't load the plan prices, so nothing can be charged. Try again in a moment.");
   }
 
   return <UpgradeForm publishableKey={publishableKey} amounts={amounts} />;

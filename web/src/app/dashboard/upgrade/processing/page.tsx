@@ -12,7 +12,13 @@ import { ActivationPoller } from "@/components/ActivationPoller";
  * Checks subscription_status rather than subscription_tier==='full' so a
  * Basic subscriber's checkout resolves here too, not just Full's.
  */
-export default async function UpgradeProcessingPage() {
+type Props = {
+  /** tier=full: a Basic -> Full upgrade. The account is already active, so wait for the tier instead. */
+  searchParams: Promise<{ tier?: string }>;
+};
+
+export default async function UpgradeProcessingPage({ searchParams }: Props) {
+  const { tier: awaitedTier } = await searchParams;
   const supabase = await createSupabaseServerClient();
   if (!supabase) {
     redirect("/login?next=/dashboard/upgrade/processing");
@@ -31,22 +37,27 @@ export default async function UpgradeProcessingPage() {
   }
 
   const normalizedEmail = user.email?.trim().toLowerCase();
-  let subscriptionStatus: string | null = null;
+  type Row = { subscription_status: string | null; subscription_tier: string | null };
+  let row: Row | null = null;
 
   if (normalizedEmail) {
     const { data } = await service
       .from("users")
-      .select("subscription_status")
+      .select("subscription_status, subscription_tier")
       .eq("email", normalizedEmail)
       .maybeSingle();
-    subscriptionStatus = (data as { subscription_status: string | null } | null)?.subscription_status ?? null;
+    row = data as Row | null;
   }
-  if (subscriptionStatus === null) {
-    const { data } = await service.from("users").select("subscription_status").eq("id", user.id).maybeSingle();
-    subscriptionStatus = (data as { subscription_status: string | null } | null)?.subscription_status ?? null;
+  if (!row) {
+    const { data } = await service.from("users").select("subscription_status, subscription_tier").eq("id", user.id).maybeSingle();
+    row = data as Row | null;
   }
 
-  if (subscriptionStatus === "active") {
+  // A Basic -> Full upgrade starts from an active account, so status alone
+  // would redirect before the webhook has written Full.
+  const done =
+    row?.subscription_status === "active" && (awaitedTier !== "full" || row.subscription_tier === "full");
+  if (done) {
     redirect("/dashboard?upgraded=1");
   }
 

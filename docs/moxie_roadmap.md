@@ -72,37 +72,36 @@ The Full plan list and badge checkout both mention email reminders. The
 template exists; nothing sends it. Direct violation of the standing copy
 rule. Either remove the claims or wait for the scheduler.
 
-### Basic → Full upgrade doesn't follow checkout conventions
-`upgradeToFullAccess` swaps the subscription item to the Full price,
-invoices the proration and mints its PaymentIntent when the owner clicks
-"See my upgrade total" — before any payment. Elements mounts on that
-intent's client secret (not deferred), Link is not turned off, and the
-intent's methods follow the subscription's `payment_settings`, which are
-unset on all three active subscriptions.
+### Abandoned Basic → Full upgrades: Stripe on Full, app on Basic
+**The gap.** Until `2026-09-15`'s checkout conversion deploys, the live
+upgrade swaps the subscription to the Full price when the owner clicks
+"See my upgrade total". An owner who then walks away is left **on the
+Full price in Stripe while the app shows Basic** (the webhook no longer
+writes Full from the price, since `924b294`). Their next renewal charges
+the Full price — plus the proration items the swap left pending — for a
+plan they declined. Before `924b294` the same click granted Full outright.
 
-**Stripe applies the swap immediately — observed, not inferred.** Stripe's
-event log for `sub_1UBKTY…` on 2 Sept: the current three-call version
-swapped the price at 21:09:06 (`pending_update` null), created the invoice
-at 21:09:07, and it was paid at 21:09:30. `sub_1UBJeT…` (Full price since
-20:43 that day, proration never invoiced) came from the *earlier* version,
-whose swap sent `payment_behavior: "default_incomplete"` — not the same
-call as today's, which sends no `payment_behavior`. The code comment
-saying Stripe holds the change is wrong.
+**Closed for new clicks** by the conversion (see Done): the subscription
+is not touched until the upgrade invoice is paid.
 
-**Full before payment is closed in the webhook (2026-09-15).** The tier
-now follows the paid invoice, not the subscription's price
-(`lib/subscription-tier.ts`), so the swap no longer writes Full; the paid
-proration invoice does. Still open on this checkout: an abandoned upgrade
-leaves the Stripe price on Full with the account on Basic, and the
-downgrade-grace notifier reads Stripe's price as the tier.
+**Anyone already in it stays in it** — the conversion doesn't undo a swap.
+Checked read-only on 2026-09-15: no account is (the one Basic account,
+`0a5267af…`, is on the Basic price in Stripe; no open or abandoned upgrade
+invoices anywhere). If one appears from the window before deploy, the sign
+is `users.subscription_tier = 'basic'` with the live subscription's item on
+`STRIPE_PRICE_ID_FULL`. Fixing one is a Stripe write: swap the item back
+with `proration_behavior: "none"` and delete its pending proration items —
+ask first.
 
-**Converting it (option B) is blocked on one unknown.** An invoice's
-PaymentIntent carries `setup_future_usage: off_session` (read on both
-subscription invoices), and a deferred form must match it. No standalone
-invoice exists to read, so what a customer-only invoice sets is unobserved.
-Either confirm it with test-mode writes, or charge a plain PaymentIntent
-(the badge fee's proven shape) and add a migration so `account_payments`
-can record one.
+**Existing data, not this gap:** `90806ee6…` (`sub_1UBJeT…`) is Full in
+both Stripe and the app, having paid only for Basic; its two pending
+proration items (net $89.99) will go on its 2027-09-02 renewal.
+
+### A paid upgrade that can't be applied is only logged
+If the subscription is cancelled (or its item changed) between the upgrade
+payment and the webhook, `completeTierUpgrade` records the payment and logs
+an error — no swap, no Full, no notification to the owner or admin. Refund
+by hand from the Stripe dashboard. Rare; wants an admin-visible signal.
 
 ### Upgrading to Full doesn't restore locked vessels
 `clear_vessels_lapsed` only restores `dormant_cause = 'lapsed'`. An owner
@@ -150,6 +149,10 @@ downgraded on the first run. It must also compare against what was paid
 - **`shipped_at` / `received_at` renames** + per-identity despatch
   timestamp. From the provisioning build; do together.
 - **Confirm `ben@` removed from `ADMIN_EMAILS`** in Vercel.
+- **Upgrade form no longer offers the saved card.** The old form created a
+  Stripe Customer Session to pre-select the card on file; the deferred form
+  doesn't (that session was a Stripe object made before the Pay click).
+  Owners re-enter a card to upgrade; renewals still use the saved one.
 - **No vessel cap check on the plan picker.** A cancelled owner
   resubscribing to Basic with more lapsed vessels than Basic allows isn't
   warned at the Pay click; `reconcile_vessel_overflow` still enforces it
@@ -175,5 +178,7 @@ and document stale-cache fixes · gold contrast sweep · vessel cap bypass
 · webhook log-and-succeed failures · `choose_active_vessels` constraints ·
 payment/title records RESTRICT · card-only checkout · owner delete path ·
 all dormancy notifications · plan picker on `/dashboard/upgrade` card-only,
-created at the Pay click · tier follows the paid invoice, not the
+created at the Pay click · Basic → Full upgrade converted: quoted by
+a read, standalone card-only invoice at the Pay click, subscription
+swapped by the webhook only after payment · tier follows the paid invoice, not the
 subscription's price · admin account exempt from Stripe tier sync

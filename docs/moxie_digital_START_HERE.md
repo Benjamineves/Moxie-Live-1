@@ -15,7 +15,7 @@ A vessel registry. Every boat gets a permanent **MXE ID** (`MXE-01024`), printed
 - An account-level subscription: **Basic** ($59/yr, 2 active vessels) or **Full Access** ($149/yr, 5 active vessels).
 - A **transfer fee** paid by the seller ($49 on Basic, $25 on Full).
 
-Prices and limits live in `web/src/lib/tier-config.ts`; the actual charge comes from the Stripe Price each env var points at. The badge fee, signup bundle, transfer fee and plan picker checkouts are card-only; the Basic → Full upgrade at `/dashboard/upgrade` is not yet (open item 10).
+Prices and limits live in `web/src/lib/tier-config.ts`; the actual charge comes from the Stripe Price each env var points at. All five checkouts — badge fee, signup bundle, transfer fee, plan picker, Basic → Full upgrade — are card-only and create their Stripe objects at the Pay click.
 
 **Badge inventory:** MXE IDs are **sequential, five digits**, allocated when a badge batch is minted, not when a vessel registers. A vessel is assigned a pre-minted identity from the pool at creation; badges encode `/s/<token>`, which resolves to the vessel. An unpaid vessel's identity can be reclaimed back to stock.
 
@@ -78,6 +78,6 @@ Known and deliberately not done, as of 2026-09-14. The first several were raised
 | 7 | **Stripe `unpaid` recovery reads as a resubscription** | Notified in-app instead of by email. Recorded in the dormant identity spec §8 |
 | 8 | **Live Stripe keys** | Everything runs in Stripe test mode. Switching to live is the last step before real customers |
 | 9 | **Native app** | Deferred; the PWA covers it for now |
-| 10 | **Basic → Full upgrade (`/dashboard/upgrade`) predates the checkout conventions** | `upgradeToFullAccess` swaps the subscription to the Full price and creates the proration invoice's PaymentIntent when the owner asks to *see* the total, before any payment. Its payment methods follow the subscription's `payment_settings`, unset on every subscription that exists today. The plan picker on the same page was brought in line on 2026-09-14. Granting Full before payment was closed in the webhook on 2026-09-15 (the tier follows the paid invoice); converting the checkout is blocked on one unknown, see the roadmap |
+| 10 | **Abandoned Basic → Full upgrades before 2026-09-15** | The old upgrade swapped the subscription to the Full price before payment, so an owner who walked away could be left on Full in Stripe and Basic in the app, and charged Full at renewal. Converted 2026-09-15; no account was in that state when checked. See the roadmap |
 
 **Migration state, checked read-only against the live database on 2026-09-14:** `20260929`, `20260930`, `20261002` and `20261003` have been run — each one's changed function or column is visible live. `20261001` (payment and history foreign keys to `ON DELETE RESTRICT`) **can't be confirmed** that way, because foreign-key rules aren't visible through PostgREST; check it in the SQL editor with `select conname, confdeltype from pg_constraint where conrelid = 'vessel_payments'::regclass and contype = 'f';` (`r` = RESTRICT, `c` = CASCADE). Anything after `20261003` postdates this document.

@@ -32,5 +32,8 @@ test("every place that syncs an account's plan from Stripe checks the exemption"
   for (const branch of ['action.kind === "lapse"', 'action.kind === "past_due"', 'action.kind === "active"']) {
     assert.ok(check < statusSync.indexOf(branch), `status sync: exemption before ${branch}`);
   }
+  const upgrade = webhook.slice(webhook.indexOf("async function completeTierUpgrade"), webhook.indexOf("async function recordAccountSubscriptionInvoice"));
+  assert.ok(upgrade.indexOf("isTierReconciliationExempt(") >= 0, "tier upgrade must check the exemption");
+  assert.ok(upgrade.indexOf("isTierReconciliationExempt(") < upgrade.indexOf('update({ subscription_tier: "full" })'), "tier upgrade: exemption before writing Full");
   assert.match(read("./dormancy-notify.ts"), /!isTierReconciliationExempt\(ownerId\)/, "grace notifier must not ask Stripe for an exempt account");
 });

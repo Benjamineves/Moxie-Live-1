@@ -16,6 +16,7 @@ const CHECKOUTS = [
   { name: "badge fee", action: "dashboard/[mxeId]/payment/actions.ts", form: "dashboard/[mxeId]/payment/PaymentForm.tsx" },
   { name: "signup bundle", action: "dashboard/[mxeId]/payment/actions.ts", form: "dashboard/[mxeId]/payment/SignupBundleForm.tsx" },
   { name: "plan picker", action: "dashboard/upgrade/actions.ts", form: "dashboard/upgrade/UpgradeForm.tsx" },
+  { name: "Basic to Full upgrade", action: "dashboard/upgrade/actions.ts", form: "dashboard/upgrade/UpgradeToFullForm.tsx" },
 ];
 
 const LIST = /payment_method_types:\s*\[\.\.\.IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES\]/;
@@ -43,12 +44,12 @@ test("each checkout action names the shared list on what it creates", () => {
   assert.equal(uses.length, 2, "badge fee intent and bundle subscription must both name the list");
   assert.match(badgeAndBundle, /payment_settings:\s*\{[^}]*payment_method_types:\s*\[\.\.\.IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES\]/);
   assert.match(source("dashboard/transfer/[transferId]/payment/actions.ts"), LIST);
-  // Plan picker: on the subscription's payment_settings, like the bundle.
-  assert.match(
-    source("dashboard/upgrade/actions.ts"),
-    /payment_settings:\s*\{[^}]*payment_method_types:\s*\[\.\.\.IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES\]/,
-    "plan picker subscription must name the list",
-  );
+  // Plan picker (the subscription) and Basic to Full (the upgrade invoice): both in payment_settings.
+  const upgradeUses =
+    source("dashboard/upgrade/actions.ts").match(
+      /payment_settings:\s*\{[^}]*payment_method_types:\s*\[\.\.\.IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES\]/g,
+    ) ?? [];
+  assert.equal(upgradeUses.length, 2, "plan picker subscription and upgrade invoice must both name the list");
 });
 
 test("each checkout form mounts Elements with the same list, and without Link", () => {

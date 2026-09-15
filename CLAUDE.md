@@ -288,12 +288,12 @@ reminder has a template (`lib/email/expiry-reminder.ts`) and **no sender**.
 - A checkout that creates a plan subscription stores its id before the
   first invoice is paid, so the next Pay click has to deal with the one on
   file. Both do it through `lib/stripe/abandoned-subscription.ts`.
-- **Known exception:** the Basic → Full upgrade in `dashboard/upgrade`
-  (`upgradeToFullAccess`) predates both rules. It swaps the price and
-  creates the invoice's PaymentIntent at "See my upgrade total", and the
-  intent's methods follow the subscription's `payment_settings`, which are
-  unset on subscriptions created before the card-only change. Open item in
-  the roadmap.
+- **Never change a subscription before it is paid for.** Stripe applies an
+  item swap when requested. The Basic → Full upgrade charges a standalone
+  invoice and the webhook swaps the item after `invoice.paid`
+  (`lib/stripe/tier-upgrade.ts`). A subscription invoice's PaymentIntent
+  carries `setup_future_usage: off_session`; a standalone invoice's doesn't
+  (read in test mode) — the deferred form must match whichever it confirms.
 - Tier numbers and prices live in `lib/tier-config.ts`. Several are mirrored
   by hand as literals in SQL functions (vessel limits, the 7- and 14-day grace
   periods) — change both.
