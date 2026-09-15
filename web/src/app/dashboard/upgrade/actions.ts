@@ -362,11 +362,10 @@ export async function upgradeToFullAccess(input: { expectedAmountCents: number; 
     }
 
     // 5. The intent must match the deferred form, which mounts with no
-    //    setup_future_usage. Read in test mode on a customer with no saved
-    //    card: null. Not yet read on one with a saved card — every real
-    //    upgrader has one. A mismatch would fail at confirmation without
-    //    charging; checking here fails the same way, but says why, logs the
-    //    value, and voids the invoice rather than leaving it open.
+    //    setup_future_usage. Read in test mode as null both without and with
+    //    a saved card (see UPGRADE_FORM_SETUP_FUTURE_USAGE). Kept as a guard:
+    //    a mismatch would fail at confirmation without charging; this fails
+    //    the same way, but says why, logs the value, and voids the invoice.
     const paymentIntentId = clientSecret.split("_secret_")[0];
     const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
     if ((intent.setup_future_usage ?? null) !== UPGRADE_FORM_SETUP_FUTURE_USAGE) {

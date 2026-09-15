@@ -266,7 +266,9 @@ export async function createSavedCardSession(stripe: Stripe, customerId: string)
 /**
  * What the deferred upgrade form mounts with. The action refuses an invoice
  * whose PaymentIntent disagrees, before handing out its client secret.
- * Read in test mode on a customer with no saved card: null. Not yet read on
- * a customer with one.
+ * Read in test mode on 2026-09-15, both null: a customer with no saved card
+ * (cus_VGTlfcx1RwtwOz) and one with a saved test card, allow_redisplay
+ * 'unspecified' (cus_VGUCm4n6lRjsuj). Neither fixture had a subscription;
+ * the invoice isn't attached to one.
  */
 export const UPGRADE_FORM_SETUP_FUTURE_USAGE = null;

@@ -97,17 +97,6 @@ ask first.
 both Stripe and the app, having paid only for Basic; its two pending
 proration items (net $89.99) will go on its 2027-09-02 renewal.
 
-### Upgrade intent's `setup_future_usage` unobserved for customers with a saved card
-The upgrade form mounts with no `setup_future_usage`. The upgrade
-invoice's PaymentIntent was read as `null` on a fixture customer with **no**
-saved card; every real upgrader has one, and that case is unread. If it
-differs, `upgradeToFullAccess` voids the invoice and refuses with the value
-logged — nothing is charged, but **every upgrade would refuse**, so the
-whole path would be down for exactly the people who can use it. Showing
-saved cards doesn't change this: the session has saving disabled and
-can't alter the intent. Settling it takes test-mode writes on a fixture
-customer with a test card attached — ask first.
-
 ### Upgrading to Full doesn't restore locked vessels
 `clear_vessels_lapsed` only restores `dormant_cause = 'lapsed'`. An owner
 who pays for Full keeps cap-locked vessels until they find manage-fleet.
@@ -154,13 +143,13 @@ downgraded on the first run. It must also compare against what was paid
 - **`shipped_at` / `received_at` renames** + per-identity despatch
   timestamp. From the provisioning build; do together.
 - **Confirm `ben@` removed from `ADMIN_EMAILS`** in Vercel.
-- **Saved-card rendering not seen.** The upgrade form lists saved cards
-  through a Customer Session (created on page load when the customer has a
-  card — a Stripe write per view, no payment state). Seeing it render needs
-  that write and a signed-in Basic account; the only Basic account is a
-  personal one. The form it replaced set no `allow_redisplay` filter, and
-  every saved card read in test mode is `limited` or `unspecified`, so it
-  most likely showed no saved cards either (inferred, not seen).
+- **Saved card: Stripe shows an edit (pencil) action.** Seen rendering on
+  the upgrade form: the saved card lists with no remove action and the
+  new-card form has no save tick, as configured. Stripe also offers an
+  edit button on the saved card, which no Customer Session feature in
+  `stripe@22` controls; what it lets an owner change wasn't tried (saving
+  would be a Stripe write). Only `unspecified` cards were seen rendering;
+  `limited` cards are in the filter but weren't on the fixture.
 - **No vessel cap check on the plan picker.** A cancelled owner
   resubscribing to Basic with more lapsed vessels than Basic allows isn't
   warned at the Pay click; `reconcile_vessel_overflow` still enforces it
@@ -189,6 +178,7 @@ all dormancy notifications · plan picker on `/dashboard/upgrade` card-only,
 created at the Pay click · Basic → Full upgrade converted: quoted by
 a read, standalone card-only invoice at the Pay click, subscription
 swapped by the webhook only after payment · saved cards offered on the
-upgrade form · a paid upgrade that can't be applied alerts every admin and
+upgrade form (seen rendering; the upgrade invoice's intent has no
+`setup_future_usage` with or without a saved card — both read in test mode) · a paid upgrade that can't be applied alerts every admin and
 the owner, and retries while the subscription could recover · tier follows the paid invoice, not the
 subscription's price · admin account exempt from Stripe tier sync
