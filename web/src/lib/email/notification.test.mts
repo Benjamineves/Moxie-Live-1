@@ -30,6 +30,8 @@ const ALL: NotificationType[] = [
   "transfer_declined_or_expired",
   "transfer_completed_seller",
   "transfer_completed_buyer",
+  "tier_upgrade_not_applied",
+  "admin_tier_upgrade_not_applied",
 ];
 
 const EMAILING: EmailableNotificationType[] = ALL.filter(
@@ -225,6 +227,7 @@ test("CTAs point at routes that exist", () => {
     "https://moxieyacht.com/dashboard/upgrade",
     "https://moxieyacht.com/dashboard/manage-fleet",
     "https://moxieyacht.com/MXE-01042?role=owner",
+    "https://moxieyacht.com/admin",
   ];
   for (const type of EMAILING) {
     for (const mxeId of [null, "MXE-01042"]) {

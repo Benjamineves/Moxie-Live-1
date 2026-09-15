@@ -5,8 +5,10 @@ import { fileURLToPath } from "node:url";
 import type Stripe from "stripe";
 import {
   QUOTE_MAX_AGE_SECONDS,
+  SAVED_CARD_SESSION_FEATURES,
   checkProrationDate,
   decideTierUpgradeCompletion,
+  unappliedUpgradeMessages,
   upgradeProrationCents,
 } from "./tier-upgrade.ts";
 
@@ -72,8 +74,21 @@ test("the webhook applies a paid upgrade only to a live subscription on the quot
   assert.deepEqual(decideTierUpgradeCompletion({ subscriptionStatus: "past_due", itemPriceId: BASIC, toPriceId: FULL }), { kind: "swap" });
   // Redelivery after the swap.
   assert.deepEqual(decideTierUpgradeCompletion({ subscriptionStatus: "active", itemPriceId: FULL, toPriceId: FULL }), { kind: "already_swapped" });
-  for (const status of ["canceled", "unpaid", "incomplete_expired"]) {
-    assert.deepEqual(decideTierUpgradeCompletion({ subscriptionStatus: status, itemPriceId: BASIC, toPriceId: FULL }), { kind: "not_live" });
+  // Terminal: no redelivery can apply it, so alert and stop.
+  for (const status of ["canceled", "incomplete_expired"]) {
+    assert.deepEqual(decideTierUpgradeCompletion({ subscriptionStatus: status, itemPriceId: BASIC, toPriceId: FULL }), {
+      kind: "not_live",
+      status,
+      retryable: false,
+    });
+  }
+  // Could still become live: alert and throw so Stripe redelivers.
+  for (const status of ["unpaid", "paused", "incomplete"]) {
+    assert.deepEqual(decideTierUpgradeCompletion({ subscriptionStatus: status, itemPriceId: BASIC, toPriceId: FULL }), {
+      kind: "not_live",
+      status,
+      retryable: true,
+    });
   }
   assert.equal(decideTierUpgradeCompletion({ subscriptionStatus: "active", itemPriceId: null, toPriceId: FULL }).kind, "mismatch");
   assert.equal(decideTierUpgradeCompletion({ subscriptionStatus: "active", itemPriceId: BASIC, toPriceId: BASIC }).kind, "mismatch");
@@ -103,4 +118,67 @@ test("the webhook records a paid upgrade before swapping, and swaps before writi
   assert.ok(record >= 0 && swap > record && write > swap, "record, then swap, then write Full");
   assert.match(handler, /proration_behavior:\s*"none"/, "the proration was the invoice just paid");
   assert.match(handler, /idempotencyKey:/);
+});
+
+test("a paid upgrade that isn't applied tells the admin what to do and the owner only what is true", () => {
+  const base = { amountCents: 8999, currency: "usd", invoiceId: "in_123", subscriptionId: "sub_456", ownerId: "owner-789", reason: "subscription sub_456 is 'canceled'" };
+  const terminal = unappliedUpgradeMessages({ ...base, retrying: false });
+  for (const needle of ["$89.99", "in_123", "sub_456", "owner-789", "'canceled'", "Refund"]) {
+    assert.ok(terminal.admin.includes(needle), `admin message should include ${needle}`);
+  }
+  assert.ok(terminal.owner.includes("$89.99"));
+  assert.match(terminal.owner, /alerted/);
+  // The owner is not handed internals, and not promised a refund no code issues.
+  for (const leak of ["in_123", "sub_456", "account_payments", "refund"]) {
+    assert.ok(!terminal.owner.toLowerCase().includes(leak.toLowerCase()), `owner message should not mention ${leak}`);
+  }
+  const retrying = unappliedUpgradeMessages({ ...base, retrying: true });
+  assert.match(retrying.owner, /hasn't been applied yet/);
+  assert.match(retrying.admin, /apply on its own if the subscription becomes live/);
+});
+
+test("the webhook never only logs a paid upgrade it can't apply", () => {
+  const route = app("api/stripe/webhook/route.ts");
+  const handler = fnBody(route, "completeTierUpgrade");
+  // What it used to do: console.error and return.
+  assert.doesNotMatch(handler, /console\.error\(/, "completeTierUpgrade must alert or throw, never only log");
+  // Missing metadata, no owner, not live, mismatch.
+  assert.ok((handler.match(/alertUnappliedUpgrade\(/g) ?? []).length >= 4, "every branch that can't apply must alert");
+  const notLive = handler.indexOf('decision.kind === "not_live"');
+  const branch = handler.slice(notLive, handler.indexOf('decision.kind === "mismatch"'));
+  assert.ok(branch.indexOf("alertUnappliedUpgrade(") < branch.indexOf("throw new Error("), "alert before throwing for a retry");
+  assert.match(branch, /if \(decision\.retryable\) \{\s*throw new Error\(/, "a subscription that could recover is retried");
+
+  const alert = fnBody(route, "alertUnappliedUpgrade");
+  assert.match(alert, /\.eq\("role", "admin"\)/);
+  assert.match(alert, /admins\.length === 0\) \{\s*throw new Error\(/, "no admin to alert is a failure, not a log line");
+  assert.ok(alert.indexOf('"admin_tier_upgrade_not_applied"') < alert.indexOf('"tier_upgrade_not_applied"'), "admins first: the owner's message says the team was alerted");
+  const once = fnBody(route, "notifyOncePerInvoice");
+  assert.match(once, /if \(!recorded\) throw new Error\(/, "an alert that didn't record is retried");
+});
+
+test("the saved card is offered through a Customer Session that can't change the intent", () => {
+  assert.equal(SAVED_CARD_SESSION_FEATURES.payment_method_redisplay, "enabled");
+  // Cards saved through a subscription are 'limited' or 'unspecified' (read in test mode); the default ['always'] shows none.
+  for (const value of ["always", "limited", "unspecified"]) {
+    assert.ok((SAVED_CARD_SESSION_FEATURES.payment_method_allow_redisplay_filters as readonly string[]).includes(value), value);
+  }
+  // A "save card" tick would send setup_future_usage the invoice intent doesn't have.
+  assert.equal(SAVED_CARD_SESSION_FEATURES.payment_method_save, "disabled");
+  // Removing a card here could detach the one renewals charge.
+  assert.equal(SAVED_CARD_SESSION_FEATURES.payment_method_remove, "disabled");
+
+  const lib = readFileSync(fileURLToPath(new URL("./tier-upgrade.ts", import.meta.url)), "utf8");
+  const create = fnBody(lib, "createSavedCardSession");
+  assert.ok(create.indexOf("listPaymentMethods(") < create.indexOf("customerSessions.create("), "no session for a customer with no card");
+
+  const form = app("dashboard/upgrade/UpgradeToFullForm.tsx");
+  const elements = form.match(/<Elements[\s\S]*?>\s*<CheckoutInner/)?.[0] ?? "";
+  assert.match(elements, /mode:\s*"payment"/, "still deferred");
+  assert.match(elements, /customerSessionClientSecret/, "the saved cards reach the Payment Element");
+  assert.doesNotMatch(elements, /setupFutureUsage\s*:/, "the form mounts with no setup_future_usage, like the intent");
+
+  const action = fnBody(app("dashboard/upgrade/actions.ts"), "upgradeToFullAccess");
+  const check = action.indexOf("setup_future_usage ?? null) !== UPGRADE_FORM_SETUP_FUTURE_USAGE");
+  assert.ok(check >= 0 && check < action.lastIndexOf("return { clientSecret }"), "the intent is checked against the form before its secret is returned");
 });

@@ -40,14 +40,14 @@ export async function notifyOwner(
   type: NotificationType,
   message: string,
   options: string | NotifyOptions = {},
-): Promise<void> {
+): Promise<{ recorded: boolean }> {
   // The fourth argument used to be a bare vesselId. Accepting both keeps
   // the existing call sites working and unchanged rather than rewriting
   // them to prove a point.
   const { vesselId, dedupeKey }: NotifyOptions = typeof options === "string" ? { vesselId: options } : options;
 
   const service = createSupabaseServiceClient();
-  if (!service) return;
+  if (!service) return { recorded: false };
 
   // The row goes in FIRST, before anything that could fail slowly. It is
   // the record; everything below is best effort on top of it.
@@ -61,7 +61,12 @@ export async function notifyOwner(
     console.error(`[notify] Failed to record notification (type=${type}, owner=${ownerId}):`, error);
   }
 
-  if (!isEmailableNotification(type)) return;
+  // Whether the record exists. Existing callers ignore it; a caller for whom
+  // a lost notification is itself the failure (a paid upgrade that couldn't
+  // be applied) throws on false so its event is retried.
+  const recorded = !error;
+
+  if (!isEmailableNotification(type)) return { recorded };
 
   try {
     await maybeSendNotificationEmail({
@@ -79,6 +84,7 @@ export async function notifyOwner(
     // that contract should not depend on the care taken downstream.
     console.error(`[notify] Email step threw (type=${type}, owner=${ownerId}):`, err);
   }
+  return { recorded };
 }
 
 async function maybeSendNotificationEmail(args: {

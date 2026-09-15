@@ -150,12 +150,19 @@ export type TierUpgradeCompletion =
   | { kind: "swap" }
   /** Already on the Full price (a redelivery after the swap): write Full. */
   | { kind: "already_swapped" }
-  /** Paid, but the subscription is no longer live. Recorded; refund by hand. */
-  | { kind: "not_live" }
-  /** Paid, but the item or price is not what was quoted. Recorded; resolve by hand. */
+  /**
+   * Paid, but the subscription isn't live. `retryable` when its status can
+   * still move back to live (unpaid, paused, incomplete): alert, then throw
+   * so Stripe redelivers. Terminal (canceled, incomplete_expired): alert and
+   * stop — no redelivery can apply it.
+   */
+  | { kind: "not_live"; status: string; retryable: boolean }
+  /** Paid, but the item or price is not what was quoted. Terminal: alert and stop. */
   | { kind: "mismatch"; reason: string };
 
 const LIVE = new Set(["active", "past_due", "trialing"]);
+/** Statuses Stripe never moves a subscription out of. Anything else not live might recover. */
+const TERMINAL = new Set(["canceled", "incomplete_expired"]);
 
 /** What invoice.paid does for a paid tier_upgrade invoice, against the subscription as it is now. */
 export function decideTierUpgradeCompletion(input: {
@@ -165,10 +172,101 @@ export function decideTierUpgradeCompletion(input: {
   /** metadata.to_price on the paid invoice. */
   toPriceId: string | null;
 }): TierUpgradeCompletion {
-  if (!LIVE.has(input.subscriptionStatus)) return { kind: "not_live" };
+  if (!LIVE.has(input.subscriptionStatus)) {
+    return { kind: "not_live", status: input.subscriptionStatus, retryable: !TERMINAL.has(input.subscriptionStatus) };
+  }
   if (!input.toPriceId || tierForPriceId(input.toPriceId) !== "full") return { kind: "mismatch", reason: "to_price is not the Full price" };
   if (input.itemPriceId === null) return { kind: "mismatch", reason: "the quoted subscription item no longer exists" };
   if (input.itemPriceId === input.toPriceId) return { kind: "already_swapped" };
   if (tierForPriceId(input.itemPriceId) !== "basic") return { kind: "mismatch", reason: `item is on ${input.itemPriceId}, not Basic` };
   return { kind: "swap" };
 }
+
+function formatMoney(cents: number, currency: string): string {
+  return new Intl.NumberFormat("en-US", { style: "currency", currency: currency.toUpperCase() }).format(cents / 100);
+}
+
+/**
+ * The two messages for a paid upgrade that wasn't applied. The admin's is
+ * operational — what to look up and what to do. The owner's says what
+ * happened in their terms and promises only what is true: a person has
+ * been alerted (the admin row is recorded before the owner's).
+ */
+export function unappliedUpgradeMessages(input: {
+  amountCents: number;
+  currency: string;
+  invoiceId: string;
+  subscriptionId: string | null;
+  ownerId: string | null;
+  reason: string;
+  retrying: boolean;
+}): { owner: string; admin: string } {
+  const amount = formatMoney(input.amountCents, input.currency);
+  const admin =
+    `A Full Access upgrade was paid (${amount}, invoice ${input.invoiceId}) but not applied: ${input.reason}. ` +
+    `Owner ${input.ownerId ?? "unknown"}, subscription ${input.subscriptionId ?? "unknown"}. The payment is recorded in account_payments. ` +
+    (input.retrying
+      ? "Stripe is redelivering the event for up to about three days and it will apply on its own if the subscription becomes live again; if it doesn't, refund the invoice in Stripe."
+      : "It will not apply on its own. Refund the invoice in Stripe, or apply the upgrade by hand.");
+  const owner = input.retrying
+    ? `Your ${amount} payment for Full Access was received but hasn't been applied yet, because your plan isn't active right now. The Moxie team has been alerted.`
+    : `Your ${amount} payment for Full Access was received but couldn't be applied to your plan. The Moxie team has been alerted.`;
+  return { owner, admin };
+}
+
+/**
+ * THE SAVED CARD, INSIDE THE DEFERRED PATTERN.
+ *
+ * A Customer Session lets the deferred Payment Element list the customer's
+ * saved cards — Stripe.js's no-intent Elements options accept
+ * customerSessionClientSecret (StripeElementsOptionsModeBase in the
+ * installed @stripe/stripe-js). It creates no payment state: no intent, no
+ * invoice, nothing that a second open page could race. The invoice and its
+ * PaymentIntent are still created only at the Pay click.
+ *
+ * - allow_redisplay filter: every saved card read in test mode is
+ *   'unspecified' or 'limited' (cards saved through a subscription), and
+ *   Stripe's default filter is ['always'] — which shows none of them. The
+ *   form this replaced set no filter.
+ * - payment_method_save 'disabled': a "save this card" tick would send
+ *   setup_future_usage on confirm, which the upgrade invoice's intent (null)
+ *   would not match.
+ * - payment_method_remove 'disabled': removing a card here could detach the
+ *   one the subscription renews on.
+ *
+ * Only created when the customer has a saved card (listing is a read), so a
+ * customer with nothing to show causes no Stripe write at all.
+ */
+export const SAVED_CARD_SESSION_FEATURES = {
+  payment_method_redisplay: "enabled",
+  payment_method_allow_redisplay_filters: ["always", "limited", "unspecified"],
+  payment_method_redisplay_limit: 3,
+  payment_method_save: "disabled",
+  payment_method_remove: "disabled",
+} as const;
+
+export async function createSavedCardSession(stripe: Stripe, customerId: string): Promise<string | null> {
+  const cards = await stripe.customers.listPaymentMethods(customerId, { type: "card", limit: 1 });
+  if (cards.data.length === 0) return null;
+  const session = await stripe.customerSessions.create({
+    customer: customerId,
+    components: {
+      payment_element: {
+        enabled: true,
+        features: {
+          ...SAVED_CARD_SESSION_FEATURES,
+          payment_method_allow_redisplay_filters: [...SAVED_CARD_SESSION_FEATURES.payment_method_allow_redisplay_filters],
+        },
+      },
+    },
+  });
+  return session.client_secret;
+}
+
+/**
+ * What the deferred upgrade form mounts with. The action refuses an invoice
+ * whose PaymentIntent disagrees, before handing out its client secret.
+ * Read in test mode on a customer with no saved card: null. Not yet read on
+ * a customer with one.
+ */
+export const UPGRADE_FORM_SETUP_FUTURE_USAGE = null;

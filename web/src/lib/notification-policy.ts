@@ -24,7 +24,9 @@ export type NotificationType =
   | "transfer_accepted"
   | "transfer_declined_or_expired"
   | "transfer_completed_seller"
-  | "transfer_completed_buyer";
+  | "transfer_completed_buyer"
+  | "tier_upgrade_not_applied"
+  | "admin_tier_upgrade_not_applied";
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -122,6 +124,16 @@ export const NOTIFICATION_POLICY: Record<NotificationType, NotificationPolicy> =
     email: true,
     dedupe: { mode: "none" },
     why: "Vessels paused by the past-due grace, restored because the failed payment went through on the same subscription — usually Stripe retrying on its own, with nobody watching. The owner was told their boats were paused, so they are told they are back. clear_vessels_lapsed returns the ids only to the call that restored them, so no window is needed.",
+  },
+  tier_upgrade_not_applied: {
+    email: true,
+    dedupe: { mode: "key" },
+    why: "The owner paid for Full Access and did not get it — the subscription stopped being live, or changed, between the payment and the webhook. They were at checkout, but the processing screen only times out; it cannot say why. Keyed on the invoice id: Stripe redelivers the event while the subscription might still recover, and every redelivery is the same paid invoice.",
+  },
+  admin_tier_upgrade_not_applied: {
+    email: true,
+    dedupe: { mode: "key" },
+    why: "Sent to every role='admin' account. A charge with nothing delivered needs a refund or a manual fix, and that must not depend on someone reading webhook logs. Recorded before the owner's message, which says the team has been alerted. Keyed on the invoice id, like the owner's.",
   },
   vessel_reactivated_by_moxie: {
     email: true,

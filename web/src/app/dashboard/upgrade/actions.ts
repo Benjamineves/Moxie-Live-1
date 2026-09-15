@@ -6,7 +6,7 @@ import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe/server";
 import { IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES } from "@/lib/stripe/payment-methods";
 import { releaseAbandonedSubscription } from "@/lib/stripe/abandoned-subscription";
-import { quoteTierUpgrade, TIER_UPGRADE_PAYMENT_TYPE } from "@/lib/stripe/tier-upgrade";
+import { quoteTierUpgrade, TIER_UPGRADE_PAYMENT_TYPE, UPGRADE_FORM_SETUP_FUTURE_USAGE } from "@/lib/stripe/tier-upgrade";
 import type { SubscriptionTier } from "@/lib/tier-config";
 
 type IntentResult = { clientSecret: string } | { error: string };
@@ -361,13 +361,26 @@ export async function upgradeToFullAccess(input: { expectedAmountCents: number; 
       return { error: "Couldn't prepare the upgrade payment. Nothing has been charged — please try again." };
     }
 
-    // Traceability only: the webhook routes on the INVOICE's metadata.
+    // 5. The intent must match the deferred form, which mounts with no
+    //    setup_future_usage. Read in test mode on a customer with no saved
+    //    card: null. Not yet read on one with a saved card — every real
+    //    upgrader has one. A mismatch would fail at confirmation without
+    //    charging; checking here fails the same way, but says why, logs the
+    //    value, and voids the invoice rather than leaving it open.
     const paymentIntentId = clientSecret.split("_secret_")[0];
-    if (paymentIntentId) {
-      await stripe.paymentIntents
-        .update(paymentIntentId, { metadata: { owner_id: owner.id, payment_type: TIER_UPGRADE_PAYMENT_TYPE, invoice_id: finalized.id } })
-        .catch((err) => console.error(`[upgrade] Failed to tag PaymentIntent ${paymentIntentId}:`, err));
+    const intent = await stripe.paymentIntents.retrieve(paymentIntentId);
+    if ((intent.setup_future_usage ?? null) !== UPGRADE_FORM_SETUP_FUTURE_USAGE) {
+      console.error(
+        `[upgrade] invoice ${finalized.id} (owner=${owner.id}): PaymentIntent ${intent.id} has setup_future_usage=${intent.setup_future_usage}, the form mounts with ${UPGRADE_FORM_SETUP_FUTURE_USAGE} — voiding.`,
+      );
+      await stripe.invoices.voidInvoice(finalized.id).catch(() => {});
+      return { error: "Couldn't prepare the upgrade payment. Nothing has been charged — please try again later." };
     }
+
+    // Traceability only: the webhook routes on the INVOICE's metadata.
+    await stripe.paymentIntents
+      .update(paymentIntentId, { metadata: { owner_id: owner.id, payment_type: TIER_UPGRADE_PAYMENT_TYPE, invoice_id: finalized.id } })
+      .catch((err) => console.error(`[upgrade] Failed to tag PaymentIntent ${paymentIntentId}:`, err));
 
     return { clientSecret };
   } catch (err) {

@@ -6,7 +6,7 @@ import { UpgradeToFullForm } from "./UpgradeToFullForm";
 import { PastDueBillingPrompt } from "./PastDueBillingPrompt";
 import { getPlanAmounts } from "@/lib/stripe/checkout-amounts";
 import { getStripe } from "@/lib/stripe/server";
-import { quoteTierUpgrade } from "@/lib/stripe/tier-upgrade";
+import { createSavedCardSession, quoteTierUpgrade } from "@/lib/stripe/tier-upgrade";
 
 /** The Basic -> Full quote as of this moment. Reads only. */
 async function quoteUpgradeAsOfNow(subscriptionId: string) {
@@ -132,12 +132,24 @@ export default async function UpgradePage() {
       return unavailable("We couldn't calculate your upgrade total, so nothing can be charged. Try again in a moment.");
     }
     if ("error" in quote) return unavailable(quote.error);
+
+    // The owner's saved cards, offered in the deferred form. A Customer
+    // Session creates no payment state; the invoice still waits for the Pay
+    // click. Best effort: without it the form asks for a card, which works.
+    let customerSessionClientSecret: string | null = null;
+    try {
+      customerSessionClientSecret = await createSavedCardSession(getStripe(), quote.customerId);
+    } catch (err) {
+      console.error(`[upgrade] Could not create a saved-card session for ${quote.customerId}; the form will ask for a card:`, err);
+    }
+
     return (
       <UpgradeToFullForm
         publishableKey={publishableKey}
         amountCents={quote.amountCents}
         currency={quote.currency}
         prorationDate={quote.prorationDate}
+        customerSessionClientSecret={customerSessionClientSecret}
       />
     );
   }

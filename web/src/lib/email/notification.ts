@@ -159,6 +159,22 @@ const COPY: Record<EmailableNotificationType, Copy> = {
     ],
     cta: { label: "Open your dashboard", path: "/dashboard" },
   },
+  tier_upgrade_not_applied: {
+    subject: "Your Full Access upgrade hasn't been applied",
+    title: "Your upgrade payment hasn't been applied",
+    detail: [
+      "Nothing else on your account has changed. You don't need to pay again.",
+    ],
+    cta: { label: "Open your dashboard", path: "/dashboard" },
+  },
+  admin_tier_upgrade_not_applied: {
+    subject: "Action needed: a paid upgrade wasn't applied",
+    title: "A paid upgrade wasn't applied",
+    detail: [
+      "The owner has been told their payment was received and that the team has been alerted. Look the invoice up in the Stripe dashboard.",
+    ],
+    cta: { label: "Open admin", path: "/admin" },
+  },
   vessel_reactivated_by_moxie: {
     subject: "Your vessel is active again",
     title: "Your vessel is active again",

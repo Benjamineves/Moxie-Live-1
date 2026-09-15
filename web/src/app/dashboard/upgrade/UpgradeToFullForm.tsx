@@ -23,6 +23,8 @@ type Props = {
   currency: string;
   /** The moment the quote was computed as of. Sent back at the Pay click, which re-quotes with it. */
   prorationDate: number;
+  /** Lists the owner's saved cards in the Payment Element. Null when they have none, or it couldn't be made. */
+  customerSessionClientSecret: string | null;
 };
 
 /**
@@ -30,13 +32,14 @@ type Props = {
  * math, quoted on load) and nothing exists in Stripe until the Pay click:
  * Elements mounts in deferred mode, and upgradeToFullAccess creates the
  * invoice only after the payment details validate. The subscription itself
- * is not changed until the webhook sees the invoice paid.
+ * is not changed until the webhook sees the invoice paid. An owner with a
+ * saved card sees it listed and can pay with it, or enter another.
  *
  * It used to change the subscription and create the invoice when the owner
  * asked to see the total — leaving them on the Full price in Stripe if they
  * then walked away.
  */
-export function UpgradeToFullForm({ publishableKey, amountCents, currency, prorationDate }: Props) {
+export function UpgradeToFullForm({ publishableKey, amountCents, currency, prorationDate, customerSessionClientSecret }: Props) {
   const stripe = getStripeJs(publishableKey);
 
   return (
@@ -82,6 +85,11 @@ export function UpgradeToFullForm({ publishableKey, amountCents, currency, prora
               // Must match the invoice's payment_settings — see
               // lib/stripe/payment-methods.ts.
               paymentMethodTypes: [...IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES],
+              // Saved cards, listed by a Customer Session — see
+              // createSavedCardSession. No setup_future_usage option: the upgrade
+              // invoice's intent has none, and the session can't add one
+              // (saving is disabled on it).
+              ...(customerSessionClientSecret ? { customerSessionClientSecret } : {}),
             }}
           >
             <CheckoutInner amountCents={amountCents} prorationDate={prorationDate} />

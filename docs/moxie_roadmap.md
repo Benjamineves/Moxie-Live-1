@@ -97,11 +97,16 @@ ask first.
 both Stripe and the app, having paid only for Basic; its two pending
 proration items (net $89.99) will go on its 2027-09-02 renewal.
 
-### A paid upgrade that can't be applied is only logged
-If the subscription is cancelled (or its item changed) between the upgrade
-payment and the webhook, `completeTierUpgrade` records the payment and logs
-an error — no swap, no Full, no notification to the owner or admin. Refund
-by hand from the Stripe dashboard. Rare; wants an admin-visible signal.
+### Upgrade intent's `setup_future_usage` unobserved for customers with a saved card
+The upgrade form mounts with no `setup_future_usage`. The upgrade
+invoice's PaymentIntent was read as `null` on a fixture customer with **no**
+saved card; every real upgrader has one, and that case is unread. If it
+differs, `upgradeToFullAccess` voids the invoice and refuses with the value
+logged — nothing is charged, but **every upgrade would refuse**, so the
+whole path would be down for exactly the people who can use it. Showing
+saved cards doesn't change this: the session has saving disabled and
+can't alter the intent. Settling it takes test-mode writes on a fixture
+customer with a test card attached — ask first.
 
 ### Upgrading to Full doesn't restore locked vessels
 `clear_vessels_lapsed` only restores `dormant_cause = 'lapsed'`. An owner
@@ -149,10 +154,13 @@ downgraded on the first run. It must also compare against what was paid
 - **`shipped_at` / `received_at` renames** + per-identity despatch
   timestamp. From the provisioning build; do together.
 - **Confirm `ben@` removed from `ADMIN_EMAILS`** in Vercel.
-- **Upgrade form no longer offers the saved card.** The old form created a
-  Stripe Customer Session to pre-select the card on file; the deferred form
-  doesn't (that session was a Stripe object made before the Pay click).
-  Owners re-enter a card to upgrade; renewals still use the saved one.
+- **Saved-card rendering not seen.** The upgrade form lists saved cards
+  through a Customer Session (created on page load when the customer has a
+  card — a Stripe write per view, no payment state). Seeing it render needs
+  that write and a signed-in Basic account; the only Basic account is a
+  personal one. The form it replaced set no `allow_redisplay` filter, and
+  every saved card read in test mode is `limited` or `unspecified`, so it
+  most likely showed no saved cards either (inferred, not seen).
 - **No vessel cap check on the plan picker.** A cancelled owner
   resubscribing to Basic with more lapsed vessels than Basic allows isn't
   warned at the Pay click; `reconcile_vessel_overflow` still enforces it
@@ -180,5 +188,7 @@ payment/title records RESTRICT · card-only checkout · owner delete path ·
 all dormancy notifications · plan picker on `/dashboard/upgrade` card-only,
 created at the Pay click · Basic → Full upgrade converted: quoted by
 a read, standalone card-only invoice at the Pay click, subscription
-swapped by the webhook only after payment · tier follows the paid invoice, not the
+swapped by the webhook only after payment · saved cards offered on the
+upgrade form · a paid upgrade that can't be applied alerts every admin and
+the owner, and retries while the subscription could recover · tier follows the paid invoice, not the
 subscription's price · admin account exempt from Stripe tier sync

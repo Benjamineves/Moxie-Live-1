@@ -7,7 +7,7 @@ import { notifyOwner } from "@/lib/notify";
 import { decideSubscriptionSync } from "@/lib/subscription-sync";
 import { isTierReconciliationExempt } from "@/lib/billing-exempt";
 import { accountUpdateForActiveSubscription, decidePaidInvoiceAccountAction, tierForPaidInvoice } from "@/lib/subscription-tier";
-import { decideTierUpgradeCompletion, TIER_UPGRADE_PAYMENT_TYPE } from "@/lib/stripe/tier-upgrade";
+import { decideTierUpgradeCompletion, TIER_UPGRADE_PAYMENT_TYPE, unappliedUpgradeMessages } from "@/lib/stripe/tier-upgrade";
 import { notifyDowngradeGraceIfDue, notifyVesselsRestored } from "@/lib/dormancy-notify";
 
 export const runtime = "nodejs";
@@ -578,17 +578,30 @@ async function recordAccountPayment(
  *  3. Write subscription_tier = 'full' (same value every time), then
  *     reconcile the cap.
  *
- * A subscription that is no longer live, or an item that isn't what was
- * quoted, is logged as an error and left: the payment is recorded, and no
- * retry can make the upgrade applicable.
+ * A PAID UPGRADE THAT CAN'T BE APPLIED IS NEVER ONLY LOGGED. It used to be:
+ * the owner was charged, got nothing, and nobody was told. Now every such
+ * case goes through alertUnappliedUpgrade — every admin, then the owner —
+ * and then:
+ *  - throws, when the subscription could still become live (unpaid, paused,
+ *    incomplete), so Stripe redelivers and a later delivery applies it;
+ *  - returns, when nothing can change that (cancelled, expired, the item or
+ *    price not as quoted, no owner) — retrying would only fail for three
+ *    days. The alert is the handoff to a person.
+ * This function logs no errors of its own: a failure either throws or alerts.
  */
 async function completeTierUpgrade(service: ServiceClient, invoice: Stripe.Invoice) {
   const meta = invoice.metadata ?? {};
-  const subscriptionId = meta.subscription_id;
+  const subscriptionId = meta.subscription_id ?? null;
   const itemId = meta.subscription_item_id;
   const customerId = typeof invoice.customer === "string" ? invoice.customer : invoice.customer?.id;
   if (!subscriptionId || !itemId || !customerId) {
-    console.error(`[stripe-webhook] invoice.paid ${invoice.id}: tier_upgrade invoice missing subscription_id, subscription_item_id or customer — not applied.`);
+    await alertUnappliedUpgrade(service, {
+      invoice,
+      ownerId: null,
+      subscriptionId,
+      reason: "the invoice is missing its subscription, subscription item or customer",
+      retrying: false,
+    });
     return;
   }
 
@@ -602,7 +615,14 @@ async function completeTierUpgrade(service: ServiceClient, invoice: Stripe.Invoi
   }
   const owner = ownerRow as { id: string } | null;
   if (!owner) {
-    console.error(`[stripe-webhook] invoice.paid ${invoice.id}: tier_upgrade paid, but no user has stripe_customer_id=${customerId}. Refund by hand.`);
+    // Nothing to record the payment against (account_payments.owner_id is required).
+    await alertUnappliedUpgrade(service, {
+      invoice,
+      ownerId: null,
+      subscriptionId,
+      reason: `no account has stripe_customer_id ${customerId}, so the payment could not be recorded either`,
+      retrying: false,
+    });
     return;
   }
 
@@ -623,13 +643,22 @@ async function completeTierUpgrade(service: ServiceClient, invoice: Stripe.Invoi
   });
 
   if (decision.kind === "not_live") {
-    console.error(
-      `[stripe-webhook] invoice.paid ${invoice.id}: tier_upgrade paid for subscription ${subscriptionId}, which is '${subscription.status}' now. Recorded; not applied — refund by hand.`,
-    );
+    await alertUnappliedUpgrade(service, {
+      invoice,
+      ownerId: owner.id,
+      subscriptionId,
+      reason: `subscription ${subscriptionId} is '${decision.status}'`,
+      retrying: decision.retryable,
+    });
+    if (decision.retryable) {
+      throw new Error(
+        `invoice.paid ${invoice.id}: tier_upgrade paid but subscription ${subscriptionId} is '${decision.status}' — alerted; retrying in case it becomes live.`,
+      );
+    }
     return;
   }
   if (decision.kind === "mismatch") {
-    console.error(`[stripe-webhook] invoice.paid ${invoice.id}: tier_upgrade not applied — ${decision.reason}. Recorded; resolve by hand.`);
+    await alertUnappliedUpgrade(service, { invoice, ownerId: owner.id, subscriptionId, reason: decision.reason, retrying: false });
     return;
   }
 
@@ -649,6 +678,72 @@ async function completeTierUpgrade(service: ServiceClient, invoice: Stripe.Invoi
   if (tierError) throw new Error(`invoice.paid ${invoice.id}: could not write Full for ${owner.id}: ${tierError.message}`);
 
   await reconcileVesselOverflow(service, owner.id, `tier upgrade ${invoice.id}`);
+}
+
+/**
+ * Tells a person about a paid upgrade that wasn't applied: every
+ * role='admin' account first, then the owner (whose message says the team
+ * has been alerted, so it must come second).
+ *
+ * Throws when the alert itself can't be recorded — no admin account, or a
+ * notification row that didn't write — so Stripe redelivers rather than the
+ * alert being lost the way the log line was. Once per invoice per recipient:
+ * a row already recorded for this invoice is not written again, which keeps
+ * a redelivered event (the retrying case sends several) to one banner and
+ * one email each.
+ */
+async function alertUnappliedUpgrade(
+  service: ServiceClient,
+  input: { invoice: Stripe.Invoice; ownerId: string | null; subscriptionId: string | null; reason: string; retrying: boolean },
+) {
+  const { invoice, ownerId } = input;
+  console.error(
+    `[stripe-webhook] invoice.paid ${invoice.id}: tier_upgrade paid but not applied — ${input.reason}${input.retrying ? " (retrying)" : ""}. Alerting admins${ownerId ? " and the owner" : ""}.`,
+  );
+
+  const { data: adminRows, error: adminError } = await service.from("users").select("id").eq("role", "admin");
+  if (adminError) throw new Error(`invoice.paid ${invoice.id}: could not read admin accounts to alert: ${adminError.message}`);
+  const admins = (adminRows ?? []) as { id: string }[];
+  if (admins.length === 0) {
+    throw new Error(`invoice.paid ${invoice.id}: paid upgrade not applied and there is no admin account to alert.`);
+  }
+
+  const messages = unappliedUpgradeMessages({
+    amountCents: invoice.amount_paid,
+    currency: invoice.currency,
+    invoiceId: invoice.id,
+    subscriptionId: input.subscriptionId,
+    ownerId,
+    reason: input.reason,
+    retrying: input.retrying,
+  });
+
+  for (const admin of admins) {
+    await notifyOncePerInvoice(service, admin.id, "admin_tier_upgrade_not_applied", messages.admin, invoice.id);
+  }
+  if (ownerId) {
+    await notifyOncePerInvoice(service, ownerId, "tier_upgrade_not_applied", messages.owner, invoice.id);
+  }
+}
+
+async function notifyOncePerInvoice(
+  service: ServiceClient,
+  recipientId: string,
+  type: "admin_tier_upgrade_not_applied" | "tier_upgrade_not_applied",
+  message: string,
+  invoiceId: string,
+) {
+  const { count, error } = await service
+    .from("owner_notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("owner_id", recipientId)
+    .eq("type", type)
+    .eq("dedupe_key", invoiceId);
+  if (error) throw new Error(`invoice.paid ${invoiceId}: could not check for an existing ${type} alert: ${error.message}`);
+  if ((count ?? 0) > 0) return;
+
+  const { recorded } = await notifyOwner(recipientId, type, message, { dedupeKey: invoiceId });
+  if (!recorded) throw new Error(`invoice.paid ${invoiceId}: the ${type} alert for ${recipientId} was not recorded.`);
 }
 
 /**
