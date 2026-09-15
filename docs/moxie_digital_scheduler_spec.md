@@ -1,7 +1,9 @@
 # Moxie — scheduler spec
 
-**Status: approved design, not built.** Written 2026-09-15; decisions
-recorded the same day (§12). Nothing in this document exists in the code yet; where it states a fact about the
+**Status: phase 1 built (report-only), 2026-09-15.** Decisions recorded
+the same day (§12). Phase 1 is the whole pipeline in report-only mode: it
+records what each step would do and changes nothing. No acting path exists
+yet; §13 lists what phase 1 is and isn't. Nothing in this document exists in the code yet; where it states a fact about the
 current system, that fact was checked against the code, the live database
 (read-only) or vendor documentation on that date, and says so.
 
@@ -329,8 +331,12 @@ reads as nagging. **Nothing after expiry.**
   7-day reminder. If it jumps from 31 days to 6, it gets the 7-day
   reminder only, not 30 and 7 together.
 - A document gets **3** emails at most per expiry date, not 30.
-- A document first dated inside a window (added with 12 days left) starts
-  at the next threshold ahead of it (7), not the one already passed.
+- A document first dated inside a window is reminded for the window it's in.
+  Added with 12 days left, it gets the 30-day reminder, which says "expires in
+  12 days". **Correction, 2026-09-15:** an earlier version of this line said
+  it would start at 7. Nothing records when an expiry date was entered, so a
+  late entry can't be told apart from a missed run, and both follow the same
+  window rule.
 
 **Idempotency:** new table `expiry_reminder_sends`, unique on
 `(vessel_id, owner_id, doc_type, expiry_date, threshold_days)`.
@@ -735,3 +741,62 @@ are additive, and existing rows get nulls.
 **Still to settle when building, not now:**
 - How to resolve `90806ee6…` (item 2), and approving its writes.
 - The copy for `no_plan_window_started` and `vessel_lapsed_no_plan`.
+
+---
+
+## 13. Phase 1 as built (2026-09-15)
+
+**What runs.** `GET /api/cron/daily` (`web/vercel.json`, `0 17 * * *`) runs
+the full per-account pipeline in **report-only** mode, and records findings
+in `scheduler_runs` and `scheduler_events`. Any run that finds something or
+doesn't finish cleanly emails a digest to every admin.
+`GET /api/health/scheduler` is for the uptime monitor. `/admin/scheduler`
+shows runs and events and has **Run now**; `/admin` shows a banner when the
+scheduler isn't healthy.
+
+**Why report-only is structural, not a flag.**
+- **Store:** `lib/scheduler/store.ts` offers reads, plus writes to the
+  scheduler's own three tables. It has no method that writes users, vessels
+  or reminder sends.
+- **Stripe:** `lib/scheduler/stripe-reads.ts` wraps exactly four Stripe
+  reads, and the scheduler never sees the client.
+- **Refusal:** `runScheduler` won't start if any step in
+  `lib/scheduler/config.ts` is set to `act`.
+- **Tests:** checks fail if the store writes another table, or if any
+  scheduler file calls a Stripe write, a SQL function or a notifier.
+
+**Not built yet** (each comes with switching its step on):
+- the acting paths and `lib/account-sync.ts`;
+- `apply_no_plan_window`;
+- sending and claiming reminders;
+- the opt-out link, headers and toggle;
+- the no-plan notification copy;
+- incremental breaker enforcement (phase 1 only measures and reports);
+- removing the page-load dormancy calls.
+
+**Dormancy and reminder findings are previews** computed from reads, mirroring
+the SQL. When those steps act, the SQL is the enforcement.
+
+**Two-run rule as built:** a downward correction applies only if the same
+finding was recorded by the latest run that finished **at least 20 hours
+earlier**. A manual run an hour after the cron doesn't count as the second
+sighting.
+
+**Migration:** `supabase/migrations/20261004_scheduler_phase1.sql`.
+- Creates the four tables and the two `users` columns.
+- Makes `scheduler_events` append-only: a trigger refuses UPDATE and
+  DELETE, and UPDATE/DELETE/TRUNCATE are revoked from `service_role`.
+- Before it runs, the cron route returns 500 naming the migration, and
+  health returns 503.
+
+**Tier findings need `STRIPE_PRICE_ID_BASIC_SUBSCRIPTION`.** Without it a
+Basic invoice line maps to no tier, and the run reports `tier:undetermined`
+(an anomaly, never a change). That's what a local dry run did, since the
+variable is only commented out in `.env.local`. Production's value hasn't
+been read. If the first digest shows `tier:undetermined` for accounts on a
+paid Basic plan, that variable is the cause.
+
+**Dry run:** `node --env-file=.env.local scripts/scheduler-dry-run.mts` runs
+the shipped pipeline against live data with in-memory bookkeeping, and prints
+the findings and the digest. It writes nothing.
+

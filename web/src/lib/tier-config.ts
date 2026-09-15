@@ -25,6 +25,13 @@ export const VESSEL_LIMIT: Record<SubscriptionTier, number> = {
  */
 export const BASIC_DOCUMENT_LIMIT = 3;
 
+/**
+ * Days an account may hold an active vessel with no live plan (a transfer
+ * buyer who never subscribes) before its vessels lapse. Decided 2026-09-15;
+ * revisit with real data. Enforced by the scheduler — scheduler spec §3.2.
+ */
+export const NO_PLAN_WINDOW_DAYS = 30;
+
 /** Total Storage (docs + photos) per account, Full tier only. */
 export const FULL_STORAGE_CAP_BYTES = 500 * 1024 * 1024;
 

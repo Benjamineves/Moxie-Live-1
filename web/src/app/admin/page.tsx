@@ -3,6 +3,7 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-verify";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { AdminNav } from "@/components/AdminNav";
+import { decideHealth } from "@/lib/scheduler/health";
 import { AdminGeoMap } from "@/components/AdminGeoMap";
 import { GEO_REGIONS, classifyRegion, resolveVesselLocationSource } from "@/lib/vessel-geo";
 import { readBadgePoolStatus, POOL_AMBER_THRESHOLD, POOL_RED_THRESHOLD } from "@/lib/badge-pool";
@@ -162,10 +163,33 @@ export default async function AdminOverviewPage() {
     (a, b) => b.count - a.count,
   );
 
+  // Scheduler health (spec §7): the same rule the uptime monitor polls.
+  const { data: latestRunRow, error: latestRunError } = await service
+    .from("scheduler_runs")
+    .select("status, finished_at")
+    .not("finished_at", "is", null)
+    .order("finished_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  const schedulerHealth = latestRunError
+    ? { healthy: false, reason: latestRunError.code === "PGRST205" ? "scheduler migration 20261004 not run" : "couldn't read scheduler runs" }
+    : decideHealth((latestRunRow as { status: string; finished_at: string } | null) ?? null, new Date());
+
   return (
     <div className="min-h-screen bg-[var(--cream)] px-4 py-8 sm:px-8">
       <main className="mx-auto w-full max-w-5xl">
         <AdminNav current="/admin" />
+
+        {!schedulerHealth.healthy ? (
+          <div className="mb-6 rounded-xl border border-[var(--red-fg)] bg-[var(--red-bg)] p-4">
+            <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">
+              Scheduler not healthy: {schedulerHealth.reason}.{" "}
+              <Link href="/admin/scheduler" className="underline">
+                Open the scheduler
+              </Link>
+            </p>
+          </div>
+        ) : null}
 
         <header className="mb-8">
           <p className="font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.12em] text-[var(--text3)]">

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/daily",
+      "schedule": "0 17 * * *"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/api/health/scheduler",
+      "headers": [
+        {
+          "key": "x-moxie-vercel-json",
+          "value": "web"
+        }
+      ]
+    }
+  ]
+}

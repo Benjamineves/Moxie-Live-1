@@ -50,7 +50,10 @@ question.
 ## Tier 3 — Unblocked once Tier 1 lands
 
 ### Scheduler (tier reconciliation, transfer window, dormancy, reminders)
-**Unblocked** (Vercel Pro live). **Spec approved, not built:**
+**Phase 1 built: report-only** (2026-09-15; spec §13). Before its first run
+you need to: run migration `20261004`, set `CRON_SECRET` in Vercel
+Production, then set up the uptime monitor. Then a week of digests, resolve
+`90806ee6…`, and switch steps on one at a time. **Spec:**
 `docs/moxie_digital_scheduler_spec.md`. Decisions recorded 2026-09-15 in
 its §12: 30-day transfer window, reminders Full-only at 30/7/0 days,
 per-owner opt-out, proportional circuit breaker, external uptime monitor.

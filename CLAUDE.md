@@ -240,7 +240,8 @@ No app or marketing copy may promise reminders, notifications, alerts, or
 emails that the app does not actually send. Check the sender exists before
 writing the sentence. What sends today: the notification types in
 `lib/notification-policy.ts` (via `notifyOwner`), the transfer invitation
-(via `notifyEmailAddress`), and Supabase's password reset. The expiry
+(via `notifyEmailAddress`), Supabase's password reset, and the scheduler's
+admin digest (`lib/scheduler/digest.ts`, to `role = 'admin'` accounts only). The expiry
 reminder has a template (`lib/email/expiry-reminder.ts`) and **no sender**.
 
 ### Notifications
