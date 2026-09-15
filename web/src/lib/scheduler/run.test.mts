@@ -159,7 +159,7 @@ test("one account's Stripe failure skips its later steps only; the run continues
   assert.deepEqual(good, ["no_plan:start"], "the next account still ran every step");
   assert.equal(h.finished[0].needsAlert, true);
   assert.equal(h.sent.length, 1);
-  assert.match(h.sent[0].subject, /partial/);
+  assert.match(h.sent[0].subject, /^Moxie scheduler: 1 thing needs you/);
 });
 
 test("the time budget stops starting new accounts; the rest are recorded not reached", async () => {

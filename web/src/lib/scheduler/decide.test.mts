@@ -102,7 +102,7 @@ test("tier: 90806ee6's shape reports a downgrade and carries its review note", (
   const a = account({ id: "90806ee6-7f4d-4f17-aa7a-894e9fdb07d1", subscription_tier: "full", stripe_subscription_id: "sub_1UBJeTF2ijdqsFlLZ7sdkun1" });
   const r = decideTier({ account: a, exempt: false, facts: found({ live: { id: "sub_1UBJeTF2ijdqsFlLZ7sdkun1", status: "active" }, paidTier: "basic" }), previousSignatures: none, state: initialState(a, []) });
   assert.equal(r.findings[0].signature, "tier:full->basic");
-  assert.match(String(r.findings[0].detail.review_note), /own test account/);
+  assert.match(String(r.findings[0].detail.review_note), /^Known test account/);
 });
 
 test("tier: no live plan in Stripe lapses only on a second sighting", () => {

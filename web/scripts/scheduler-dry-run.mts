@@ -10,7 +10,7 @@
  * Works before migration 20261004 (the scheduler tables are faked here, and
  * the new users columns read as null).
  *
- *   node --env-file=.env.local scripts/scheduler-dry-run.mts
+ *   node --env-file=.env.local scripts/scheduler-dry-run.mts [--html path/to/digest.html]
  */
 import { createClient } from "@supabase/supabase-js";
 import Stripe from "stripe";
@@ -18,6 +18,9 @@ import { runScheduler } from "../src/lib/scheduler/run.ts";
 import { createSupabaseReads, type SchedulerBookkeeping, type SchedulerReads } from "../src/lib/scheduler/store.ts";
 import { createStripeReads } from "../src/lib/scheduler/stripe-reads.ts";
 import type { Finding } from "../src/lib/scheduler/types.ts";
+import { writeFileSync } from "node:fs";
+
+const htmlPath = process.argv.includes("--html") ? process.argv[process.argv.indexOf("--html") + 1] : null;
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -61,6 +64,7 @@ const result = await runScheduler({
   isCapExempt: (email) => !!email && allow.includes(email.toLowerCase()),
   sendDigest: async (m) => {
     console.log(`\n── digest that would go to ${m.to} ──\nSubject: ${m.subject}\n\n${m.text}`);
+    if (htmlPath) writeFileSync(htmlPath, m.html);
     return { sent: true };
   },
   log: (line) => console.log(`[scheduler] ${line}`),

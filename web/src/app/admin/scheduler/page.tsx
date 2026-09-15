@@ -4,7 +4,9 @@ import { requireAdmin } from "@/lib/admin-verify";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { AdminNav } from "@/components/AdminNav";
 import { REVIEW_NOTES, STEP_MODES, STEP_ORDER } from "@/lib/scheduler/config";
+import { brief } from "@/lib/scheduler/describe";
 import { decideHealth } from "@/lib/scheduler/health";
+import type { Finding } from "@/lib/scheduler/types";
 import { runSchedulerNow } from "./actions";
 
 type RunRow = {
@@ -21,10 +23,11 @@ type RunRow = {
 
 type EventRow = {
   id: string;
+  run_id: string;
   owner_id: string | null;
   vessel_id: string | null;
-  step: string;
-  kind: string;
+  step: Finding["step"];
+  kind: Finding["kind"];
   signature: string | null;
   detail: Record<string, unknown>;
   created_at: string;
@@ -33,17 +36,26 @@ type EventRow = {
 type Props = { searchParams: Promise<{ run?: string; error?: string }> };
 
 const ERRORS: Record<string, string> = {
-  migration: "The scheduler tables don't exist yet — migration 20261004 hasn't been run.",
-  overlap: "Another run is in progress; this one did nothing.",
+  migration: "The scheduler tables don't exist yet: migration 20261004 hasn't been run.",
+  overlap: "Another run was already in progress, so this one did nothing.",
   start: "The run failed to start. Check the server logs.",
-  service: "Supabase service role isn't configured.",
+  service: "The Supabase service role isn't configured.",
 };
 
-const cell = "px-3 py-2 align-top";
 const text = "font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]";
+const cell = "px-3 py-2 align-top";
+
+function when(iso: string) {
+  return `${iso.replace("T", " ").slice(0, 16)} UTC`;
+}
+
+function asFindings(events: EventRow[]) {
+  return events.map((e) => ({ step: e.step, kind: e.kind, signature: e.signature, vesselId: e.vessel_id, detail: e.detail ?? {}, owner_id: e.owner_id }));
+}
 
 /**
- * The scheduler's record: recent runs, what each found, and a manual run.
+ * The scheduler's record, read like the digest: whether anything needs a
+ * person first, then plain sentences, then the raw events for debugging.
  * docs/moxie_digital_scheduler_spec.md §7.
  */
 export default async function SchedulerAdminPage({ searchParams }: Props) {
@@ -61,32 +73,60 @@ export default async function SchedulerAdminPage({ searchParams }: Props) {
   const runs = (runRows ?? []) as RunRow[];
   const migrationMissing = runsError?.code === "PGRST205";
 
-  const selected = runs.find((r) => r.id === sp.run) ?? runs[0] ?? null;
   let events: EventRow[] = [];
-  if (selected) {
+  if (runs.length > 0) {
     const { data } = await service
       .from("scheduler_events")
-      .select("id, owner_id, vessel_id, step, kind, signature, detail, created_at")
-      .eq("run_id", selected.id)
-      .order("created_at", { ascending: true });
+      .select("id, run_id, owner_id, vessel_id, step, kind, signature, detail, created_at")
+      .in("run_id", runs.map((r) => r.id))
+      .order("created_at", { ascending: true })
+      .limit(5000);
     events = (data ?? []) as EventRow[];
   }
+  const eventsByRun = new Map<string, EventRow[]>();
+  for (const e of events) {
+    if (!eventsByRun.has(e.run_id)) eventsByRun.set(e.run_id, []);
+    eventsByRun.get(e.run_id)!.push(e);
+  }
+  const briefFor = (r: RunRow) => brief({ findings: asFindings(eventsByRun.get(r.id) ?? []), status: r.status, summary: r.summary });
+
+  const selected = runs.find((r) => r.id === sp.run) ?? runs[0] ?? null;
+  const selectedBrief = selected ? briefFor(selected) : null;
 
   const latestFinished = runs.find((r) => r.finished_at) ?? null;
   const health = decideHealth(latestFinished ? { status: latestFinished.status, finished_at: latestFinished.finished_at! } : null, new Date());
   const reportOnly = Object.values(STEP_MODES).every((m) => m === "report");
+
+  const noteOwners = Object.keys(REVIEW_NOTES);
+  const { data: noteUsers } = noteOwners.length
+    ? await service.from("users").select("id, email").in("id", noteOwners)
+    : { data: [] };
+  const emailById = new Map(((noteUsers ?? []) as { id: string; email: string | null }[]).map((u) => [u.id, u.email]));
 
   return (
     <div className="min-h-screen bg-[var(--cream)] px-4 py-8 sm:px-8">
       <main className="mx-auto w-full max-w-5xl">
         <AdminNav current="/admin/scheduler" />
         <header className="mb-6">
-          <p className="font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.12em] text-[var(--text3)]">Admin</p>
-          <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-light italic text-[var(--navy)]">Scheduler</h1>
+          <p className="font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.12em] text-[var(--text3)]">Admin · Scheduler</p>
+          <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-light italic text-[var(--navy)]">
+            {migrationMissing
+              ? "Not set up yet."
+              : !health.healthy
+                ? "The scheduler needs you."
+                : selectedBrief
+                  ? selectedBrief.headline
+                  : "No runs yet."}
+          </h1>
           <p className={`mt-2 max-w-2xl ${text}`}>
-            The daily run at 17:00 UTC: tier reconciliation, the no-plan window, dormancy and expiry reminders, per
-            account in that order.{" "}
-            {reportOnly ? <strong>Every step is report-only: runs record what they would do and change nothing.</strong> : null}
+            {migrationMissing
+              ? ERRORS.migration
+              : !health.healthy
+                ? `It isn't healthy: ${health.reason}. The uptime monitor sees the same.`
+                : selected
+                  ? `${selected.id === runs[0]?.id ? "Latest run" : "Run"}: ${when(selected.started_at)}, ${selected.trigger}, ${selected.status}.`
+                  : "The first run will appear here."}{" "}
+            {reportOnly ? "Every step is report-only: runs record what they would do and change nothing." : null}
           </p>
         </header>
 
@@ -96,25 +136,80 @@ export default async function SchedulerAdminPage({ searchParams }: Props) {
           </div>
         ) : null}
 
-        {migrationMissing ? (
-          <div className="mb-4 rounded-xl border border-[var(--red-fg)] bg-[var(--red-bg)] p-4">
-            <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">{ERRORS.migration}</p>
-          </div>
-        ) : !health.healthy ? (
-          <div className="mb-4 rounded-xl border border-[var(--red-fg)] bg-[var(--red-bg)] p-4">
-            <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">
-              Not healthy: {health.reason}. The uptime monitor sees the same.
-            </p>
-          </div>
+        {selectedBrief ? (
+          <section className="mb-6 rounded-xl border border-[var(--divider)] bg-[var(--white)] p-5 shadow-sm">
+            {selectedBrief.needsYou.length > 0 ? (
+              <>
+                <h2 className="font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--red-fg)]">Needs you</h2>
+                <ul className="mt-2 mb-5 list-disc space-y-2 pl-5 font-[family-name:var(--font-dm)] text-[15px] leading-relaxed text-[var(--navy)]">
+                  {selectedBrief.needsYou.map((t, i) => (
+                    <li key={i}>{t}</li>
+                  ))}
+                </ul>
+              </>
+            ) : null}
+            <h2 className="font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text3)]">No action needed</h2>
+            {selectedBrief.noAction.length > 0 ? (
+              <ul className="mt-2 list-disc space-y-2 pl-5 font-[family-name:var(--font-dm)] text-[15px] leading-relaxed text-[var(--text2)]">
+                {selectedBrief.noAction.map((t, i) => (
+                  <li key={i}>{t}</li>
+                ))}
+              </ul>
+            ) : (
+              <p className={`mt-2 ${text}`}>Nothing to report on the accounts this run checked.</p>
+            )}
+            {selected?.error ? <p className="mt-4 font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">Run error: {selected.error}</p> : null}
+          </section>
         ) : null}
+
+        <section className="mb-6 overflow-x-auto rounded-xl border border-[var(--divider)] bg-[var(--white)] shadow-sm">
+          <table className="w-full min-w-[640px] text-left font-[family-name:var(--font-dm)] text-sm">
+            <thead className="border-b border-[var(--divider)] text-xs uppercase tracking-[0.08em] text-[var(--text3)]">
+              <tr>
+                <th className={cell}>Run</th>
+                <th className={cell}>Needs you</th>
+                <th className={cell}>For information</th>
+                <th className={cell}>Status</th>
+                <th className={cell}>Accounts checked</th>
+              </tr>
+            </thead>
+            <tbody>
+              {runs.length === 0 ? (
+                <tr>
+                  <td className={cell} colSpan={5}>
+                    No runs yet.
+                  </td>
+                </tr>
+              ) : (
+                runs.map((r) => {
+                  const b = briefFor(r);
+                  return (
+                    <tr key={r.id} className={`border-b border-[var(--divider)] ${selected?.id === r.id ? "bg-[var(--cream2)]" : ""}`}>
+                      <td className={cell}>
+                        <Link href={`/admin/scheduler?run=${r.id}`} className="text-[var(--blue-fg)] underline">
+                          {when(r.started_at)}
+                        </Link>{" "}
+                        <span className="text-[var(--text3)]">({r.trigger})</span>
+                      </td>
+                      <td className={`${cell} ${b.needsYou.length > 0 ? "font-semibold text-[var(--red-fg)]" : ""}`}>{b.needsYou.length === 0 ? "Nothing" : b.needsYou.length}</td>
+                      <td className={cell}>{b.noAction.length}</td>
+                      <td className={cell}>{r.status}</td>
+                      <td className={cell}>{String(r.summary?.accounts_visited ?? "—")}</td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </section>
 
         <section className="mb-6 grid gap-4 sm:grid-cols-2">
           <div className="rounded-xl border border-[var(--divider)] bg-[var(--white)] p-4">
-            <p className="font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text3)]">Step modes</p>
+            <p className="font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text3)]">Steps</p>
             <ul className={`mt-2 ${text}`}>
               {STEP_ORDER.map((s) => (
                 <li key={s}>
-                  {s}: <strong>{STEP_MODES[s]}</strong>
+                  {s.replaceAll("_", " ")}: {STEP_MODES[s] === "report" ? "report-only" : "acting"}
                 </li>
               ))}
             </ul>
@@ -128,95 +223,28 @@ export default async function SchedulerAdminPage({ searchParams }: Props) {
             </form>
           </div>
           <div className="rounded-xl border border-[var(--divider)] bg-[var(--white)] p-4">
-            <p className="font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text3)]">Known findings</p>
+            <p className="font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text3)]">Known accounts</p>
             <ul className={`mt-2 ${text}`}>
               {Object.entries(REVIEW_NOTES).map(([owner, n]) => (
                 <li key={owner} className="mb-1">
-                  <code className="text-xs">{owner.slice(0, 8)}…</code> — {n}
+                  <strong>{emailById.get(owner) ?? `${owner.slice(0, 8)}…`}</strong>: {n.label}. No action needed {n.untilWhen}.
                 </li>
               ))}
             </ul>
           </div>
         </section>
 
-        <section className="mb-6 overflow-x-auto rounded-xl border border-[var(--divider)] bg-[var(--white)] shadow-sm">
-          <table className="w-full min-w-[720px] text-left font-[family-name:var(--font-dm)] text-sm">
-            <thead className="border-b border-[var(--divider)] text-xs uppercase tracking-[0.08em] text-[var(--text3)]">
-              <tr>
-                <th className={cell}>Started (UTC)</th>
-                <th className={cell}>Trigger</th>
-                <th className={cell}>Status</th>
-                <th className={cell}>Visited</th>
-                <th className={cell}>Digest</th>
-              </tr>
-            </thead>
-            <tbody>
-              {runs.length === 0 ? (
-                <tr>
-                  <td className={cell} colSpan={5}>
-                    No runs yet.
-                  </td>
-                </tr>
-              ) : (
-                runs.map((r) => (
-                  <tr key={r.id} className={`border-b border-[var(--divider)] ${selected?.id === r.id ? "bg-[var(--cream2)]" : ""}`}>
-                    <td className={cell}>
-                      <Link href={`/admin/scheduler?run=${r.id}`} className="text-[var(--blue-fg)] underline">
-                        {r.started_at.replace("T", " ").slice(0, 19)}
-                      </Link>
-                    </td>
-                    <td className={cell}>{r.trigger}</td>
-                    <td className={cell}>{r.status}</td>
-                    <td className={cell}>{String(r.summary?.accounts_visited ?? "—")}</td>
-                    <td className={cell}>{r.needs_alert ? (r.alerted_at ? "sent" : "pending") : "not needed"}</td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </section>
-
         {selected ? (
-          <section className="overflow-x-auto rounded-xl border border-[var(--divider)] bg-[var(--white)] shadow-sm">
-            <p className={`px-3 pt-3 ${text}`}>
-              Run <code className="text-xs">{selected.id}</code> · {selected.status}
-              {selected.error ? ` · ${selected.error}` : ""}
-            </p>
-            <table className="mt-2 w-full min-w-[720px] text-left font-[family-name:var(--font-dm)] text-sm">
-              <thead className="border-b border-[var(--divider)] text-xs uppercase tracking-[0.08em] text-[var(--text3)]">
-                <tr>
-                  <th className={cell}>Account</th>
-                  <th className={cell}>Step</th>
-                  <th className={cell}>Kind</th>
-                  <th className={cell}>Finding</th>
-                  <th className={cell}>Detail</th>
-                </tr>
-              </thead>
-              <tbody>
-                {events.length === 0 ? (
-                  <tr>
-                    <td className={cell} colSpan={5}>
-                      Nothing recorded — every visited account had nothing to report.
-                    </td>
-                  </tr>
-                ) : (
-                  events.map((e) => (
-                    <tr key={e.id} className="border-b border-[var(--divider)]">
-                      <td className={cell}>
-                        <code className="text-xs">{e.owner_id ? `${e.owner_id.slice(0, 8)}…` : "run"}</code>
-                      </td>
-                      <td className={cell}>{e.step}</td>
-                      <td className={cell}>{e.kind}</td>
-                      <td className={cell}>{e.signature}</td>
-                      <td className={cell}>
-                        <pre className="max-w-md whitespace-pre-wrap break-words text-xs">{JSON.stringify(e.detail, null, 1)}</pre>
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </section>
+          <details className="rounded-xl border border-[var(--divider)] bg-[var(--white)] p-4">
+            <summary className={`cursor-pointer ${text}`}>Raw events for this run ({(eventsByRun.get(selected.id) ?? []).length})</summary>
+            <pre className="mt-3 max-h-[480px] overflow-auto whitespace-pre-wrap break-words text-xs">
+              {JSON.stringify(
+                (eventsByRun.get(selected.id) ?? []).map((e) => ({ step: e.step, kind: e.kind, signature: e.signature, detail: e.detail })),
+                null,
+                2,
+              )}
+            </pre>
+          </details>
         ) : null}
       </main>
     </div>

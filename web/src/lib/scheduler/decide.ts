@@ -23,8 +23,9 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 const LIVE = new Set(["active", "past_due", "trialing"]);
 const HAS_PLAN = new Set(["active", "past_due"]);
 
-function note(ownerId: string): { review_note?: string } {
-  return REVIEW_NOTES[ownerId] ? { review_note: REVIEW_NOTES[ownerId] } : {};
+function note(ownerId: string): { review_note?: string; review_until?: string } {
+  const n = REVIEW_NOTES[ownerId];
+  return n ? { review_note: n.label, review_until: n.untilWhen } : {};
 }
 
 function storedTier(account: AccountRow): SubscriptionTier {
@@ -300,6 +301,7 @@ export function decideNoPlanWindow(input: {
           detail: {
             status: state.status,
             active_vessels: state.activeVesselIds.length,
+            vessel_ids: state.activeVesselIds,
             action: "set no_plan_since = now(); notify no_plan_window_started",
             deadline: deadline.toISOString(),
             ...note(account.id),
@@ -313,6 +315,7 @@ export function decideNoPlanWindow(input: {
   const deadline = new Date(since.getTime() + windowDays * DAY_MS);
   if (now.getTime() >= deadline.getTime()) {
     const count = state.activeVesselIds.length;
+    const lapsedIds = state.activeVesselIds;
     state.activeVesselIds = [];
     return {
       findings: [
@@ -322,7 +325,7 @@ export function decideNoPlanWindow(input: {
           signature: "no_plan:lapse",
           removesAccess: true,
           pausesVessels: count,
-          detail: { no_plan_since: account.no_plan_since, deadline: deadline.toISOString(), action: `lapse ${count} vessel(s); notify vessel_lapsed_no_plan`, ...note(account.id) },
+          detail: { no_plan_since: account.no_plan_since, deadline: deadline.toISOString(), vessel_ids: lapsedIds, action: `lapse ${count} vessel(s); notify vessel_lapsed_no_plan`, ...note(account.id) },
         },
       ],
       next: state,
@@ -361,7 +364,7 @@ export function decideDormancy(input: {
             signature: "dormancy:lapse",
             removesAccess: true,
             pausesVessels: active.length,
-            detail: { past_due_since: account.past_due_since, grace_ended: due.toISOString(), action: `lapse ${active.length} vessel(s); notify vessel_lapsed`, ...note(account.id) },
+            detail: { past_due_since: account.past_due_since, grace_ended: due.toISOString(), vessel_ids: active, action: `lapse ${active.length} vessel(s); notify vessel_lapsed`, ...note(account.id) },
           },
         ],
         next: state,

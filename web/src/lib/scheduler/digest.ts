@@ -1,16 +1,20 @@
-import { detailCard, escapeHtml, notice, paragraph, button, renderEmailLayout } from "../email/layout.ts";
+import { detailCard, escapeHtml, notice, paragraph, button, renderEmailLayout, EMAIL_COLORS } from "../email/layout.ts";
 import { renderPlainText } from "../email/plain-text.ts";
-import { STEP_ORDER, type StepMode, type StepName } from "./config.ts";
+import type { StepMode, StepName } from "./config.ts";
+import { brief } from "./describe.ts";
 import type { Finding } from "./types.ts";
 
 /**
- * THE ADMIN DIGEST (spec §7). One email per run that found something,
- * changed something or didn't finish cleanly. A clean run with nothing to
- * report sends nothing, so an email means something happened.
+ * THE ADMIN DIGEST (spec §7). One email per run that found something or
+ * didn't finish cleanly; a clean run with nothing to report sends nothing.
  *
- * Goes to every role = 'admin' account, directly through sendEmail — not
- * notifyOwner, because a digest is an operational report, not an event on
- * the admin's own account.
+ * Built to be read in five seconds: the subject and the first line say
+ * whether anything needs a person. Then the things that do, then the things
+ * that don't, each a plain sentence naming the account by email and vessels
+ * by MXE ID (lib/scheduler/describe.ts). Run details come last.
+ *
+ * Goes to every role = 'admin' account through sendEmail — not notifyOwner:
+ * a digest is an operational report, not an event on the admin's account.
  */
 
 export type DigestInput = {
@@ -25,145 +29,80 @@ export type DigestInput = {
   baseUrl?: string;
 };
 
-const STEP_LABEL: Record<StepName | "run", string> = {
-  run: "Run",
-  tier: "Tier reconciliation",
-  no_plan_window: "No-plan window",
-  dormancy: "Dormancy",
-  reminders: "Expiry reminders",
-};
-
-const KIND_LABEL: Record<Finding["kind"], string> = {
-  changed: "changed",
-  would_change: "would change",
-  exempt: "exempt",
-  skipped: "skipped",
-  failed: "FAILED",
-  anomaly: "anomaly",
-};
+const FOOTER = "Sent to Moxie admins because a scheduler run found something or didn't finish cleanly.";
 
 function origin(baseUrl?: string) {
   return (baseUrl ?? process.env.NEXT_PUBLIC_BASE_URL ?? "https://moxieyacht.com").replace(/\/$/, "");
 }
 
-function shortId(id: string | null) {
-  return id ? `${id.slice(0, 8)}…` : "run";
+function isReportOnly(modes: Record<StepName, StepMode>) {
+  return Object.values(modes).every((m) => m === "report");
 }
 
-function describe(f: Finding & { owner_id: string | null }): string {
-  const d = f.detail ?? {};
-  const bits: string[] = [];
-  if (typeof d.action === "string") bits.push(d.action);
-  if (typeof d.from === "string" || typeof d.to === "string") bits.push(`${d.from ?? "?"} → ${d.to ?? "?"}`);
-  if (typeof d.applies === "string") bits.push(`applies ${d.applies}`);
-  if (typeof d.deadline === "string") bits.push(`deadline ${d.deadline.slice(0, 10)}`);
-  if (typeof d.mxe_id === "string") bits.push(`${d.mxe_id} ${d.doc} expires ${d.expiry_date} (${d.days_remaining} days)`);
-  if (typeof d.reason === "string") bits.push(d.reason);
-  if (typeof d.error === "string") bits.push(d.error);
-  return bits.join(" · ");
-}
+const REPORT_ONLY_LINE = "Report-only: nothing was changed and no owner was emailed. Each line says what would happen once that step is switched on.";
 
 export function digestNeeded(input: { status: string; findings: Finding[] }): boolean {
   if (input.status !== "succeeded") return true;
   return input.findings.some((f) => f.kind === "would_change" || f.kind === "changed" || f.kind === "anomaly" || f.kind === "failed" || f.kind === "skipped");
 }
 
-export function digestSubject(input: Pick<DigestInput, "status" | "findings" | "modes">): string {
-  const reportOnly = Object.values(input.modes).every((m) => m === "report");
-  const counts = input.findings.filter((f) => f.kind === "would_change" || f.kind === "changed").length;
-  const problems = input.findings.filter((f) => f.kind === "failed" || f.kind === "anomaly").length;
-  const lead = input.status === "succeeded" ? "Scheduler" : `Scheduler run ${input.status}`;
-  return `${lead}: ${counts} finding${counts === 1 ? "" : "s"}${problems ? `, ${problems} problem${problems === 1 ? "" : "s"}` : ""}${reportOnly ? " (report-only)" : ""}`;
+export function digestSubject(input: Pick<DigestInput, "status" | "findings" | "modes" | "summary">): string {
+  const b = brief({ findings: input.findings, status: input.status, summary: input.summary });
+  const lead = b.needsYou.length === 0 ? "nothing needs you" : `${b.needsYou.length} ${b.needsYou.length === 1 ? "thing needs" : "things need"} you`;
+  const rest = b.noAction.length > 0 ? `, ${b.noAction.length} for information` : "";
+  return `Moxie scheduler: ${lead}${rest}${isReportOnly(input.modes) ? " (report-only)" : ""}`;
 }
 
-function grouped(findings: DigestInput["findings"]) {
-  const steps: (StepName | "run")[] = ["run", ...STEP_ORDER];
-  return steps
-    .map((step) => ({ step, items: findings.filter((f) => f.step === step && f.kind !== "exempt") }))
-    .filter((g) => g.items.length > 0);
+function runDetails(input: DigestInput) {
+  return [
+    { label: "Run", value: input.status },
+    { label: "Started", value: `${input.startedAt.replace("T", " ").slice(0, 16)} UTC (${input.trigger})` },
+    { label: "Accounts checked", value: String(input.summary.accounts_visited ?? "?") },
+  ];
 }
 
 export function renderDigestHtml(input: DigestInput): string {
-  const reportOnly = Object.values(input.modes).every((m) => m === "report");
+  const b = brief({ findings: input.findings, status: input.status, summary: input.summary });
   const runUrl = `${origin(input.baseUrl)}/admin/scheduler?run=${encodeURIComponent(input.runId)}`;
+  const list = (items: string[]) =>
+    `<ul style="margin:0 0 20px;padding-left:18px;font-size:15px;line-height:1.55;color:${EMAIL_COLORS.navy};">${items
+      .map((t) => `<li style="margin:0 0 10px;">${escapeHtml(t)}</li>`)
+      .join("")}</ul>`;
+
   const blocks: string[] = [];
-
-  blocks.push(
-    detailCard([
-      { label: "Status", value: input.status, emphasis: input.status !== "succeeded" },
-      { label: "Trigger", value: input.trigger },
-      { label: "Started", value: input.startedAt },
-      { label: "Accounts visited", value: String(input.summary.accounts_visited ?? "?") },
-      { label: "Not reached", value: String(input.summary.accounts_not_reached ?? 0) },
-    ]),
-  );
-
-  for (const group of grouped(input.findings)) {
-    const lines = group.items
-      .map((f) => {
-        const note = typeof f.detail?.review_note === "string" ? `<br><em>Known: ${escapeHtml(f.detail.review_note)}</em>` : "";
-        return `<li style="margin:0 0 8px;"><strong>${escapeHtml(KIND_LABEL[f.kind])}</strong> · ${escapeHtml(shortId(f.owner_id))} · ${escapeHtml(f.signature ?? "")}<br>${escapeHtml(describe(f))}${note}</li>`;
-      })
-      .join("");
-    blocks.push(paragraph(`<strong>${escapeHtml(STEP_LABEL[group.step])}</strong>`));
-    blocks.push(`<ul style="margin:0 0 16px;padding-left:18px;font-size:14px;line-height:1.5;">${lines}</ul>`);
+  if (b.needsYou.length > 0) {
+    blocks.push(paragraph("<strong>Needs you</strong>"));
+    blocks.push(list(b.needsYou));
   }
-
-  const breakers = input.summary.breakers as Record<string, { count: number; limit: number; trips: boolean }> | undefined;
-  if (breakers && Object.values(breakers).some((b) => b.trips)) {
-    blocks.push(notice(escapeHtml(`Circuit breaker would trip: ${Object.entries(breakers).filter(([, b]) => b.trips).map(([k, b]) => `${k} ${b.count} > ${b.limit}`).join("; ")}.`)));
+  if (b.noAction.length > 0) {
+    blocks.push(paragraph("<strong>No action needed</strong>"));
+    blocks.push(list(b.noAction));
   }
-
+  if (isReportOnly(input.modes)) blocks.push(notice(escapeHtml(REPORT_ONLY_LINE)));
   blocks.push(button(runUrl, "Open this run"));
+  blocks.push(detailCard(runDetails(input)));
 
   return renderEmailLayout({
     subject: digestSubject(input),
     headerLabel: "Scheduler",
-    title: reportOnly ? "What the scheduler would do" : "What the scheduler did",
-    intro: [
-      paragraph(
-        escapeHtml(
-          reportOnly
-            ? "Report-only: nothing below was changed, and no owner was emailed. Each line is what the step would do once it is switched on."
-            : "Actions this run took, and anything that needs a look.",
-        ),
-        { last: true },
-      ),
-    ],
+    title: b.headline,
+    intro: [],
     blocks,
-    footerReason: "Sent to Moxie admins because a scheduler run found something or didn't finish cleanly.",
+    footerReason: FOOTER,
   });
 }
 
 export function renderDigestText(input: DigestInput): string {
-  const reportOnly = Object.values(input.modes).every((m) => m === "report");
-  const paragraphs: string[] = [
-    reportOnly
-      ? "Report-only: nothing below was changed, and no owner was emailed. Each line is what the step would do once it is switched on."
-      : "Actions this run took, and anything that needs a look.",
-  ];
-  for (const group of grouped(input.findings)) {
-    paragraphs.push(
-      `${STEP_LABEL[group.step]}:\n` +
-        group.items
-          .map((f) => {
-            const note = typeof f.detail?.review_note === "string" ? `\n    Known: ${f.detail.review_note}` : "";
-            return `  - ${KIND_LABEL[f.kind]} · ${shortId(f.owner_id)} · ${f.signature ?? ""}\n    ${describe(f)}${note}`;
-          })
-          .join("\n"),
-    );
-  }
+  const b = brief({ findings: input.findings, status: input.status, summary: input.summary });
+  const paragraphs: string[] = [];
+  if (b.needsYou.length > 0) paragraphs.push(`NEEDS YOU\n${b.needsYou.map((t) => `- ${t}`).join("\n")}`);
+  if (b.noAction.length > 0) paragraphs.push(`NO ACTION NEEDED\n${b.noAction.map((t) => `- ${t}`).join("\n")}`);
+  if (isReportOnly(input.modes)) paragraphs.push(REPORT_ONLY_LINE);
   return renderPlainText({
-    title: reportOnly ? "What the scheduler would do" : "What the scheduler did",
+    title: b.headline,
     paragraphs,
-    details: [
-      { label: "Status", value: input.status },
-      { label: "Trigger", value: input.trigger },
-      { label: "Started", value: input.startedAt },
-      { label: "Accounts visited", value: String(input.summary.accounts_visited ?? "?") },
-      { label: "Not reached", value: String(input.summary.accounts_not_reached ?? 0) },
-    ],
+    details: runDetails(input),
     action: { label: "Open this run", url: `${origin(input.baseUrl)}/admin/scheduler?run=${encodeURIComponent(input.runId)}` },
-    footerReason: "Sent to Moxie admins because a scheduler run found something or didn't finish cleanly.",
+    footerReason: FOOTER,
   });
 }

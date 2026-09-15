@@ -114,6 +114,7 @@ export async function runScheduler(deps: RunDeps): Promise<RunResult> {
       deps.reads.loadPreviousTierSignatures(startedAt, TWO_RUN_MIN_AGE_MS),
     ]);
 
+    const mxeById = new Map(vessels.map((v) => [v.id, v.mxe_id ?? v.id]));
     const vesselsByOwner = new Map<string, ActiveVesselRow[]>();
     for (const v of vessels) {
       if (!vesselsByOwner.has(v.owner_id)) vesselsByOwner.set(v.owner_id, []);
@@ -152,6 +153,17 @@ export async function runScheduler(deps: RunDeps): Promise<RunResult> {
       });
       eligibleDocuments += outcome.eligibleDocuments;
       if (outcome.failed) failedAccounts.push(account.id);
+      // Name the account and its vessels on the event itself, so the digest and
+      // the admin page read in emails and MXE IDs — and still do later, even if
+      // an email changes or a vessel moves on.
+      for (const f of outcome.findings) {
+        const ids = [f.detail.vessel_ids, f.detail.lock_vessel_ids].find(Array.isArray) as string[] | undefined;
+        f.detail = {
+          ...f.detail,
+          owner_email: account.email,
+          ...(ids ? { mxe_ids: ids.map((id) => mxeById.get(id) ?? id) } : {}),
+        };
+      }
       for (const f of outcome.findings) {
         count(f);
         allFindings.push({ ...f, owner_id: account.id });

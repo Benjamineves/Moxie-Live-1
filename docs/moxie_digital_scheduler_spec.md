@@ -796,7 +796,21 @@ variable is only commented out in `.env.local`. Production's value hasn't
 been read. If the first digest shows `tier:undetermined` for accounts on a
 paid Basic plan, that variable is the cause.
 
-**Dry run:** `node --env-file=.env.local scripts/scheduler-dry-run.mts` runs
+**How findings read (2026-09-15).** The digest and `/admin/scheduler` lead
+with one line: whether anything needs a person. Then two lists, **Needs
+you** and **No action needed**, in plain sentences
+(`lib/scheduler/describe.ts`). Accounts are named by email and vessels by
+MXE ID, both copied onto the event when it's recorded.
+- **Needs you:** failures, anomalies (a customer Stripe can't find, no
+  paid invoice naming a plan, two live subscriptions, a plan with no
+  customer), a stored plan that disagrees with what was paid on an
+  unexplained account, and a breaker that would trip.
+- **No action needed:** policy doing its job, plus findings on accounts
+  in `REVIEW_NOTES`.
+- **Grouping:** one cause on several accounts, such as a missing price id,
+  is one line listing the accounts.
+
+**Dry run:** `node --env-file=.env.local scripts/scheduler-dry-run.mts [--html file]` runs
 the shipped pipeline against live data with in-memory bookkeeping, and prints
 the findings and the digest. It writes nothing.
 

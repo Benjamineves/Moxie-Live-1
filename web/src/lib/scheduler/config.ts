@@ -57,12 +57,16 @@ export const BREAKER = {
 } as const;
 
 /**
- * Accounts whose findings are known and explained. Shown beside the finding
- * in the digest and on /admin/scheduler, so a week of report-only digests
- * doesn't re-raise what's already understood. A note is not an exemption:
- * the finding is still recorded, and still blocks switching its step on.
+ * Accounts whose findings are known and explained. The digest and
+ * /admin/scheduler list a known account's would-change findings under "no
+ * action needed", with this label, so a week of report-only digests doesn't
+ * re-raise what's already understood. A note is not an exemption: the
+ * finding is still recorded, still listed, and still blocks switching its
+ * step on. Anomalies and failures on a noted account still need a human.
  */
-export const REVIEW_NOTES: Record<string, string> = {
-  "90806ee6-7f4d-4f17-aa7a-894e9fdb07d1":
-    "Owner's own test account: test-mode data from the pre-2-Sept upgrade bug (Full price, only Basic paid). Resolve before the tier step acts — spec §3.1.",
+export const REVIEW_NOTES: Record<string, { label: string; untilWhen: string }> = {
+  "90806ee6-7f4d-4f17-aa7a-894e9fdb07d1": {
+    label: "Known test account (test data left by the upgrade bug fixed on 2 September)",
+    untilWhen: "until the tier step is switched on, when it has to be resolved first",
+  },
 };
