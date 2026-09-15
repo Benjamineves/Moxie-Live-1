@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PermissiveDatabase } from "./supabase/schema-stub.ts";
 import { getStripe } from "./stripe/server.ts";
 import { tierForPriceId } from "./stripe/tiers.ts";
+import { isTierReconciliationExempt } from "./billing-exempt.ts";
 import type { SubscriptionTier } from "./tier-config.ts";
 import { countActiveVessels } from "./vessel-cap.ts";
 import { notifyOwner } from "./notify.ts";
@@ -87,7 +88,9 @@ export async function notifyDowngradeGraceIfDue(service: Service, ownerId: strin
   // current (no subscription — a transfer buyer, or an account set by hand)
   // does the stored tier stand.
   let stripeTier: SubscriptionTier | null = null;
-  if (row.stripe_customer_id) {
+  // An account set by hand (lib/billing-exempt.ts) is not asked about: its
+  // stored tier is the decision, whatever Stripe holds for its customer.
+  if (row.stripe_customer_id && !isTierReconciliationExempt(ownerId)) {
     const subs = await getStripe().subscriptions.list({ customer: row.stripe_customer_id, status: "all", limit: 20 });
     stripeTier = tierFromSubscriptions(
       subs.data.map((s) => {

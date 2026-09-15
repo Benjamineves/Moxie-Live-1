@@ -3,7 +3,7 @@
 Open items and what depends on what. Update as items close; add what
 turns up. Where this disagrees with the code, the code wins.
 
-_Last updated 14 September 2026_
+_Last updated 15 September 2026_
 
 ---
 
@@ -80,19 +80,29 @@ intent's client secret (not deferred), Link is not turned off, and the
 intent's methods follow the subscription's `payment_settings`, which are
 unset on all three active subscriptions.
 
-**Likely grants Full without paying.** The swap is sent without
-`payment_behavior: "pending_if_incomplete"`; Stripe's docs say only that
-mode holds a change until payment, and the code comment claiming
-otherwise is wrong. Observed on `sub_1UBJeT…` (test mode): Full price,
-`pending_update` null, the two proration items still uninvoiced, only the
-Basic signup invoice ever paid. That run predates the current three-call
-version, but step 1 is the same call. `customer.subscription.updated` then
-writes `subscription_tier = full`. Not demonstrated against current code
-— that needs a Stripe write.
+**Stripe applies the swap immediately — observed, not inferred.** Stripe's
+event log for `sub_1UBKTY…` on 2 Sept: the current three-call version
+swapped the price at 21:09:06 (`pending_update` null), created the invoice
+at 21:09:07, and it was paid at 21:09:30. `sub_1UBJeT…` (Full price since
+20:43 that day, proration never invoiced) came from the *earlier* version,
+whose swap sent `payment_behavior: "default_incomplete"` — not the same
+call as today's, which sends no `payment_behavior`. The code comment
+saying Stripe holds the change is wrong.
 
-A deferred version needs the amount before the swap:
-`invoices.createPreview` (a read) on load, then swap + invoice at the Pay
-click, with `pending_if_incomplete`.
+**Full before payment is closed in the webhook (2026-09-15).** The tier
+now follows the paid invoice, not the subscription's price
+(`lib/subscription-tier.ts`), so the swap no longer writes Full; the paid
+proration invoice does. Still open on this checkout: an abandoned upgrade
+leaves the Stripe price on Full with the account on Basic, and the
+downgrade-grace notifier reads Stripe's price as the tier.
+
+**Converting it (option B) is blocked on one unknown.** An invoice's
+PaymentIntent carries `setup_future_usage: off_session` (read on both
+subscription invoices), and a deferred form must match it. No standalone
+invoice exists to read, so what a customer-only invoice sets is unobserved.
+Either confirm it with test-mode writes, or charge a plain PaymentIntent
+(the badge fee's proven shape) and add a migration so `account_payments`
+can record one.
 
 ### Upgrading to Full doesn't restore locked vessels
 `clear_vessels_lapsed` only restores `dormant_cause = 'lapsed'`. An owner
@@ -116,6 +126,10 @@ with pricing.
 If they diverge with no tier event to correct it, the grace clock is
 never announced and the fallback locks vessels against the wrong tier.
 Wants a scheduled reconciliation. Recorded in dormant identity spec §8.
+**The job must skip `lib/billing-exempt.ts`** — the admin account
+`2255a040…` is Full by hand with no Stripe subscription, and would be
+downgraded on the first run. It must also compare against what was paid
+(`lib/subscription-tier.ts`), not the subscription's price.
 
 ---
 
@@ -140,9 +154,6 @@ Wants a scheduled reconciliation. Recorded in dormant identity spec §8.
   resubscribing to Basic with more lapsed vessels than Basic allows isn't
   warned at the Pay click; `reconcile_vessel_overflow` still enforces it
   after payment.
-- **Account `2255a040…` is active/Full with no Stripe subscription.** Has a
-  customer id, no subscription on it, `stripe_subscription_id` null. Seen
-  while auditing checkouts; not investigated.
 
 ---
 
@@ -164,4 +175,5 @@ and document stale-cache fixes · gold contrast sweep · vessel cap bypass
 · webhook log-and-succeed failures · `choose_active_vessels` constraints ·
 payment/title records RESTRICT · card-only checkout · owner delete path ·
 all dormancy notifications · plan picker on `/dashboard/upgrade` card-only,
-created at the Pay click
+created at the Pay click · tier follows the paid invoice, not the
+subscription's price · admin account exempt from Stripe tier sync

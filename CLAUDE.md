@@ -261,6 +261,12 @@ reminder has a template (`lib/email/expiry-reminder.ts`) and **no sender**.
 
 - **Throw on failure when a retry is safe**, so POST returns 500 and Stripe
   redelivers. Establish retry safety per handler — it is not symmetric.
+- **The tier follows what was paid, never the subscription's price.** Stripe
+  applies a price swap when it is requested, before any invoice is paid.
+  `invoice.paid` writes the tier the latest paid invoice charged for
+  (`lib/subscription-tier.ts`); status events never write a tier.
+- **Accounts set by hand are not Stripe's to change.** Anything that syncs
+  tier or status from Stripe checks `lib/billing-exempt.ts` first.
 - **Act on current Stripe state, not the event's snapshot**, for anything
   whose status moves back and forth (subscriptions). Retries arrive up to
   ~3 days late and out of order. See `lib/subscription-sync.ts`.

@@ -5,7 +5,8 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { DORMANCY } from "@/lib/tier-config";
 import { notifyOwner } from "@/lib/notify";
 import { decideSubscriptionSync } from "@/lib/subscription-sync";
-import { tierForPriceId } from "@/lib/stripe/tiers";
+import { isTierReconciliationExempt } from "@/lib/billing-exempt";
+import { accountUpdateForActiveSubscription, tierForPaidInvoice } from "@/lib/subscription-tier";
 import { notifyDowngradeGraceIfDue, notifyVesselsRestored } from "@/lib/dormancy-notify";
 
 export const runtime = "nodejs";
@@ -362,12 +363,12 @@ async function completeSignupBundle(service: ServiceClient, intent: Stripe.Payme
 
   const active = await activateVessel(service, vessel, mxeId, `payment_intent.succeeded ${intent.id}`);
   // Same as the badge fee. One ordering caveat specific to a bundle: the
-  // plan's tier is written by invoice.paid / customer.subscription.updated,
-  // which can arrive AFTER this event. Until one does, the account still
+  // plan's tier is written by invoice.paid, which can arrive AFTER this
+  // event. Until one does, the account still
   // carries its old subscription_tier (Basic by default), so an account
   // that already held vessels and chose Full can briefly look over the cap
-  // and start a grace window here. The tier-writing events reconcile too,
-  // and clear it the moment the real tier lands.
+  // and start a grace window here. invoice.paid reconciles too, and clears
+  // it the moment the real tier lands.
   if (active) await reconcileVesselOverflow(service, vessel.owner_id, `signup bundle ${intent.id}, ${mxeId}`);
 }
 
@@ -552,16 +553,26 @@ async function recordAccountSubscriptionInvoice(service: ServiceClient, invoice:
     return;
   }
 
-  const subscription = await getStripe().subscriptions.retrieve(subscriptionId);
+  const stripe = getStripe();
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
   const customerId = typeof subscription.customer === "string" ? subscription.customer : subscription.customer.id;
+
+  // The tier comes from what THIS invoice charged for, so it needs every
+  // line. The event carries the first page only.
+  let paidInvoice = invoice;
+  if (invoice.lines?.has_more) {
+    const all: Stripe.InvoiceLineItem[] = [];
+    for await (const line of stripe.invoices.listLineItems(invoice.id, { limit: 100 })) all.push(line);
+    paidInvoice = { ...invoice, lines: { ...invoice.lines, data: all, has_more: false } };
+  }
 
   // items.data[0] is always the one recurring plan price — the badge fee
   // rides along on the invoice via add_invoice_items, never as a
-  // subscription item, so there's exactly one item to read here regardless
-  // of whether this was a plain subscription or a bundled signup.
+  // subscription item. Read here ONLY for the amount recorded on a first
+  // invoice; the tier is never read from it (lib/subscription-tier.ts).
   const planItem = subscription.items.data[0];
   const planPrice = planItem?.price;
-  const tier = tierForPriceId(typeof planPrice === "string" ? planPrice : planPrice?.id);
+  const tier = tierForPaidInvoice(paidInvoice, subscription);
   const subscriptionOnlyAmountCents =
     invoice.billing_reason === "subscription_create"
       ? typeof planPrice === "string"
@@ -570,8 +581,8 @@ async function recordAccountSubscriptionInvoice(service: ServiceClient, invoice:
       : invoice.amount_paid;
 
   if (!tier) {
-    console.error(
-      `[stripe-webhook] invoice.paid ${invoice.id}: subscription ${subscription.id}'s price ${typeof planPrice === "string" ? planPrice : planPrice?.id} matches neither STRIPE_PRICE_ID_BASIC_SUBSCRIPTION nor STRIPE_PRICE_ID_FULL — leaving subscription_tier untouched.`,
+    console.log(
+      `[stripe-webhook] invoice.paid ${invoice.id}: names no single plan tier, or is not subscription ${subscription.id}'s latest invoice — leaving subscription_tier untouched.`,
     );
   }
 
@@ -646,9 +657,25 @@ async function recordAccountSubscriptionInvoice(service: ServiceClient, invoice:
   //
   // If it is not active now, the account is left to syncSubscriptionStatus,
   // which is driven by the status events and applies lapses and restores.
-  // That also covers the brief lag where an invoice is paid before Stripe
-  // has moved the subscription to active: customer.subscription.updated
-  // follows and applies it.
+  //
+  // EXCEPT the brief lag where a first invoice is paid before Stripe has
+  // moved the subscription out of 'incomplete'. customer.subscription.updated
+  // used to cover that by writing the tier from the price; it no longer
+  // writes a tier at all, so this is now the only event that lands a new
+  // subscription's tier. Thrown, so Stripe redelivers once the status has
+  // moved. Retry-safe: the payment record above is guarded.
+  if (subscription.status === "incomplete") {
+    throw new Error(
+      `invoice.paid ${invoice.id}: subscription ${subscription.id} is still 'incomplete' — retrying so the paid tier lands once it is active.`,
+    );
+  }
+
+  // Set by hand; nothing driven by Stripe writes its plan (lib/billing-exempt.ts).
+  if (isTierReconciliationExempt(owner.id)) {
+    console.log(`[stripe-webhook] invoice.paid ${invoice.id}: recorded; account ${owner.id} is exempt from Stripe tier sync — not updated.`);
+    return;
+  }
+
   if (subscription.status === "active") {
     const { error: updateError } = await service
       .from("users")
@@ -675,7 +702,7 @@ async function recordAccountSubscriptionInvoice(service: ServiceClient, invoice:
   // it relied on customer.subscription.updated arriving too. It matters
   // more now that activation reconciles: a bundled signup can be activated
   // (and reconciled against the account's OLD tier) before the new tier
-  // lands, and this is one of the two events that land it. Reconciling
+  // lands, and this is the event that lands it. Reconciling
   // after every tier write means a window started against a stale tier is
   // cleared as soon as the real one is known, whichever event is first.
   await reconcileVesselOverflow(service, owner.id, `invoice.paid ${invoice.id}`);
@@ -735,6 +762,27 @@ async function syncSubscriptionStatus(service: ServiceClient, eventSubscription:
       `[stripe-webhook] subscription ${subscription.id} is '${subscription.status}' but ${action.by} is live on customer ${customerId} — not applying.`,
     );
     return;
+  }
+
+  // Every branch below writes by customer. An account whose plan was set by
+  // hand is not Stripe's to change — lapsing it would downgrade it and pause
+  // its vessels (lib/billing-exempt.ts). Read before any write, so a failed
+  // read is a clean retry.
+  if (action.kind !== "ignore") {
+    const { data: customerOwners, error: customerOwnersError } = await service
+      .from("users")
+      .select("id")
+      .eq("stripe_customer_id", customerId);
+    if (customerOwnersError) {
+      throw new Error(`could not read the accounts for customer ${customerId}: ${customerOwnersError.message}`);
+    }
+    const exempt = ((customerOwners ?? []) as { id: string }[]).filter((r) => isTierReconciliationExempt(r.id));
+    if (exempt.length > 0) {
+      console.log(
+        `[stripe-webhook] subscription ${subscription.id} ('${subscription.status}') is on customer ${customerId}, which belongs to exempt account ${exempt.map((r) => r.id).join(", ")} — not applying.`,
+      );
+      return;
+    }
   }
 
   if (action.kind === "lapse") {
@@ -824,17 +872,14 @@ async function syncSubscriptionStatus(service: ServiceClient, eventSubscription:
   }
 
   if (action.kind === "active") {
-    const planItem = subscription.items.data[0];
-    const planPrice = planItem?.price;
-    const tier = tierForPriceId(typeof planPrice === "string" ? planPrice : planPrice?.id);
-    if (!tier) {
-      console.error(
-        `[stripe-webhook] customer.subscription.updated ${subscription.id}: price ${typeof planPrice === "string" ? planPrice : planPrice?.id} matches neither STRIPE_PRICE_ID_BASIC_SUBSCRIPTION nor STRIPE_PRICE_ID_FULL — leaving subscription_tier untouched.`,
-      );
-    }
+    // Status only. The tier used to be read off the item price here, and a
+    // price swap is not a payment: Stripe applies it when requested, so the
+    // swap's own event wrote Full before (or without) the upgrade being
+    // paid. The tier is written by invoice.paid, from what was paid — see
+    // lib/subscription-tier.ts.
     const { data: updatedRows, error: updateError } = await service
       .from("users")
-      .update({ subscription_status: "active", ...(tier ? { subscription_tier: tier } : {}) })
+      .update(accountUpdateForActiveSubscription())
       .eq("stripe_customer_id", customerId)
       .select("id");
     if (updateError) throw new Error(`active: users update failed for customer ${customerId}: ${updateError.message}`);
