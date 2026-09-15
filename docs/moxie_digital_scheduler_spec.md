@@ -1,7 +1,7 @@
 # Moxie — scheduler spec
 
-**Status: proposed, not built.** Written 2026-09-15 for review. Nothing in
-this document exists in the code yet; where it states a fact about the
+**Status: approved design, not built.** Written 2026-09-15; decisions
+recorded the same day (§12). Nothing in this document exists in the code yet; where it states a fact about the
 current system, that fact was checked against the code, the live database
 (read-only) or vendor documentation on that date, and says so.
 
@@ -29,7 +29,8 @@ The order differs from the one proposed, by one swap:
 Everything ships **report-only first**: the job records what it *would* do,
 without writing or sending, until each step is switched on deliberately.
 
-Decisions this spec needs from you are collected in §12.
+The §12 decisions were answered on 2026-09-15 and are folded into the
+sections below.
 
 ---
 
@@ -127,6 +128,14 @@ is true (today: `2255a040…`, admin@). Recorded as `exempt`.
 or `past_due` and not on the exempt list, it's an **anomaly** (a hand-set
 plan nobody listed). Report it and alert; never change it.
 
+**A customer Stripe can't find is an anomaly, never "no plan".** A
+`resource_missing` on the customer (deleted, or a test-mode id read with
+live keys) says nothing about whether the owner pays. Treating it as
+"no subscriptions" would lapse the account. It's recorded `anomaly`,
+alerted, and nothing changes. This matters on the switch to live Stripe
+keys: every `stripe_customer_id` in the database today is a test-mode
+id, and a live-key run would hit this for all of them.
+
 **Reads per account** (all reads):
 1. `subscriptions.list({ customer, status: 'all' })`
 2. The live subscription's latest invoice, with its lines
@@ -169,9 +178,21 @@ take it away wait 24 hours, and a genuine missed cancellation is still
 fixed the next day.
 
 **First-run effects, known today:**
-- `90806ee6…` (`sub_1UBJeT…`): stored `full`, Stripe price Full, but paid
-  only for Basic. The job would report tier drift down to Basic, and
-  would downgrade on run two if acting. **Decision needed (§12).**
+- `90806ee6…` (`sub_1UBJeT…`) is **your own account**, with test-mode
+  data left by the upgrade bug from before the 2 Sept fix: stored `full`,
+  Stripe price Full, paid only for Basic. Reconciliation must not
+  downgrade it and record that as a correction. **Gate: the tier step
+  can't be switched to acting while this account shows drift.** Resolve it
+  first, in one of two ways:
+  1. **Correct the test data (recommended):** swap the subscription item
+     back to Basic with `proration_behavior: "none"`, delete the two
+     pending proration items, and set the stored tier to match whichever
+     plan you want the account on. These are Stripe and database writes,
+     asked for when the time comes. It keeps the exempt list meaning "plan
+     set by hand, no Stripe subscription".
+  2. **Add it to `lib/billing-exempt.ts`** with the reason. That's quicker,
+     but the account would never be reconciled again, and the list would
+     stop meaning one thing.
 - `2255a040…` (admin): exempt, so untouched.
 
 **Stripe read budget.** About 3 reads per subscribed account per run. Stripe
@@ -182,7 +203,9 @@ transactions a month to stay inside. Worth watching, not yet a constraint.
 
 ### 3.2 Transfer-buyer window
 
-The mechanism is scoped here; the duration is not fixed.
+**Window: 30 days** (decided 2026-09-15). Long enough that a buyer
+sorting out a boat purchase isn't rushed, short enough that free service
+doesn't accrue. Revisit once there's real data.
 
 **Condition.** After step 1, the account:
 - is not exempt,
@@ -201,9 +224,11 @@ vessel without a plan, is the same gap.
 
 **Why not derive it from `ownership_transfers.completed_at`.** For existing
 holders the transfer is already in the past. `b6cac9fa…` completed on
-2026-09-11; with a short window, a derived clock would lapse them on the
-first run with no warning. A stored clock gives everyone the full window
-from the day they're first told.
+2026-09-11; a derived clock would lapse them 30 days after that, possibly
+on the first run and with no warning. A stored clock gives everyone the
+full 30 days from the day they're first told. **The clock starts at the
+first acting run**, not a report-only one, which writes nothing. As
+proposed; not contradicted in review.
 
 **Expiry:** new SQL function `apply_no_plan_window(p_owner_id, p_window_days)`
 → `UUID[]`.
@@ -214,13 +239,14 @@ from the day they're first told.
 - Subscribing restores them through the existing `clear_vessels_lapsed`
   in the webhook's active branch.
 
-**Duration:** `NO_PLAN_WINDOW_DAYS` in `lib/tier-config.ts`, mirrored as
-the argument, **null until decided**. While null, the step can only run
-report-only: it records `would_start_clock` and `would_lapse` events and
-writes nothing.
+**Duration:** `NO_PLAN_WINDOW_DAYS = 30` in `lib/tier-config.ts`, passed
+as the function's argument (the number lives in one place, so SQL doesn't
+mirror a literal).
 
-**Notifications** (new types, copy written when the duration is known):
-- `no_plan_window_started` (email): "choose a plan by {date}".
+**Notifications** (new types):
+- `no_plan_window_started` (email): "choose a plan by {date}", where the
+  date is `no_plan_since + 30 days` read from the stored clock, never a
+  restated day count (the same rule as the downgrade email).
 - `vessel_lapsed_no_plan` (email). The existing `vessel_lapsed` copy
   covers two causes and would be false for a third.
 
@@ -275,21 +301,36 @@ call that paused them, so nothing notifies twice.
 - The owner has an email and hasn't opted out.
 - Documents: `reg_expiry`, `ins_expiry`, and `fishing_license_expiry`
   unless `fishing_license_lifetime`. The boater card has no expiry.
-- **Which tiers get reminders is open (§12).** App copy currently lists
-  reminders as a Full Access feature.
+- **Full Access only** (decided 2026-09-15): `subscription_tier = 'full'`
+  as of after step 1, so the tier has been checked against Stripe.
+  Reminders are the concrete thing Full delivers and the copy sells them
+  that way. Basic owners keep the in-app expiry badges; the email is the
+  upgrade reason.
+  - A `past_due` Full owner still gets them: they're still on Full, and
+    their vessels are active until dormancy says otherwise.
+  - An owner who drops to Basic mid-window gets no further reminders. One
+    who upgrades gets the thresholds still ahead.
+  - The admin account (exempt, Full by hand) is included like any Full
+    owner. Its vessels are test vessels, so expect reminders to
+    admin@moxieyachting.com for them.
 
 **"Days remaining" is computed from calendar dates in `America/Los_Angeles`.**
 Vercel functions run in UTC, and `document-expiry.ts` uses the process's
 local date. Unpinned, a document would read a day short for owners west of
 UTC.
 
-**Thresholds (proposed, §12):** 60, 30, 7 and 0 days before expiry.
+**Thresholds: 30, 7 and 0 days before expiry** (decided 2026-09-15). Sixty
+days is too early to act on an insurance renewal and trains people to
+ignore the sender; three emails per document is the ceiling before it
+reads as nagging. **Nothing after expiry.**
 - Each run sends **at most one** reminder per document: the most urgent
   threshold crossed that hasn't been sent.
-- If a missed run means a document jumps from 31 days to 6, it gets the
-  7-day reminder only, not 30 and 7 together.
-- A document sitting inside a 60-day window gets **4** emails at most,
-  not 60.
+- If a missed run means a document jumps from 8 days to 6, it gets the
+  7-day reminder. If it jumps from 31 days to 6, it gets the 7-day
+  reminder only, not 30 and 7 together.
+- A document gets **3** emails at most per expiry date, not 30.
+- A document first dated inside a window (added with 12 days left) starts
+  at the next threshold ahead of it (7), not the one already passed.
 
 **Idempotency:** new table `expiry_reminder_sends`, unique on
 `(vessel_id, owner_id, doc_type, expiry_date, threshold_days)`.
@@ -314,7 +355,9 @@ The key parts cover these edge cases:
 webhook notifications. The job sends at most 5 per second and honours
 `retry-after` on a 429.
 
-**Opt-out** (doesn't exist; this spec adds it):
+**Opt-out, per owner** (decided 2026-09-15: one toggle, one link; someone
+who wants these off wants all of them off). Doesn't exist yet; this spec
+adds it:
 - **Column:** `users.expiry_reminders_opt_out_at`; null means reminders are on.
 - **Link:** every reminder's footer links to `/email/unsubscribe` with
   `owner` and `token` query parameters.
@@ -414,13 +457,38 @@ browser.
   and the next run's start-up check ("previous run not succeeded and not
   alerted") sends it then.
 
-**Circuit breaker for access-removing actions.** If one run would lapse or
-downgrade more than **5 accounts**, or lock or lapse more than **20
-vessels** (proposed numbers, §12), those actions switch to report-only for
-the rest of the run and the admin email says so. Nothing is removed until
-an admin runs it again from `/admin` with confirmation. A bug in
-reconciliation that mass-downgrades paying customers is the worst failure
-this job can have, and it should stop and ask.
+**Circuit breaker.** A bug in reconciliation that mass-downgrades paying
+customers is the worst failure this job can have, and it should stop and
+ask.
+
+**Principle: it trips on a proportion, not a count** (decided 2026-09-15).
+Ten accounts locking in one run is alarming at seven accounts and routine
+at a thousand. A fixed number is either too tight later or meaningless
+now.
+
+**What counts, against what:**
+
+| Measure | Counts | Denominator (fixed at run start) | Trips above |
+|---|---|---|---|
+| Accounts losing access | Tier downgrades, lapses (tier step or no-plan window) and accounts with vessels locked | Accounts holding an active vessel or a live plan | **5%**, but never below **2 accounts** |
+| Vessels paused | Vessels locked or lapsed | Active vessels | **5%**, but never below **5 vessels** |
+| Reminder emails | Reminders sent | Full owners' dated documents in scope | **50%**, but never below **10 emails** |
+
+**Why a floor.** A pure proportion trips on every ordinary event while
+the business is small: at 7 accounts, one missed cancellation is 14%. The
+floor only stops a single routine event tripping it. Above a few dozen
+accounts the proportion is what binds. At 1,000 accounts the account
+breaker trips above 50, so ten locking is routine.
+
+**What tripping does.**
+- **When:** checked before each access-removing action and each send. The
+  breaker is measured as the run goes, so at most the threshold is acted
+  on before it trips.
+- **Then:** those actions switch to report-only for the rest of the run.
+  Other steps carry on, and the run ends `partial`.
+- **Alert:** the admin email says which breaker tripped, with the counts.
+- **Resuming:** nothing more is removed or sent until an admin reruns it
+  from `/admin` with an explicit "confirm above threshold".
 
 ---
 
@@ -518,14 +586,42 @@ Vercel's runtime logs get one structured line per step and account. They
 are not the record; the tables are. (I haven't checked Vercel Pro's log
 retention.)
 
-**Absence detection.** A run that never happens can't report itself.
-- **Always:** `/admin` shows a warning banner when the last `succeeded` run
-  is older than 26 hours. Someone has to open `/admin` to see it.
-- **Recommended, needs your decision (§12):** an external heartbeat such as
-  Healthchecks.io or Better Stack. The job pings a URL when a run ends
-  `succeeded`, and the service emails you if no ping arrives within 26
-  hours. That's a new third-party service and an outbound call each run,
-  which is why it's yours to approve.
+**Absence detection.** A run that never happens can't report itself, and a
+job that silently stops is the failure that matters. Decided 2026-09-15:
+an external uptime monitor polls a health endpoint.
+
+**`GET /api/health/scheduler`**
+- **Healthy (200):** the most recent *finished* run ended `succeeded` or
+  `partial` within the last **26 hours**. That's the daily interval plus
+  two hours of slack for a slow run.
+- **Unhealthy (503):** otherwise, meaning no finished run in 26 hours, or
+  the latest ended `failed` or `timed_out`. Also 503 if the table can't
+  be read (`PGRST205` before the migration, or the database is down). A
+  monitor that can't tell is an alert.
+- **`partial` counts as healthy:** the job ran, and failed accounts already
+  produce the admin email. The monitor answers "is it running", not "was
+  every account clean".
+- **Unauthenticated** (most free monitors can't send headers), so the body
+  says as little as possible: `ok` or `stale`, plus the last finished
+  run's time. No counts, account ids or errors.
+- One indexed read per poll, `Cache-Control: no-store`.
+
+**Monitor setup** (yours, about fifteen minutes, after the first run so it
+doesn't start red):
+1. In a free uptime monitor (UptimeRobot, Better Stack or similar; check
+   its free plan's check interval), add an HTTP(S) monitor for
+   `https://moxieyacht.com/api/health/scheduler`.
+2. Alert on non-200, to your email.
+3. Check every 5–15 minutes, whatever the free plan allows.
+   The 26-hour window, not the check interval, decides how late you hear.
+4. Stop the cron (or point the monitor at a path that returns 503) once,
+   to confirm the alert reaches you.
+
+**Also:** `/admin` shows a warning banner when the last healthy run is
+older than 26 hours.
+- **Not chosen:** a push heartbeat, where the job pings the monitor's
+  URL on success. It works too, but it's an outbound call to a third party
+  on every run, and polling needs nothing from the job.
 
 ---
 
@@ -584,17 +680,22 @@ are additive, and existing rows get nulls.
 
 1. **Migrations** (§9). You run them.
 2. **`CRON_SECRET` and `EMAIL_UNSUBSCRIBE_SECRET`** in Vercel Production (§4).
-3. **Deploy the route with every step report-only.** Modes live in
-   `lib/scheduler-config.ts`, so switching a step on is a reviewed commit,
-   not a dashboard toggle.
-4. **About a week of daily digests.** Review what each step would do,
-   especially tier drift (§3.1 first-run effects).
-5. **Switch steps on one at a time,** in pipeline order: tier, then
-   dormancy, then reminders (after the opt-out ships). The transfer window
-   comes on only once its duration is decided.
-6. **Three clean acting runs of dormancy,** then remove the page-load
+3. **Deploy the route and the health endpoint with every step
+   report-only.** Modes live in `lib/scheduler-config.ts`, so switching a
+   step on is a reviewed commit, not a dashboard toggle.
+4. **After the first run, set up the uptime monitor** (§7) and test its alert once.
+5. **About a week of daily digests.** Review what each step would do,
+   especially tier drift.
+6. **Resolve `90806ee6…`** (§3.1). The tier step can't be switched on while
+   it shows drift.
+7. **Switch steps on one at a time,** in pipeline order:
+   1. tier;
+   2. the transfer window (30 days; `b6cac9fa…`'s clock starts here);
+   3. dormancy;
+   4. reminders, after the opt-out ships.
+8. **Three clean acting runs of dormancy,** then remove the page-load
    callers (§3.3).
-7. **Reminders on,** then update the app copy, CLAUDE.md's "what sends"
+9. **Reminders on,** then update the app copy, CLAUDE.md's "what sends"
    list and the roadmap.
 
 ---
@@ -617,23 +718,20 @@ are additive, and existing rows get nulls.
 
 ---
 
-## 12. Decisions needed
+## 12. Decisions (recorded 2026-09-15)
 
-1. **Order:** accept tier → transfer window → dormancy → reminders, run per
-   account (§2)?
-2. **`90806ee6…`:** paid Basic, stored and priced Full. Let reconciliation
-   downgrade it once acting, add it to a hand-reviewed exception, or fix it
-   in Stripe first?
-3. **Transfer window duration** (§3.2), still open. And do existing no-plan
-   holders (`b6cac9fa…`) get the full window from the first acting run, as
-   proposed?
-4. **Reminder eligibility:** every owner, or Full only? Copy currently
-   sells them as Full.
-5. **Reminder thresholds:** 60/30/7/0 as proposed, and whether to send one
-   after expiry (the template supports "has expired").
-6. **Opt-out scope:** per owner, as proposed, or per vessel or document.
-7. **Circuit-breaker numbers:** 5 accounts, 20 vessels per run?
-8. **External heartbeat** for absence detection: approve a service, or rely
-   on the `/admin` banner?
-9. **Removing page-load dormancy** rather than keeping it as a fallback
-   (§3.3)?
+| # | Question | Decision |
+|---|---|---|
+| 1 | Step order and shape | **Per account**: tier → transfer window → dormancy → reminders (§2). |
+| 2 | `90806ee6…` | Your own account; test-mode data from the pre-fix upgrade bug. **Exempt or correct it before the first acting run**, never "corrected" by a downgrade. Spec recommends correcting it, with the writes asked for at the time (§3.1). |
+| 3 | Transfer window | **30 days**; revisit with real data. The clock starts at the first acting run, including for `b6cac9fa…` (§3.2). |
+| 4 | Reminder eligibility | **Full Access only.** Basic keeps the in-app badges (§3.4). |
+| 5 | Thresholds | **30, 7, 0 days**; nothing after expiry; at most 3 per document per expiry date (§3.4). |
+| 6 | Opt-out | **Per owner**: one toggle, one link (§3.4). |
+| 7 | Circuit breaker | **Trips on a proportion**, with a small floor: 5% of accounts (at least 2), 5% of active vessels (at least 5), 50% of reminder-eligible documents (at least 10) (§5). |
+| 8 | Absence detection | **External uptime monitor** polling `/api/health/scheduler` (§7). |
+| 9 | Page-load dormancy | **Removed** after three clean acting runs of the dormancy step (§3.3). |
+
+**Still to settle when building, not now:**
+- How to resolve `90806ee6…` (item 2), and approving its writes.
+- The copy for `no_plan_window_started` and `vessel_lapsed_no_plan`.

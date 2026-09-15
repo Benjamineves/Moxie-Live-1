@@ -50,8 +50,10 @@ question.
 ## Tier 3 — Unblocked once Tier 1 lands
 
 ### Scheduler (tier reconciliation, transfer window, dormancy, reminders)
-**Unblocked** (Vercel Pro live). **Spec proposed, not built:**
-`docs/moxie_digital_scheduler_spec.md` — nine decisions in its §12.
+**Unblocked** (Vercel Pro live). **Spec approved, not built:**
+`docs/moxie_digital_scheduler_spec.md`. Decisions recorded 2026-09-15 in
+its §12: 30-day transfer window, reminders Full-only at 30/7/0 days,
+per-owner opt-out, proportional circuit breaker, external uptime monitor.
 One daily cron route running a per-account pipeline: tier reconciliation →
 transfer-buyer window → dormancy → expiry reminders. Replaces the
 page-load dormancy calls (including a stranger's badge scan) and closes
@@ -104,8 +106,9 @@ Billing correctness, not notifications.
 Neither acceptance nor completion checks subscription status, and lapse
 logic only runs on Stripe events a never-subscribed account never gets.
 A seller can pay a transfer fee and hand someone indefinite free service.
-**Decision needed:** require a plan at acceptance, or allow a window
-before the vessel lapses. A window needs the scheduler to close it.
+**Decided 2026-09-15:** a 30-day window, enforced by the scheduler
+(spec §3.2); revisit with real data. Live example: `b6cac9fa…` holds
+`MXE-01024` with no plan.
 
 ### Document limit can never trigger
 `BASIC_DOCUMENT_LIMIT` is 3 and exactly three slots count, so the locked
