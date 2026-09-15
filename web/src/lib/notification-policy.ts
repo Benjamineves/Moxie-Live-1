@@ -20,6 +20,7 @@ export type NotificationType =
   | "vessel_locked"
   | "vessel_reactivated"
   | "vessel_reactivated_by_moxie"
+  | "vessel_reactivated_payment_recovered"
   | "transfer_accepted"
   | "transfer_declined_or_expired"
   | "transfer_completed_seller"
@@ -79,8 +80,9 @@ export const NOTIFICATION_POLICY: Record<NotificationType, NotificationPolicy> =
   vessel_lapsed: {
     email: true,
     dedupe: { mode: "window", windowMs: 7 * DAY_MS },
-    why: "Terminal event, so there is no grace period to anchor to. A week covers every webhook retry. The cost is that a cancel-resubscribe-cancel inside one week emails once; the in-app row still records both.",
+    why: "Vessels paused for non-payment, once for the account naming the count. Two causes share the type: the 7-day past-due grace running out (fired from the lazy dormancy check, which returns the paused ids only to the call that paused them), and Stripe ending the subscription (fired from the webhook). The window stays for the webhook path, which does not have that guard and can be redelivered. The cost: a subscription ending inside a week of the past-due pause does not email again; the in-app row still records it.",
   },
+
   downgrade_grace_started: {
     email: true,
     dedupe: { mode: "none" },
@@ -114,7 +116,12 @@ export const NOTIFICATION_POLICY: Record<NotificationType, NotificationPolicy> =
   vessel_reactivated: {
     email: false,
     dedupe: { mode: "none" },
-    why: "Lapsed vessels restored by a resubscription, once per account naming the count. Usually fires while the owner is on the processing screen watching it happen, and emailing a confirmation of what someone just did is noise. Known exception: Stripe recovering an unpaid subscription on a retry, with nobody watching — in-app only for now; not yet decided.",
+    why: "Lapsed vessels restored by a NEW subscription after a cancellation, once per account naming the count. The owner resubscribed at checkout and is on the processing screen watching it happen; emailing a confirmation of what someone just did is noise. A payment recovering on its own is a different event: vessel_reactivated_payment_recovered.",
+  },
+  vessel_reactivated_payment_recovered: {
+    email: true,
+    dedupe: { mode: "none" },
+    why: "Vessels paused by the past-due grace, restored because the failed payment went through on the same subscription — usually Stripe retrying on its own, with nobody watching. The owner was told their boats were paused, so they are told they are back. clear_vessels_lapsed returns the ids only to the call that restored them, so no window is needed.",
   },
   vessel_reactivated_by_moxie: {
     email: true,

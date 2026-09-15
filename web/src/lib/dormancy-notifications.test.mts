@@ -3,8 +3,12 @@ import assert from "node:assert/strict";
 import {
   decideGraceNotification,
   graceStartedMessage,
+  parseClearLapsedResult,
+  parseOwnerDormancyResult,
   tierFromSubscriptions,
+  vesselsLapsedAfterPaymentFailureMessage,
   vesselsLockedMessage,
+  vesselsRecoveredMessage,
   type SubscriptionSummary,
 } from "./dormancy-notifications.ts";
 import { VESSEL_LIMIT } from "./tier-config.ts";
@@ -86,4 +90,33 @@ test("the grace message quotes the stored deadline, not a day count", () => {
 test("the lock message names the count once, for the whole account", () => {
   assert.match(vesselsLockedMessage(4), /^4 vessels on your account have been paused/);
   assert.match(vesselsLockedMessage(1), /^1 vessel on your account has been paused/);
+});
+
+
+test("reconcile_owner_dormancy results parse in both the 20261002 and 20261003 shapes", () => {
+  // Pushes deploy before migrations run; the page render must read either.
+  assert.deepEqual(parseOwnerDormancyResult(["a", "b"]), { lockedIds: ["a", "b"], lapsedIds: [] });
+  assert.deepEqual(parseOwnerDormancyResult({ locked_ids: ["a"], lapsed_ids: ["x", "y"] }), { lockedIds: ["a"], lapsedIds: ["x", "y"] });
+  assert.deepEqual(parseOwnerDormancyResult(null), { lockedIds: [], lapsedIds: [] });
+  assert.deepEqual(parseOwnerDormancyResult({ locked_ids: null }), { lockedIds: [], lapsedIds: [] });
+});
+
+test("an old clear_vessels_lapsed result never classifies a restore as a recovered payment", () => {
+  // The 20261002 shape cannot say why the vessels were restored. Guessing
+  // "recovered" would email; the safe reading is the in-app behaviour that
+  // applied before the split.
+  assert.deepEqual(parseClearLapsedResult(["a"]), { restoredIds: ["a"], recoveredFromPastDue: false });
+  assert.deepEqual(parseClearLapsedResult({ restored_ids: ["a"], recovered_from_past_due: true }), { restoredIds: ["a"], recoveredFromPastDue: true });
+  // Only a real true counts.
+  assert.equal(parseClearLapsedResult({ restored_ids: ["a"], recovered_from_past_due: "true" }).recoveredFromPastDue, false);
+  assert.deepEqual(parseClearLapsedResult(null), { restoredIds: [], recoveredFromPastDue: false });
+});
+
+test("the past-due lapse message names the count and what fixes it, without claiming the subscription ended", () => {
+  const many = vesselsLapsedAfterPaymentFailureMessage(3);
+  assert.match(many, /3 vessels on your account are now paused/);
+  assert.match(many, /Update your payment method to restore them/);
+  assert.doesNotMatch(many, /ended/);
+  assert.match(vesselsLapsedAfterPaymentFailureMessage(1), /1 vessel on your account is now paused.*restore it\./);
+  assert.match(vesselsRecoveredMessage(2), /2 paused vessels are active again/);
 });

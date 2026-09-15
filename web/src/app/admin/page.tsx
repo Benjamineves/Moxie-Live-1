@@ -6,7 +6,7 @@ import { AdminNav } from "@/components/AdminNav";
 import { AdminGeoMap } from "@/components/AdminGeoMap";
 import { GEO_REGIONS, classifyRegion, resolveVesselLocationSource } from "@/lib/vessel-geo";
 import { readBadgePoolStatus, POOL_AMBER_THRESHOLD, POOL_RED_THRESHOLD } from "@/lib/badge-pool";
-import { notifyVesselsLocked } from "@/lib/dormancy-notify";
+import { notifyVesselsLapsedAfterPaymentFailure, notifyVesselsLocked } from "@/lib/dormancy-notify";
 
 function startOfMonth(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -50,11 +50,17 @@ export default async function AdminOverviewPage() {
   // page self-heals on every load instead of drifting between visits.
   // Still not real-time — correct as of the last /admin load, not the
   // instant a grace period actually expires.
-  const { data: lockedByOwner } = await service.rpc("reconcile_all_dormancy");
+  const { data: pausedByOwner } = await service.rpc("reconcile_all_dormancy");
   // For an owner who never logs in and whose badge is never scanned, this
-  // admin load is when their vessels lock — and so when they are told. One
-  // row per owner that had vessels locked by THIS call (none before 20261002).
-  for (const row of (Array.isArray(lockedByOwner) ? lockedByOwner : []) as { owner_id: string; locked_ids: string[] }[]) {
+  // admin load is when their vessels pause — and so when they are told. One
+  // row per owner and kind of event that THIS call caused; lapsed_ids is
+  // absent before 20261003, which sends nothing for it.
+  for (const row of (Array.isArray(pausedByOwner) ? pausedByOwner : []) as {
+    owner_id: string;
+    locked_ids?: string[];
+    lapsed_ids?: string[];
+  }[]) {
+    await notifyVesselsLapsedAfterPaymentFailure(row.owner_id, row.lapsed_ids);
     await notifyVesselsLocked(row.owner_id, row.locked_ids);
   }
 

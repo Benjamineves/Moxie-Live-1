@@ -8,8 +8,12 @@ import { notifyOwner } from "./notify.ts";
 import {
   decideGraceNotification,
   graceStartedMessage,
+  parseClearLapsedResult,
+  parseOwnerDormancyResult,
   tierFromSubscriptions,
+  vesselsLapsedAfterPaymentFailureMessage,
   vesselsLockedMessage,
+  vesselsRecoveredMessage,
   vesselsRestoredMessage,
 } from "./dormancy-notifications.ts";
 
@@ -139,8 +143,49 @@ export async function notifyVesselsLocked(ownerId: string, lockedIds: unknown): 
   await notifyOwner(ownerId, "vessel_locked", vesselsLockedMessage(lockedIds.length));
 }
 
-/** vessel_reactivated (in-app), once for the account, from clear_vessels_lapsed's result. */
-export async function notifyVesselsRestored(ownerId: string, restoredIds: unknown): Promise<void> {
-  if (!Array.isArray(restoredIds) || restoredIds.length === 0) return;
-  await notifyOwner(ownerId, "vessel_reactivated", vesselsRestoredMessage(restoredIds.length));
+/**
+ * vessel_lapsed, once for the account, when the past-due grace ran out.
+ *
+ * The ids come from apply_past_due_dormancy_if_expired (via
+ * reconcile_owner_dormancy or reconcile_all_dormancy), which returns them only
+ * to the call that paused the vessels. After the window expires the account
+ * stays past_due and every page load re-runs the lapse, but finds nothing
+ * still active, so this sends once.
+ */
+export async function notifyVesselsLapsedAfterPaymentFailure(ownerId: string, lapsedIds: unknown): Promise<void> {
+  if (!Array.isArray(lapsedIds) || lapsedIds.length === 0) return;
+  await notifyOwner(ownerId, "vessel_lapsed", vesselsLapsedAfterPaymentFailureMessage(lapsedIds.length));
+}
+
+/**
+ * Both notifications a reconcile_owner_dormancy call can produce, from its
+ * result in either the 20261002 or 20261003 shape. For the page renders that
+ * run the lazy dormancy checks.
+ */
+export async function notifyOwnerDormancyResult(ownerId: string, data: unknown): Promise<void> {
+  const { lockedIds, lapsedIds } = parseOwnerDormancyResult(data);
+  await notifyVesselsLapsedAfterPaymentFailure(ownerId, lapsedIds);
+  await notifyVesselsLocked(ownerId, lockedIds);
+}
+
+/**
+ * Lapsed vessels restored when a subscription became active — two
+ * different events, so two different types.
+ *
+ *  - A failed payment recovered on the same subscription, usually by Stripe
+ *    retrying on its own: nobody was watching, so it emails
+ *    (vessel_reactivated_payment_recovered).
+ *  - A new subscription after a cancellation: the owner resubscribed at
+ *    checkout and is watching it happen, so in-app only (vessel_reactivated).
+ *
+ * clear_vessels_lapsed tells them apart in the database — see 20261003.
+ */
+export async function notifyVesselsRestored(ownerId: string, data: unknown): Promise<void> {
+  const { restoredIds, recoveredFromPastDue } = parseClearLapsedResult(data);
+  if (restoredIds.length === 0) return;
+  if (recoveredFromPastDue) {
+    await notifyOwner(ownerId, "vessel_reactivated_payment_recovered", vesselsRecoveredMessage(restoredIds.length));
+  } else {
+    await notifyOwner(ownerId, "vessel_reactivated", vesselsRestoredMessage(restoredIds.length));
+  }
 }

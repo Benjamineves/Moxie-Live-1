@@ -62,14 +62,22 @@ const COPY: Record<EmailableNotificationType, Copy> = {
       "Nothing is paused yet, and nothing is ever deleted. Your vessels keep their MXE identity permanently, whatever happens to the subscription.",
   },
   vessel_lapsed: {
-    subject: "Your Moxie subscription has ended",
-    title: "Your subscription has ended",
+    // Two causes send this — a payment that stayed failed past its grace, and
+    // a subscription Stripe has ended — so the copy is true for both. The
+    // cause is in the lead line. It used to say "Your subscription has
+    // ended", which was false for the first.
+    subject: "Your Moxie vessels are paused",
+    title: "Your vessels are paused",
     detail: [
-      "Your badges carry on working — a scan still reaches each vessel's public profile. It is the owner-side features that are paused.",
+      "Your badges carry on working — a scan still reaches each vessel's public profile. It is the owner-side features that are paused: document access, sharing and editing.",
     ],
-    cta: { label: "Resubscribe", path: "/dashboard/upgrade" },
+    // /dashboard/upgrade sends a past-due account to its payment method and
+    // a cancelled one to choosing a plan, so one link serves both causes.
+    cta: { label: "Restore access", path: "/dashboard/upgrade" },
     reassurance:
-      "There is nothing to set up again. Resubscribing restores every document, share and setting exactly as you left it.",
+      // It used to promise every share came back. They do not: pausing
+      // revokes share links, and restoring does not reinstate them.
+      "Nothing is deleted. Restoring access brings back every document and setting as you left it. Share links were revoked when access paused, so create new ones if you need them.",
   },
   downgrade_grace_started: {
     subject: "Action needed on your Moxie account",
@@ -142,6 +150,14 @@ const COPY: Record<EmailableNotificationType, Copy> = {
     cta: { label: "Choose which stay active", path: "/dashboard/manage-fleet" },
     reassurance:
       "Each vessel's MXE identity is permanent and unaffected. Unpausing restores everything exactly as it was.",
+  },
+  vessel_reactivated_payment_recovered: {
+    subject: "Your payment went through — your vessels are active again",
+    title: "Your vessels are active again",
+    detail: [
+      "Document access and editing are back as they were. Share links were revoked while access was paused, so create new ones if you need them.",
+    ],
+    cta: { label: "Open your dashboard", path: "/dashboard" },
   },
   vessel_reactivated_by_moxie: {
     subject: "Your vessel is active again",

@@ -110,3 +110,58 @@ export function vesselsRestoredMessage(count: number): string {
 export function vesselReactivatedByMoxieMessage(mxeId: string): string {
   return `Moxie has reactivated ${mxeId}. It is active on your account again.`;
 }
+
+/**
+ * RPC RESULT SHAPES, OLD AND NEW.
+ *
+ * Pushes deploy before migrations are run, so these accept the shape each
+ * function returns before 20261003 as well as after it, and never throw on
+ * either. What they cannot know from an old shape, they do not guess.
+ */
+
+function uuidList(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [];
+}
+
+/**
+ * reconcile_owner_dormancy: UUID[] of locked vessels (20261002), or
+ * {locked_ids, lapsed_ids} (20261003).
+ */
+export function parseOwnerDormancyResult(data: unknown): { lockedIds: string[]; lapsedIds: string[] } {
+  if (Array.isArray(data)) return { lockedIds: uuidList(data), lapsedIds: [] };
+  if (data && typeof data === "object") {
+    const o = data as { locked_ids?: unknown; lapsed_ids?: unknown };
+    return { lockedIds: uuidList(o.locked_ids), lapsedIds: uuidList(o.lapsed_ids) };
+  }
+  return { lockedIds: [], lapsedIds: [] };
+}
+
+/**
+ * clear_vessels_lapsed: UUID[] of restored vessels (20261002), or
+ * {restored_ids, recovered_from_past_due} (20261003).
+ *
+ * The old shape cannot say whether the restore followed a recovered payment,
+ * so it reports false — the in-app-only behaviour that applied before the
+ * split — rather than emailing on a guess.
+ */
+export function parseClearLapsedResult(data: unknown): { restoredIds: string[]; recoveredFromPastDue: boolean } {
+  if (Array.isArray(data)) return { restoredIds: uuidList(data), recoveredFromPastDue: false };
+  if (data && typeof data === "object") {
+    const o = data as { restored_ids?: unknown; recovered_from_past_due?: unknown };
+    return { restoredIds: uuidList(o.restored_ids), recoveredFromPastDue: o.recovered_from_past_due === true };
+  }
+  return { restoredIds: [], recoveredFromPastDue: false };
+}
+
+/** The past-due grace ran out without the payment going through. */
+export function vesselsLapsedAfterPaymentFailureMessage(count: number): string {
+  return (
+    `Your payment still hasn't gone through, so ${plural(count, "vessel on your account is", "vessels on your account are")} now paused. ` +
+    `Update your payment method to restore ${count === 1 ? "it" : "them"}.`
+  );
+}
+
+/** A failed payment went through on its own — nobody was watching it happen. */
+export function vesselsRecoveredMessage(count: number): string {
+  return `Your payment has gone through, so ${plural(count, "paused vessel is", "paused vessels are")} active again.`;
+}

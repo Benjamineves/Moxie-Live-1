@@ -25,6 +25,7 @@ const ALL: NotificationType[] = [
   "vessel_locked",
   "vessel_reactivated",
   "vessel_reactivated_by_moxie",
+  "vessel_reactivated_payment_recovered",
   "transfer_accepted",
   "transfer_declined_or_expired",
   "transfer_completed_seller",
@@ -56,8 +57,10 @@ test("every type emails except the owner's own resubscription restore", () => {
     false,
     "a resubscription restore fires while the owner is watching it happen; emailing it is noise",
   );
-  // The owner was not there when an admin reactivated their vessel.
+  // The owner was not there when an admin reactivated their vessel, or when
+  // a failed payment went through on its own.
   assert.equal(NOTIFICATION_POLICY.vessel_reactivated_by_moxie.email, true);
+  assert.equal(NOTIFICATION_POLICY.vessel_reactivated_payment_recovered.email, true);
 });
 
 test("account-level dedupe windows match the grace period each message quotes", () => {
@@ -76,7 +79,7 @@ test("dormancy events that fire once by construction do not use a window", () =>
   // and both reactivations are reported only by the call that made the change.
   // A window would wrongly suppress a genuine second episode — a grace clock
   // that cleared and restarted, or a second downgrade.
-  for (const type of ["downgrade_grace_started", "vessel_locked", "vessel_reactivated", "vessel_reactivated_by_moxie"] as const) {
+  for (const type of ["downgrade_grace_started", "vessel_locked", "vessel_reactivated", "vessel_reactivated_by_moxie", "vessel_reactivated_payment_recovered"] as const) {
     assert.deepEqual(NOTIFICATION_POLICY[type].dedupe, { mode: "none" }, type);
   }
 });
@@ -247,4 +250,13 @@ test("no CTA points under /dashboard/<mxeId>, which is not a page", () => {
       `${type} links at a bare /dashboard/<mxeId>, which is not a route`,
     );
   }
+});
+
+test("the lapse email is true for both of its causes", () => {
+  // Sent when the past-due grace runs out (subscription still past_due) and
+  // when Stripe ends the subscription. It must not claim either.
+  const text = renderNotificationEmailText({ type: "vessel_lapsed", message: "x", mxeId: null });
+  assert.doesNotMatch(text, /subscription has ended/i);
+  // Pausing revokes share links and restoring does not bring them back.
+  assert.doesNotMatch(text, /every document, share/i);
 });

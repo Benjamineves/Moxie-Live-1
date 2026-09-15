@@ -855,9 +855,12 @@ async function syncSubscriptionStatus(service: ServiceClient, eventSubscription:
       const { data: restored, error } = await service.rpc("clear_vessels_lapsed", { p_owner_id: row.id });
       if (error) throw new Error(`clear_vessels_lapsed failed for owner ${row.id}: ${error.message}`);
 
-      // vessel_reactivated, once for the account. clear_vessels_lapsed returns
-      // the restored ids only to the call that restored them (NULL before
-      // 20261002), so a redelivery of this event sends nothing twice.
+      // Once for the account, and one of two types: a failed payment that
+      // recovered on its own emails (nobody was watching); a resubscription
+      // is in-app (the owner is at checkout). clear_vessels_lapsed returns the
+      // restored ids only to the call that restored them, and classifies the
+      // restore in the same transaction that clears past_due_since, so a
+      // redelivery neither sends twice nor classifies differently.
       await notifyVesselsRestored(row.id, restored);
 
       // clear_vessels_lapsed reconciles inside SQL, which may start a grace
