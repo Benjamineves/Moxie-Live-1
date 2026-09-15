@@ -143,13 +143,6 @@ downgraded on the first run. It must also compare against what was paid
 - **`shipped_at` / `received_at` renames** + per-identity despatch
   timestamp. From the provisioning build; do together.
 - **Confirm `ben@` removed from `ADMIN_EMAILS`** in Vercel.
-- **Saved card: Stripe shows an edit (pencil) action.** Seen rendering on
-  the upgrade form: the saved card lists with no remove action and the
-  new-card form has no save tick, as configured. Stripe also offers an
-  edit button on the saved card, which no Customer Session feature in
-  `stripe@22` controls; what it lets an owner change wasn't tried (saving
-  would be a Stripe write). Only `unspecified` cards were seen rendering;
-  `limited` cards are in the filter but weren't on the fixture.
 - **No vessel cap check on the plan picker.** A cancelled owner
   resubscribing to Basic with more lapsed vessels than Basic allows isn't
   warned at the Pay click; `reconcile_vessel_overflow` still enforces it
@@ -166,6 +159,32 @@ fixture vessels that don't exist. `docs/moxie_digital_schema.sql` is
 headed "CURRENT" but predates 36 migrations — don't run it.
 
 ---
+
+## Decided, no action
+
+### Saved-card edit button on the upgrade form (accepted 2026-09-15)
+The Payment Element shows an edit (pencil) action on each saved card it
+lists. **It can't be turned off:** no Customer Session feature controls
+it (the API reference's full `payment_element.features` list is redisplay,
+redisplay filter, redisplay limit, remove, save, save usage), and no
+Payment Element option in the installed `@stripe/stripe-js` does either.
+
+**What it can reach.** It edits the saved card in place — same
+PaymentMethod id, which is the card the subscription renews on. Stripe
+doesn't document the edit form itself. Stripe.js's
+`savedpaymentmethodupdate` event returns the card's billing details, so
+those are editable; the PaymentMethod update API bounds anything more to
+expiry month and year and preferred network for co-branded cards. It
+cannot change the card number or detach the card (removal is disabled).
+Whether the form exposes expiry wasn't observed.
+
+**Why accepted.** A mistyped billing address or expiry could decline the
+next renewal, which lands in the existing past-due grace and Stripe's
+dunning. And it's a narrower version of something owners can already do:
+the Billing Portal's default configuration has `payment_method_update`
+enabled (read in test mode), which lets an owner replace the renewal card
+outright. Offering the saved card removes re-entry friction on the upgrade
+path; the edit button adds no capability the portal doesn't already give.
 
 ## Done
 
