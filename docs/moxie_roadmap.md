@@ -86,14 +86,61 @@ against exactly three countable slots is arithmetic, not a policy.
   serviced, how regularly the bottom is cleaned — which a list of files
   cannot show. This is also what a buyer is actually reading.
 
-**Open decision, deliberately not resolved:** whether service records
-transfer with the vessel, and separately whether an attached file
-transfers with its entry. **Proposed direction: the entry carries, the
-file is the seller's choice.** The history belongs to the boat and is
-most of what makes it worth having at sale; a scanned invoice may carry a
-name, an address or a price the seller does not intend to hand over.
-Settle this before building, because it decides whether the table hangs
-off the vessel or the owner, and `accept_ownership_transfer` has to know.
+**Transfer: settled 2026-09-16.** **Entries transfer with the vessel
+automatically. Attached files are the seller's choice and do not transfer
+by default.** So the table hangs off the vessel, not the owner, and
+`complete_ownership_transfer` carries the rows while nulling or detaching
+the file references — the same line it already draws for documents (what
+describes the boat carries; what describes you doesn't).
+
+The history belongs to the boat and is most of what makes it worth having
+at sale. A scanned invoice is different: it can carry a name, an address,
+a price, sometimes a signature — things the seller may not intend to hand
+over with the hull.
+
+**A buyer asks the seller directly, and Moxie doesn't broker it.** No
+request flow, no queue, no mediation — the page says so plainly in a short
+blurb rather than leaving the buyer to discover it. Two reasons worth
+keeping: building a request flow means holding a conversation between two
+parties about documents we've deliberately not taken custody of, and the
+people involved are already talking to each other, because they are in the
+middle of selling a boat.
+
+**Two things that make a seller-authored record credible.** The problem
+with any history its own seller writes is that a buyer has no reason to
+believe it. Neither of these verifies a claim — nothing can,
+short of contacting the yard — but both make the *shape* of an honest
+record visible and the shape of a fabricated one obvious.
+
+- **A system-set, immutable `logged_at` alongside the owner-entered
+  service date, and both display.** A seller can invent an entry, but not
+  invent having entered it two years ago. A history logged steadily over
+  six seasons reads differently from one where all 22 entries appeared the
+  week before listing — and a buyer can see which they are looking at
+  without being told. Immutable in the same sense as HIN and year: set
+  once by the database, never editable, for the same reason those are
+  locked (`#locked-fields` on the FAQ makes this promise to owners
+  already). The owner-entered service date stays freely editable — it's a
+  claim about the world, and people do log things late.
+
+- **The history shows which entries have a file attached, without
+  exposing the file.** A buyer sees "14 of 22 entries have documents" and
+  can ask about the three that matter rather than making a blanket
+  request. It also makes the seller's choice legible: withholding
+  everything looks different from withholding one invoice, and both look
+  different from having nothing to show.
+
+**Why this is a product argument, not just a design one.** Both features
+reward *logging as you go* and give bulk import at sale time visibly less
+value. That ordering is deliberate. An owner who enters a service the week
+it happens builds something a buyer will pay attention to; an owner who
+dumps six years of receipts into the app the day before listing builds
+something that looks exactly like what it is. The feature is worth more to
+Moxie the earlier in ownership it is used, which means the reason to keep
+the record current is intrinsic rather than a nag — the record's value to
+*you* accrues from your own diligence, and it is the part of the product a
+seller cannot recreate retroactively.
+
 Related: the transfer flow already leaves documents behind with the seller
 (see the `vessel_transferred` email copy).
 
