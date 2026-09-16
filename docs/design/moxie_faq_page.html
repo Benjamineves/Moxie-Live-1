@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Moxie — Frequently asked questions</title>
+<style>
+  :root {
+    --navy: #0d1f35;
+    --navy-deep: #0a1828;
+    --gold: #c9a84c;
+    --gold-deep: #7d6119;
+    --aqua: #17c3b2;
+    --cream: #f5f2ec;
+    --cream2: #ede9e0;
+    --white: #ffffff;
+    --divider: #e5e1d8;
+    --text: #0d1f35;
+    --text2: #3f4f5e;
+    --text3: #566a7b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--cream);
+    color: var(--text2);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 0 24px 96px; }
+
+  header.bar {
+    background: var(--navy-deep);
+    padding: 20px 24px;
+    margin-bottom: 56px;
+  }
+  header.bar .inner {
+    max-width: 760px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .wordmark {
+    font-family: Georgia, "Times New Roman", serif;
+    font-size: 22px; font-style: italic; color: #fff;
+  }
+  .wordmark .m { color: var(--gold); }
+  .wordmark .dot { color: var(--aqua); }
+  .bar .label {
+    font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
+    color: rgba(255,255,255,.45);
+  }
+
+  h1 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight: normal; font-style: italic;
+    font-size: 44px; line-height: 1.15;
+    color: var(--text); margin: 0 0 16px;
+  }
+  .standfirst { font-size: 18px; color: var(--text2); margin: 0 0 20px; max-width: 58ch; }
+
+  nav.toc {
+    background: var(--white);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin: 0 0 56px;
+  }
+  nav.toc p {
+    margin: 0 0 10px;
+    font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--text3);
+  }
+  nav.toc a {
+    color: var(--gold-deep); text-decoration: none;
+    border-bottom: 1px solid rgba(125,97,25,.3);
+    margin-right: 20px; display: inline-block; font-size: 15px;
+  }
+  nav.toc a:hover { color: var(--navy); }
+
+  h2 {
+    font-family: Georgia, "Times New Roman", serif;
+    font-weight: normal; font-style: italic;
+    font-size: 30px; color: var(--text);
+    margin: 56px 0 4px; padding-top: 24px;
+    border-top: 1px solid var(--divider);
+  }
+  h2:first-of-type { border-top: none; padding-top: 0; }
+  .section-note { font-size: 15px; color: var(--text3); margin: 0 0 28px; }
+
+  .qa { margin: 0 0 32px; }
+  .qa h3 {
+    font-size: 17px; font-weight: 600; color: var(--text);
+    margin: 0 0 8px; line-height: 1.45;
+  }
+  .qa p { margin: 0 0 12px; }
+  .qa p:last-child { margin-bottom: 0; }
+  .qa ul { margin: 0 0 12px; padding-left: 22px; }
+  .qa li { margin-bottom: 6px; }
+  .qa a { color: var(--gold-deep); }
+  .qa a:hover { color: var(--navy); }
+  strong { color: var(--text); font-weight: 600; }
+
+  .pull {
+    background: var(--white);
+    border-radius: 10px;
+    padding: 16px 20px;
+    margin: 0 0 12px;
+    font-size: 15px;
+  }
+
+  footer.f {
+    margin-top: 72px; padding-top: 28px;
+    border-top: 1px solid var(--divider);
+    font-size: 14px; color: var(--text3);
+  }
+  footer.f a { color: var(--gold-deep); }
+
+  .flag {
+    background: #fdf6e3;
+    border-left: 3px solid var(--gold);
+    padding: 14px 18px;
+    margin: 0 0 18px;
+    font-size: 14px;
+    color: var(--text2);
+  }
+  .flag strong { color: var(--navy); }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="inner">
+    <div class="wordmark"><span class="m">M</span>oxie<span class="dot">.</span></div>
+    <div class="label">Help</div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <h1>Frequently asked questions</h1>
+  <p class="standfirst">
+    What Moxie is, what a scan shows, and what happens to the record when
+    the boat changes hands.
+  </p>
+
+  <nav class="toc">
+    <p>On this page</p>
+    <a href="#getting-started">Getting started</a>
+    <a href="#scanning">Scanning &amp; privacy</a>
+    <a href="#documents">Documents</a>
+    <a href="#ownership">Ownership &amp; transfer</a>
+    <a href="#practical">Plans &amp; practical</a>
+  </nav>
+
+  <!-- ─────────────────────────────── -->
+  <h2 id="getting-started">Getting started</h2>
+  <p class="section-note">The basics, in about two minutes.</p>
+
+  <div class="qa" id="what-is-moxie">
+    <h3>What is Moxie?</h3>
+    <p>
+      A permanent digital identity for your boat. The record lives with the
+      hull rather than with you, so it carries forward when the boat is sold
+      — the way a vehicle history follows a car rather than its driver.
+    </p>
+    <p>
+      You register the vessel once, add what matters, and it stays attached
+      to that boat for as long as the boat exists.
+    </p>
+  </div>
+
+  <div class="qa" id="what-is-the-badge">
+    <h3>What's the badge?</h3>
+    <p>
+      A weatherproof vinyl QR badge you affix to the hull. Scanning it pulls
+      up the vessel's profile — no app to download, no account needed to
+      look.
+    </p>
+  </div>
+
+  <div class="qa" id="mxe-number">
+    <h3>What does the MXE number mean?</h3>
+    <p>
+      The MXE number is a permanent identifier, assigned once and never
+      reissued. It stays with the boat it was assigned to and follows it
+      through every change of ownership.
+    </p>
+    <p>
+      No two vessels share one, and a number is never recycled — not even
+      after a boat is decommissioned.
+    </p>
+  </div>
+
+  <div class="qa" id="badge-or-app">
+    <h3>Do I need the badge, or is the app enough?</h3>
+    <p>
+      Honestly: the app works without it, but the badge is the point.
+      Everything else is a record. The badge is what makes that record
+      reachable by someone standing at the boat.
+    </p>
+    <p>
+      The flexibility is in what a scan reveals. One badge, and what appears
+      depends entirely on who is looking.
+    </p>
+  </div>
+
+  <div class="qa" id="home-screen">
+    <h3>How do I put Moxie on my phone's home screen?</h3>
+    <p>
+      Install it from any page. It opens straight to your dashboard and you
+      stay signed in, so there's no logging in on a dock in the wind.
+    </p>
+    <p>
+      <strong>On iPhone or iPad:</strong> open moxieyacht.com in Safari, tap
+      the Share button, then <strong>Add to Home Screen</strong>. It has to
+      be Safari — other browsers on iOS don't offer it.
+    </p>
+    <p>
+      <strong>On Android:</strong> Chrome will offer to install it, or use
+      the menu and choose <strong>Install app</strong>.
+    </p>
+  </div>
+
+  <!-- ─────────────────────────────── -->
+  <h2 id="scanning">Scanning and privacy</h2>
+  <p class="section-note">What a scan shows, and to whom.</p>
+
+  <div class="qa" id="what-a-scan-shows">
+    <h3>What happens when someone scans my badge?</h3>
+    <p>
+      It depends who's scanning, and who you've authorised.
+    </p>
+    <p>
+      A stranger — someone admiring the boat at a dock, or a buyer at a
+      brokerage — sees a limited public profile: vessel name, make, model,
+      year and photo. Not your documents. Not your contact details. Nothing
+      that identifies you.
+    </p>
+    <p>
+      Someone you've given a share link to sees more, because you decided
+      they should. And when you scan it yourself, you get your own full
+      record.
+    </p>
+    <p>
+      Same badge, three different answers.
+    </p>
+  </div>
+
+  <div class="qa" id="stranger-documents">
+    <h3>Can a stranger see my registration or insurance?</h3>
+    <p>
+      No. Documents are private to you and to the people you explicitly
+      share them with. A public scan never reaches them.
+    </p>
+  </div>
+
+  <div class="qa" id="scan-my-own">
+    <h3>What do I see when I scan my own boat?</h3>
+    <p>
+      Your own full record, because you're signed in — every stored detail,
+      your documents, and their expiry status. Same badge, different view.
+    </p>
+  </div>
+
+  <div class="qa" id="how-it-knows">
+    <h3>How does it know who's scanning?</h3>
+    <p>
+      The profile renders differently depending on who's signed in when the
+      badge is scanned. One QR code, resolving to whatever that particular
+      person is entitled to see.
+    </p>
+    <p>
+      It's the part of Moxie we've applied for a patent on.
+    </p>
+  </div>
+
+  <div class="qa" id="share-documents">
+    <h3>Can I show my documents to someone — a surveyor, a buyer, my marina?</h3>
+    <p>
+      Yes, with a share link you create and control. You choose what it
+      includes and you can revoke it at any time. No account needed on their
+      end.
+    </p>
+  </div>
+
+  <!-- ─────────────────────────────── -->
+  <h2 id="documents">Documents</h2>
+  <p class="section-note">What you can keep, and getting to it when you need it.</p>
+
+  <div class="qa" id="what-can-i-store">
+    <h3>What can I store?</h3>
+    <p>
+      Registration, insurance, boater card and fishing licence — the
+      paperwork you'd otherwise keep in a damp folder in a locker.
+    </p>
+  </div>
+
+  <div class="qa" id="expiry-status">
+    <h3>How do I know if something's expired?</h3>
+    <p>
+      Each document shows its status at a glance: current, expiring soon, or
+      expired. Add the expiry date when you upload — it's printed on the
+      document — and Moxie tracks it from there.
+    </p>
+  </div>
+
+  <div class="qa" id="offline">
+    <h3>Can I get to my documents without a signal?</h3>
+    <p>
+      Yes, if you've explicitly saved that vessel for offline first. Open the
+      vessel and choose to make it available offline, and its documents come
+      with you.
+    </p>
+    <p>
+      Moxie doesn't quietly cache things in the background. You decide what's
+      stored on your phone, so you always know what's there.
+    </p>
+  </div>
+
+  <div class="qa" id="security">
+    <h3>Is my information secure?</h3>
+    <p>
+      Documents are held in private storage, reachable only by you and by
+      anyone you've deliberately shared with. They're not public, not
+      indexed, and not reachable from a scan.
+    </p>
+  </div>
+
+  <!-- ─────────────────────────────── -->
+  <h2 id="ownership">Ownership and transfer</h2>
+  <p class="section-note">The part that makes a permanent record worth having.</p>
+
+  <div class="qa" id="selling">
+    <h3>What happens when I sell the boat?</h3>
+    <p>
+      The identity transfers to the buyer. The MXE number, the badge on the
+      hull, and the vessel's own details all stay with the boat.
+    </p>
+    <p>The rule is simple — <strong>what describes the boat carries; what
+      describes you doesn't</strong>:</p>
+    <div class="pull">
+      <p style="margin:0 0 8px"><strong>Carries to the buyer:</strong> the MXE
+        number, badge, vessel name, make, model, year, HIN, photo, and the
+        registration document.</p>
+      <p style="margin:0"><strong>Stays with you:</strong> your insurance, your
+        boater card, your contact details, and any share links you'd created —
+        all revoked at transfer.</p>
+    </div>
+    <p>
+      You keep a permanent read-only copy of the vessel as it was on the day
+      you sold it. Anything the new owner adds afterwards is theirs, and
+      isn't visible to you.
+    </p>
+  </div>
+
+  <div class="qa" id="buying-badged-boat">
+    <h3>What if I buy a boat that already has a badge?</h3>
+    <p>
+      The seller starts the transfer from their account using your email
+      address. Moxie emails you a link that only works for that address.
+    </p>
+    <p>
+      You open it, create an account if you don't have one, and accept. Once
+      the seller pays the transfer fee, the vessel appears in your dashboard
+      with its history intact.
+    </p>
+  </div>
+
+  <div class="qa" id="locked-fields">
+    <h3>Why can't I edit the HIN or year?</h3>
+    <p>
+      A boat's HIN and year of build don't change, in the same way its MXE
+      number doesn't. Locking them is what makes the record worth anything —
+      a record you can freely rewrite isn't a record.
+    </p>
+    <p>
+      If something was entered incorrectly, it can be corrected with
+      supporting documentation. Contact support and we'll put it right.
+    </p>
+  </div>
+
+  <div class="qa" id="out-of-service">
+    <h3>What if I take the boat out of service?</h3>
+    <p>
+      You can decommission it. The vessel is archived, its record preserved,
+      and its MXE number retired permanently — never reissued to another
+      boat. Available on every plan.
+    </p>
+  </div>
+
+  <!-- ─────────────────────────────── -->
+  <h2 id="practical">Plans and practical</h2>
+  <p class="section-note">Cost, coverage, and what to do if something goes wrong.</p>
+
+  <div class="qa" id="cost">
+    <h3>What does it cost?</h3>
+    <p>
+      Current pricing is on the <a href="/pricing">pricing page</a>.
+    </p>
+  </div>
+
+  <div class="qa" id="plan-differences">
+    <h3>What's the difference between plans?</h3>
+    <p>
+      Plans differ mainly in how many vessels you can keep active and how much
+      you can store against each. Because features change as we build, the
+      <a href="/pricing">pricing page</a> is always the accurate answer.
+    </p>
+  </div>
+
+  <div class="qa" id="transfer-fee">
+    <h3>Is there a fee to transfer a boat?</h3>
+    <p>
+      Yes, and it's charged to the seller once the buyer accepts. Nothing is
+      charged if a transfer is never accepted.
+    </p>
+  </div>
+
+  <div class="qa" id="damaged-badge">
+    <h3>What if my badge gets damaged or falls off?</h3>
+    <p>
+      You can print a temporary one immediately — your badge is downloadable
+      from the vessel's page, and plain paper works while you wait.
+    </p>
+    <p>
+      For a replacement, email
+      <a href="mailto:support@moxieyacht.com">support@moxieyacht.com</a> with
+      your MXE number. Replacement fees apply. Your MXE number never changes,
+      so the new badge is identical to the old one.
+    </p>
+  </div>
+
+  <div class="qa" id="outside-california">
+    <h3>Do you work outside California?</h3>
+    <p>
+      We're headquartered in California and the Bay Area is where you'll find
+      most of us, most of the time. But a hull number is a hull number, and
+      nothing about Moxie stops at a state line.
+    </p>
+    <p>
+      If your boat floats, we'll badge it.
+    </p>
+  </div>
+
+  <footer class="f">
+    <p>
+      Still stuck? Email <a href="mailto:support@moxieyacht.com">support@moxieyacht.com</a>
+      and a person will answer.
+    </p>
+  </footer>
+
+  <div class="flag" style="margin-top:48px">
+    <strong>Review notes — not for the live page.</strong>
+    <p style="margin:8px 0 0">
+      <strong>Expiry status:</strong> written without any mention of reminders,
+      per the standing rule. Once the scheduler sends, that answer gains a
+      sentence.
+    </p>
+    <p style="margin:8px 0 0">
+      <strong>Fishing licence on transfer:</strong> currently carries to the
+      buyer, unlike the boater card. That looks like a bug — it's personal to a
+      person, not the boat. The copy above deliberately doesn't list it either
+      way. Worth fixing before this publishes.
+    </p>
+    <p style="margin:8px 0 0">
+      <strong>support@moxieyacht.com:</strong> confirm this mailbox exists
+      before launch. Only admin@moxieyachting.com is set up today.
+    </p>
+    <p style="margin:8px 0 0">
+      <strong>Share links:</strong> "you choose what it includes" assumes the
+      share sheet offers selection. Verify against what's built.
+    </p>
+  </div>
+
+</div>
+</body>
+</html>

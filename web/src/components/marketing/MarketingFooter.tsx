@@ -21,6 +21,10 @@ export function MarketingFooter({ isAuthenticated }: { isAuthenticated: boolean 
           Pricing
         </Link>
         <span aria-hidden>·</span>
+        <Link className="text-[var(--gold)] no-underline hover:underline" href="/faq">
+          FAQ
+        </Link>
+        <span aria-hidden>·</span>
         {isAuthenticated ? (
           <a className="text-[var(--gold)] no-underline hover:underline" href={`${APP_ORIGIN}/dashboard`}>
             Dashboard

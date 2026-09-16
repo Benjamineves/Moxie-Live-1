@@ -1,3 +1,4 @@
+import Link from "next/link";
 export type PublicProfileProps = {
   mxe_id: string;
   vessel_name: string;
@@ -156,6 +157,20 @@ export function VesselPublicProfile(props: PublicProfileProps & { hideFooter?: b
           </p>
           <p className="mt-1 font-[family-name:var(--font-dm)] text-[11px] text-[var(--text3)]">
             Marine vessel registry profile
+          </p>
+          {/*
+            A stranger who has just scanned a hull badge is the highest-intent
+            reader the FAQ has, and until now this page was a dead end for
+            them. Straight to the answer about what a scan reveals, which is
+            the question they are actually holding.
+          */}
+          <p className="mt-3 font-[family-name:var(--font-dm)] text-[11px] text-[var(--text3)]">
+            <Link
+              className="text-[var(--gold-deep)] underline underline-offset-2"
+              href="/faq#what-a-scan-shows"
+            >
+              What does this badge show?
+            </Link>
           </p>
         </footer>
       ) : null}

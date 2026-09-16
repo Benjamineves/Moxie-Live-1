@@ -195,9 +195,25 @@ downgraded on the first run. It must also compare against what was paid
 
 ## Smaller, independent
 
-- **FAQ page.** Question set drafted, awaiting a pass. Footer placement,
-  anchor per question. Some answers need pricing; one needs the badge
-  replacement process.
+- **`support@moxieyacht.com` does not exist yet.** The FAQ (shipped
+  2026-09-16) tells people to email it twice — for badge replacement and as
+  the general fallback. Only `admin@moxieyachting.com` is set up. Raised in
+  the mockup's own review notes; **create the mailbox before this page gets
+  any traffic**, or the page's one promise of a human fails silently.
+- **"You choose what it includes" on share links.** The FAQ's
+  `#share-documents` answer says a share link's contents are selectable.
+  Not verified against what the share sheet actually offers — flagged in
+  the mockup's review notes and not checked, since copy was settled. If the
+  sheet has no field selection, that sentence is the copy rule again.
+- **Tailwind's dev CSS went stale on a new file.** Building the FAQ, the
+  dev server emitted only utilities that already existed elsewhere in the
+  codebase (`pt-32`, `pb-24`, `mt-14`, `scroll-mt-28` were all missing,
+  `px-6` and `max-w-[760px]` were fine), so the page rendered with no top
+  padding and its heading under the fixed nav. `rm -rf .next/dev` and a
+  restart did not clear it; `npm run build` emitted every one of them
+  correctly. **Verify new marketing pages against `moxie-web-prod`, not
+  the dev server.** Worth understanding properly — it would silently
+  mis-render any new page during development.
 - **Buyer decline action on transfers.** A buyer can only let the link
   lapse, leaving the seller believing a sale is in progress.
 - **Public/owner view toggle.** Owners have no way to see what a stranger
@@ -328,7 +344,10 @@ and `--danger` pairing wasn't needed. Ratios in brand addendum §6b ·
 vessel code failed. Four boundaries now — generic at the root, and one each
 next to the code that calls `notFound()` for vessels, badge scans and print
 batches — so a message only names a thing where that thing genuinely was
-what failed · `/dashboard/<mxeId>` redirects to `/<mxeId>?role=owner`
+what failed · **FAQ page** (2026-09-16): 24 questions across five sections
+at `/faq`, from `docs/design/moxie_faq_page.html`, with stable anchors
+pinned by a test, linked from the marketing footer, signup and the public
+vessel profile · `/dashboard/<mxeId>` redirects to `/<mxeId>?role=owner`
 instead of 404ing (307, case-normalised; sub-routes unaffected) · a badge
 scan with no service role returns 500 and its own error screen instead of
 telling a scanner the badge doesn't exist · **a missing service role is a

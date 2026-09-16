@@ -121,6 +121,13 @@ export function SignupForm({ nextPath }: Props) {
           Sign in
         </Link>
       </p>
+      <p className="mt-2 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
+        New to Moxie?{" "}
+        <Link className="text-[var(--gold-deep)] underline underline-offset-2" href="/faq">
+          Read the FAQ
+        </Link>
+        .
+      </p>
     </div>
   );
 }
