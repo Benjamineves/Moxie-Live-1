@@ -111,11 +111,12 @@ export async function editServiceRecord(
 }
 
 /**
- * Deletes the entry. The attached file is deliberately LEFT IN STORAGE —
- * see the report and the roadmap. Removing it would be the one destructive
- * side effect in this feature, and it is not obvious that a deleted entry
- * means a discarded invoice; the file still counts against the owner's
- * storage cap, so it is visible rather than orphaned silently.
+ * Deletes the entry. The attached file is deliberately LEFT IN STORAGE
+ * (decided 2026-09-16). Removing it would be this feature's only
+ * destructive side effect, and a deleted entry does not obviously mean a
+ * discarded invoice — the owner may be re-filing it under another entry.
+ * The bytes still count against the owner's storage cap, so they show up
+ * in their usage rather than leaking silently.
  */
 export async function removeServiceRecord(mxeId: string, id: string): Promise<{ error?: string }> {
   const ctx = await ownedFullAccessVessel(mxeId);

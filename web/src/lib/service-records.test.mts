@@ -8,6 +8,7 @@ import {
   groupByCategory,
   isServiceCategory,
   loggingPattern,
+  wasEditedAfterLogging,
   tierAllowsServiceRecords,
   validateServiceRecord,
   type ServiceRecord,
@@ -20,7 +21,7 @@ function rec(p: Partial<ServiceRecord> & Pick<ServiceRecord, "id" | "service_dat
   return {
     vessel_id: "v1", logged_by: "o1", description: "d", provider: null,
     file_path: null, file_name: null, file_size_bytes: null, file_was_attached: false,
-    logged_at: "2026-01-01T00:00:00Z", ...p,
+    logged_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z", ...p,
   };
 }
 
@@ -193,4 +194,23 @@ test("the migration freezes logged_at for every role and proves it", () => {
   assert.match(sql, /logged_at moved on UPDATE/, "the guard proves the freeze rather than trusting it");
   assert.match(sql, /UPDATE service_records\s*\n\s*SET file_path = NULL/, "transfer detaches files");
   assert.doesNotMatch(sql, /DELETE FROM service_records\s+WHERE vessel_id/, "transfer must not delete the history");
+});
+
+test("an edit date shows only once it differs from the logged date", () => {
+  // Both are set from now() in the same transaction on insert, so they are
+  // identical until someone edits.
+  const fresh = rec({ id: "1", service_date: "2026-01-01", category: "engine", logged_at: "2026-01-01T09:00:00Z", updated_at: "2026-01-01T09:00:00Z" });
+  assert.equal(wasEditedAfterLogging(fresh), false);
+
+  // Same day, later: still not a revision worth flagging.
+  assert.equal(wasEditedAfterLogging({ ...fresh, updated_at: "2026-01-01T18:00:00Z" }), false);
+
+  // A later day is.
+  assert.equal(wasEditedAfterLogging({ ...fresh, updated_at: "2026-03-04T09:00:00Z" }), true);
+});
+
+test("the history renders the edit date, and only then", () => {
+  const src = readFileSync(new URL("../components/service/ServiceHistory.tsx", import.meta.url), "utf8");
+  assert.match(src, /wasEditedAfterLogging\(r\) \?/, "guarded, not unconditional");
+  assert.match(src, /Edited \{formatDate\(r\.updated_at\)\}/);
 });

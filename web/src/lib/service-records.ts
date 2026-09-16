@@ -69,6 +69,8 @@ export type ServiceRecord = {
   file_was_attached: boolean;
   /** System-set, immutable. The database enforces this, not us. */
   logged_at: string;
+  /** Bumped by the trigger on every edit. Equal to logged_at until one happens. */
+  updated_at: string;
 };
 
 /** Full Access only. Basic keeps the four primary document slots. */
@@ -259,4 +261,24 @@ function relativeSpan(days: number): string {
   if (months < 18) return `${months} month${months === 1 ? "" : "s"}`;
   const years = Math.round(days / 365);
   return `${years} year${years === 1 ? "" : "s"}`;
+}
+
+/**
+ * Whether an entry has been edited since it was logged, to the day.
+ *
+ * Both columns are set from now() in the same transaction on insert, so
+ * they are identical until someone edits. Compared by calendar day rather
+ * than exactly: "logged and edited on the same day" is not a revision a
+ * reader needs flagged, and the trigger bumps updated_at on any write.
+ *
+ * Shown because editing stays allowed: logged_at can never move, so the
+ * cadence argument holds, but an entry's *text* can change after a buyer
+ * has read it. Displaying the edit date is what stops that being silent.
+ * It is not a revision history — see the roadmap.
+ */
+export function wasEditedAfterLogging(record: Pick<ServiceRecord, "logged_at" | "updated_at">): boolean {
+  const logged = (record.logged_at ?? "").slice(0, 10);
+  const updated = (record.updated_at ?? "").slice(0, 10);
+  if (!logged || !updated) return false;
+  return updated > logged;
 }

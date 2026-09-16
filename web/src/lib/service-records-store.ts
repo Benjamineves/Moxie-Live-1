@@ -22,7 +22,7 @@ export function isMissingTable(error: { code?: string } | null | undefined): boo
 }
 
 const COLUMNS =
-  "id, vessel_id, logged_by, service_date, category, description, provider, file_path, file_name, file_size_bytes, file_was_attached, logged_at";
+  "id, vessel_id, logged_by, service_date, category, description, provider, file_path, file_name, file_size_bytes, file_was_attached, logged_at, updated_at";
 
 export async function loadServiceRecords(service: ServiceClient, vesselId: string): Promise<ServiceRecord[]> {
   const { data, error } = await service

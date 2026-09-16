@@ -2,6 +2,7 @@ import {
   attachmentSummary,
   groupByCategory,
   loggingPattern,
+  wasEditedAfterLogging,
   type ServiceRecord,
 } from "@/lib/service-records";
 
@@ -104,6 +105,14 @@ export function ServiceHistory({
                   */}
                   <p className="font-[family-name:var(--font-dm)] text-[11px] text-[var(--text3)]">
                     Serviced {formatDate(r.service_date)} · Logged {formatDate(r.logged_at)}
+                    {/*
+                      Only when it differs. Editing stays allowed and
+                      logged_at still cannot move, so the cadence argument
+                      holds — but an entry's text can change after someone
+                      has read it, and showing the edit date is what stops
+                      that being silent.
+                    */}
+                    {wasEditedAfterLogging(r) ? <> · Edited {formatDate(r.updated_at)}</> : null}
                   </p>
                   {children ? <div className="mt-1">{children(r)}</div> : null}
                 </li>
