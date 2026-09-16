@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { resolveOwnerIds } from "@/lib/vessel-ownership";
 import { TransferPaymentForm } from "./TransferPaymentForm";
 import { getTransferFeeAmount } from "@/lib/stripe/checkout-amounts";
@@ -22,11 +22,7 @@ export default async function TransferPaymentPage({ params }: Props) {
     redirect(`/login?next=${encodeURIComponent(`/dashboard/transfer/${transferId}/payment`)}`);
   }
 
-  const service = createSupabaseServiceClient();
-  if (!service) {
-    redirect("/dashboard");
-  }
-
+  const service = requireSupabaseServiceClient("app/dashboard/transfer/[transferId]/payment/page");
   const { data: transferRow } = await service
     .from("ownership_transfers")
     .select("id, mxe_id, seller_id, buyer_email, status")

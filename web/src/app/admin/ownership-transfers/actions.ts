@@ -1,7 +1,7 @@
 "use server";
 
 import { requireAdmin } from "@/lib/admin-verify";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 
 /**
  * Admin-only, post-completion reversal via reverse_ownership_transfer
@@ -14,9 +14,7 @@ export async function reverseOwnershipTransfer(transferId: string): Promise<{ er
   const admin = await requireAdmin();
   if (!admin) return { error: "Not authorized." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/app/admin/ownership-transfers/actions");
   const { error } = await service.rpc("reverse_ownership_transfer", {
     p_transfer_id: transferId,
     p_admin_email: admin.email,

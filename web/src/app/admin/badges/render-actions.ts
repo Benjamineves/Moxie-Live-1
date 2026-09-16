@@ -1,7 +1,7 @@
 "use server";
 
 import { requireAdmin } from "@/lib/admin-verify";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { BADGE_ARTWORK_BUCKET, badgeArtworkPath, renderBadgeArtworkPng } from "@/lib/badge-artwork";
 import { RENDER_CHUNK_SIZE, type RenderChunkResult } from "@/lib/badge-render-chunk";
 import { badgeScanUrl } from "@/lib/badge-url";
@@ -27,9 +27,7 @@ export async function renderBatchArtworkChunk(batchId: string): Promise<RenderCh
   const admin = await requireAdmin();
   if (!admin) return { error: "Not authorized." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/app/admin/badges/render-actions");
   const { data: rows, error: selectError } = await service
     .from("badge_identities")
     .select("id, mxe_id, token")

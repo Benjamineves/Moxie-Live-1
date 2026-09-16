@@ -7,7 +7,7 @@ import { runScheduler } from "@/lib/scheduler/run";
 import { MigrationNotRunError, createSupabaseBookkeeping, createSupabaseReads } from "@/lib/scheduler/store";
 import { createStripeReads } from "@/lib/scheduler/stripe-reads";
 import { getStripe } from "@/lib/stripe/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 
 /**
  * "Run now" on /admin/scheduler. The same runScheduler the cron calls, with
@@ -19,9 +19,7 @@ export async function runSchedulerNow() {
   const admin = await requireAdmin();
   if (!admin) redirect("/dashboard");
 
-  const service = createSupabaseServiceClient();
-  if (!service) redirect("/admin/scheduler?error=service");
-
+  const service = requireSupabaseServiceClient("app/admin/scheduler/actions");
   let target = "/admin/scheduler";
   try {
     const result = await runScheduler({

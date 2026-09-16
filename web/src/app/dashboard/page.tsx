@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PixelMMark, INVERTED_MARK_COLOR } from "@/components/brand/PixelMMark";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { requireAdmin } from "@/lib/admin-verify";
 import { DeleteUnactivatedVesselButton } from "@/components/vessel-edit/DeleteUnactivatedVesselButton";
 import { notifyOwnerDormancyResult } from "@/lib/dormancy-notify";
@@ -48,11 +48,7 @@ export default async function DashboardPage({ searchParams }: Props) {
     redirect("/login?next=/dashboard");
   }
 
-  const service = createSupabaseServiceClient();
-  if (!service) {
-    redirect("/login?next=/dashboard");
-  }
-
+  const service = requireSupabaseServiceClient("app/dashboard/page");
   const ownerIds = [user.id];
   const normalizedEmail = user.email?.trim().toLowerCase();
   if (normalizedEmail) {

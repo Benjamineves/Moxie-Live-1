@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { resolveOwnerIds } from "@/lib/vessel-ownership";
 
 type Props = {
@@ -91,11 +91,7 @@ export default async function PreviouslyOwnedPage({ params }: Props) {
     redirect(`/login?next=${encodeURIComponent(`/dashboard/transfer/${transferId}/previously-owned`)}`);
   }
 
-  const service = createSupabaseServiceClient();
-  if (!service) {
-    redirect("/dashboard");
-  }
-
+  const service = requireSupabaseServiceClient("app/dashboard/transfer/[transferId]/previously-owned/page");
   const { data: transferRow } = await service
     .from("ownership_transfers")
     .select("id, mxe_id, seller_id, buyer_email, status, completed_at, vessel_snapshot")

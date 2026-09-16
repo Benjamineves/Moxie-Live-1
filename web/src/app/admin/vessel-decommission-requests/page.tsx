@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/admin-verify";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { AdminNav } from "@/components/AdminNav";
 import { DECOMMISSION_REASON_LABELS, type DecommissionReason } from "@/lib/vessel-decommission";
 import { RequestActionButtons } from "./RequestActionButtons";
@@ -48,11 +48,7 @@ export default async function VesselDecommissionRequestsPage({ searchParams }: P
     redirect("/dashboard");
   }
 
-  const service = createSupabaseServiceClient();
-  if (!service) {
-    redirect("/dashboard");
-  }
-
+  const service = requireSupabaseServiceClient("app/admin/vessel-decommission-requests/page");
   const sp = await searchParams;
   const showingResolved = sp.resolved === "1";
 

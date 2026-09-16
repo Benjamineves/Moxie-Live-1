@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-verify";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { AdminNav } from "@/components/AdminNav";
 import { decideHealth } from "@/lib/scheduler/health";
 import { AdminGeoMap } from "@/components/AdminGeoMap";
@@ -37,11 +37,7 @@ export default async function AdminOverviewPage() {
     redirect("/dashboard");
   }
 
-  const service = createSupabaseServiceClient();
-  if (!service) {
-    redirect("/dashboard");
-  }
-
+  const service = requireSupabaseServiceClient("app/admin/page");
   // Dormant Vessel Identity: without a scheduled job, an owner who
   // lapses and never logs back in (and whose badge is never scanned)
   // would otherwise sit at lifecycle_status='active' indefinitely —

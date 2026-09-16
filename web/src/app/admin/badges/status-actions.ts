@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin-verify";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 
 export type StatusActionResult = { advanced?: number; ok?: boolean; error?: string };
 
@@ -31,9 +31,7 @@ export async function advanceBatchStatus(
     return { error: "Unsupported transition." };
   }
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/app/admin/badges/status-actions");
   const { data, error } = await service.rpc("advance_badge_batch_status", {
     p_batch_id: batchId,
     p_to_status: toStatus,
@@ -70,9 +68,7 @@ export async function voidBadgeIdentity(
   const trimmed = reason.trim();
   if (!trimmed) return { error: "A reason is required." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/app/admin/badges/status-actions");
   const { error } = await service.rpc("void_badge_identity", {
     p_identity_id: identityId,
     p_reason: trimmed,

@@ -1,4 +1,4 @@
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 
 export type BillingPayment = {
   vesselName: string;
@@ -21,10 +21,15 @@ export type BillingSummary = {
  * charges (account_payments, one row per account) — merged and sorted here
  * since the account panel shows them as one list.
  */
-export async function getOwnerBillingSummary(ownerId: string): Promise<BillingSummary | null> {
-  const service = createSupabaseServiceClient();
-  if (!service) return null;
-
+/**
+ * Always returns a summary. It used to be nullable for one reason only — a
+ * missing service role — which now throws; an owner with no user row, no
+ * vessels and no payments is a genuine empty state and still gets
+ * `payments: []`, not a failure. Callers' `?? {…}` fallbacks are harmless
+ * leftovers.
+ */
+export async function getOwnerBillingSummary(ownerId: string): Promise<BillingSummary> {
+  const service = requireSupabaseServiceClient("lib/billing-service");
   const { data: userRow } = await service
     .from("users")
     .select("subscription_tier, subscription_status")

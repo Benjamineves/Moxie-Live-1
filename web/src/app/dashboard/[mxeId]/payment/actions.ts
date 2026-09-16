@@ -1,7 +1,7 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { getStripe } from "@/lib/stripe/server";
 import { resolveOwnerIds } from "@/lib/vessel-ownership";
 import { isAdminEmail } from "@/lib/admin-verify";
@@ -63,9 +63,7 @@ export async function createBadgeFeeIntent(mxeId: string): Promise<IntentResult>
   } = await authClient.auth.getUser();
   if (!user) return { error: "You must be signed in." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/app/dashboard/[mxeId]/payment/actions");
   const ownerIds = [user.id];
   const normalizedEmail = user.email?.trim().toLowerCase();
   if (normalizedEmail) {
@@ -211,9 +209,7 @@ export async function createSignupBundleIntent(mxeId: string, tier: Subscription
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { error: "You must be signed in." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/app/dashboard/[mxeId]/payment/actions");
   const { data: vesselRow } = await service
     .from("vessels")
     .select("id, mxe_id, owner_id, qr_status")

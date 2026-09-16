@@ -1,7 +1,7 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { getStripe } from "@/lib/stripe/server";
 import { resolveOwnerIds } from "@/lib/vessel-ownership";
 import { IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES } from "@/lib/stripe/payment-methods";
@@ -46,9 +46,7 @@ export async function createTransferFeeIntent(transferId: string, expectedAmount
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { error: "You must be signed in." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/app/dashboard/transfer/[transferId]/payment/actions");
   const { data: transferRow } = await service
     .from("ownership_transfers")
     .select("id, vessel_id, mxe_id, seller_id, status")

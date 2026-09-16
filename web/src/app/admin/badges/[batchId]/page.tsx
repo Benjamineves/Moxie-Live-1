@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { Suspense } from "react";
 import { requireAdmin } from "@/lib/admin-verify";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { AdminNav } from "@/components/AdminNav";
 import { BADGE_ARTWORK_BUCKET } from "@/lib/badge-artwork";
 import { measureBadgeArtwork, type BadgeMeasurement } from "@/lib/badge-measure";
@@ -62,9 +62,7 @@ export default async function BadgeBatchDetailPage({
   const admin = await requireAdmin();
   if (!admin) redirect("/dashboard");
 
-  const service = createSupabaseServiceClient();
-  if (!service) redirect("/dashboard");
-
+  const service = requireSupabaseServiceClient("app/admin/badges/[batchId]/page");
   const { batchId } = await params;
 
   const { data: batchRow } = await service
@@ -190,9 +188,7 @@ function SheetSkeleton({ count }: { count: number }) {
 }
 
 async function ContactSheet({ batchId }: { batchId: string }) {
-  const service = createSupabaseServiceClient();
-  if (!service) return null;
-
+  const service = requireSupabaseServiceClient("app/admin/badges/[batchId]/page");
   const { data: identityRows, error } = await service
     .from("badge_identities")
     .select("id, mxe_id, status, artwork_path, void_reason")

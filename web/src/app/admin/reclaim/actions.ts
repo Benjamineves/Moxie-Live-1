@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireAdmin } from "@/lib/admin-verify";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { checkStripeForPayments, deleteUnpaidVessel } from "@/lib/unpaid-vessel-delete";
 
 /**
@@ -41,9 +41,7 @@ export async function previewReclaim(mxeId: string): Promise<ReclaimPreview | { 
   const admin = await requireAdmin();
   if (!admin) return { error: "Not authorized." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/app/admin/reclaim/actions");
   const normalized = mxeId.trim().toUpperCase();
   if (!/^MXE-\d{5}$/.test(normalized)) return { error: "Enter a full MXE ID, e.g. MXE-01023." };
 
@@ -132,9 +130,7 @@ export async function reclaimUnactivatedVessel(
   const admin = await requireAdmin();
   if (!admin) return { error: "Not authorized." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/app/admin/reclaim/actions");
   const trimmedReason = reason.trim();
   if (!trimmedReason) return { error: "A reason is required." };
 

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { requireAdmin } from "@/lib/admin-verify";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { AdminNav } from "@/components/AdminNav";
 import { REVIEW_NOTES, STEP_MODES, STEP_ORDER } from "@/lib/scheduler/config";
 import { brief } from "@/lib/scheduler/describe";
@@ -61,9 +61,7 @@ function asFindings(events: EventRow[]) {
 export default async function SchedulerAdminPage({ searchParams }: Props) {
   const admin = await requireAdmin();
   if (!admin) redirect("/dashboard");
-  const service = createSupabaseServiceClient();
-  if (!service) redirect("/dashboard");
-
+  const service = requireSupabaseServiceClient("app/admin/scheduler/page");
   const sp = await searchParams;
   const { data: runRows, error: runsError } = await service
     .from("scheduler_runs")

@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { createSupabaseServiceClient, requireSupabaseServiceClient } from "@/lib/supabase/service";
 
 /**
  * Extracted out of owner-actions.ts so it can be shared with plain Route
@@ -14,10 +14,14 @@ export async function resolveOwnerIds(authClient: NonNullable<Awaited<ReturnType
   } = await authClient.auth.getUser();
   if (!user) return { user: null, ownerIds: [] as string[] };
 
-  const service = createSupabaseServiceClient();
+  // Not a guard any more: skipping this union silently dropped the
+  // email-matched placeholder owner id, so a misconfigured deploy showed
+  // an owner an EMPTY FLEET — a config failure wearing a genuine empty
+  // state (see project_owner_id_mismatch_bug).
+  const service = requireSupabaseServiceClient("lib/vessel-ownership");
   const ownerIds = [user.id];
   const normalizedEmail = user.email?.trim().toLowerCase();
-  if (service && normalizedEmail) {
+  if (normalizedEmail) {
     const { data: ownerByEmailRow } = await service
       .from("users")
       .select("id")

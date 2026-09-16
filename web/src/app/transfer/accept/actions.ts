@@ -1,7 +1,7 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { notifyOwner } from "@/lib/notify";
 
 /**
@@ -25,9 +25,7 @@ export async function acceptOwnershipTransfer(transferId: string): Promise<{ err
   } = await authClient.auth.getUser();
   if (!user?.email) return { error: "You must be signed in." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/app/transfer/accept/actions");
   const { data: transferRow } = await service
     .from("ownership_transfers")
     .select("id, buyer_email, status, seller_id, mxe_id, vessel_id")

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { PaymentForm } from "./PaymentForm";
 import { SignupBundleForm } from "./SignupBundleForm";
 import { getBadgeFeeAmount, getBundleAmounts } from "@/lib/stripe/checkout-amounts";
@@ -24,11 +24,7 @@ export default async function VesselPaymentPage({ params }: Props) {
     redirect(`/login?next=/dashboard/${encodeURIComponent(mxeId)}/payment`);
   }
 
-  const service = createSupabaseServiceClient();
-  if (!service) {
-    redirect("/dashboard");
-  }
-
+  const service = requireSupabaseServiceClient("app/dashboard/[mxeId]/payment/page");
   const ownerIds = [user.id];
   const normalizedEmail = user.email?.trim().toLowerCase();
   if (normalizedEmail) {

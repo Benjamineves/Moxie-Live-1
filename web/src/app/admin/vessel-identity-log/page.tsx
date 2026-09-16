@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/admin-verify";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { AdminNav } from "@/components/AdminNav";
 
 type LogRow = {
@@ -29,11 +29,7 @@ export default async function VesselIdentityLogPage() {
     redirect("/dashboard");
   }
 
-  const service = createSupabaseServiceClient();
-  if (!service) {
-    redirect("/dashboard");
-  }
-
+  const service = requireSupabaseServiceClient("app/admin/vessel-identity-log/page");
   const { data: rows, error } = await service
     .from("vessel_identity_audit_log")
     .select("id, mxe_id, field_name, old_value, new_value, changed_at, changed_by")

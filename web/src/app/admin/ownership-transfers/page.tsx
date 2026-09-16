@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/admin-verify";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { AdminNav } from "@/components/AdminNav";
 import { TRANSFER_STATUS_LABELS, type TransferStatus } from "@/lib/vessel-transfer";
 import { ReverseTransferButton } from "./ReverseTransferButton";
@@ -32,11 +32,7 @@ export default async function OwnershipTransfersPage({ searchParams }: Props) {
     redirect("/dashboard");
   }
 
-  const service = createSupabaseServiceClient();
-  if (!service) {
-    redirect("/dashboard");
-  }
-
+  const service = requireSupabaseServiceClient("app/admin/ownership-transfers/page");
   const sp = await searchParams;
   const showingHistory = sp.history === "1";
 

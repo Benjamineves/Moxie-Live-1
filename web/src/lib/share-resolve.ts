@@ -1,4 +1,4 @@
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { hashShareToken } from "@/lib/share-token";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { filterVesselForShare, isShareFieldFlags } from "@/lib/share-filter";
@@ -42,11 +42,11 @@ export async function resolveShareByToken(token: string, clientIp: string): Prom
     return { error: "not_active" };
   }
 
-  const service = createSupabaseServiceClient();
-  if (!service) {
-    console.error(`[share-resolve] Missing Supabase service role configuration. token_prefix=${tokenPrefix}`);
-    return { error: "server_error" };
-  }
+  // Throws rather than returning server_error: the caller renders every
+  // error here as "Link no longer active — expired, revoked, or already
+  // used", so a missing service role told a Trusted Contact their link was
+  // dead. Same shape as the badge scan. A 500 says it is our problem.
+  const service = requireSupabaseServiceClient(`lib/share-resolve token_prefix=${tokenPrefix}`);
 
   const { data: rpcData, error: rpcError } = await service.rpc("resolve_vessel_share", {
     p_token_hash: hashShareToken(token),

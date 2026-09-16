@@ -1,7 +1,7 @@
 "use server";
 
 import { requireAdmin } from "@/lib/admin-verify";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { generateUniqueBadgeTokens } from "@/lib/badge-token";
 import { badgeScanUrlProbe } from "@/lib/badge-url";
 import { assertBadgeQrVersionWithinBudget, getQrModules } from "@/lib/qr-render";
@@ -48,9 +48,7 @@ export async function mintBadgeBatch(input: {
     return { error: "Copies per identity must be a whole number between 1 and 10." };
   }
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/app/admin/badges/actions");
   // QR density, measured before a single token exists. Only possible
   // because tokens are fixed-length, so every identity in this batch
   // encodes a URL of identical length and therefore the same version

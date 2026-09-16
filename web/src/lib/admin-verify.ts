@@ -1,5 +1,5 @@
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 
 export type AdminUser = { id: string; email: string };
 
@@ -49,9 +49,12 @@ export async function requireAdmin(): Promise<AdminUser | null> {
 
   if (!isAdminEmail(email)) return null;
 
-  const service = createSupabaseServiceClient();
-  if (!service) return null;
-
+  // Throws rather than returning null. null here means "not an admin", and
+  // folding a missing service role into that answer made a misconfigured
+  // deploy indistinguishable from a demotion: all ten admin pages redirected
+  // to /dashboard and nothing alerted. A config failure is not a verdict on
+  // who you are.
+  const service = requireSupabaseServiceClient("lib/admin-verify");
   const { data: userRow } = await service.from("users").select("id, email, role").eq("email", email).maybeSingle();
   const row = userRow as { id: string; email: string; role: string } | null;
   if (!row || row.role !== "admin") return null;

@@ -1,4 +1,4 @@
-import { createSupabaseServiceClient } from "./supabase/service.ts";
+import { createSupabaseServiceClient, requireSupabaseServiceClient } from "./supabase/service.ts";
 import { getOwnerEmailByUserId } from "./owner-verify.ts";
 import { sendEmail } from "./email/send.ts";
 import {
@@ -46,8 +46,7 @@ export async function notifyOwner(
   // them to prove a point.
   const { vesselId, dedupeKey }: NotifyOptions = typeof options === "string" ? { vesselId: options } : options;
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { recorded: false };
+  const service = requireSupabaseServiceClient("lib/notify");
 
   // The row goes in FIRST, before anything that could fail slowly. It is
   // the record; everything below is best effort on top of it.

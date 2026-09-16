@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { resolveOwnerIds, loadOwnedVessel } from "@/lib/vessel-ownership";
 import { isShareFieldFlags, type ShareFieldFlags } from "@/lib/share-filter";
 import { RevokeButton } from "./RevokeButton";
@@ -63,9 +63,7 @@ export default async function ActiveSharesPage({ params }: Props) {
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) redirect(`/login?next=/dashboard/${encodeURIComponent(mxeId)}/shares`);
 
-  const service = createSupabaseServiceClient();
-  if (!service) redirect("/dashboard");
-
+  const service = requireSupabaseServiceClient("app/dashboard/[mxeId]/shares/page");
   const vessel = await loadOwnedVessel(service, mxeId, ownerIds);
   if (!vessel) redirect("/dashboard");
 

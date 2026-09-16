@@ -10,7 +10,7 @@ import type { ActiveTransfer } from "@/components/vessel-edit/TransferOwnershipP
 import { SharedVesselProfile } from "@/components/share/SharedVesselProfile";
 import { fetchVesselByMxeId, filterVesselForRole } from "@/lib/vessel-service";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { emailsMatch, getOwnerEmailByUserId } from "@/lib/owner-verify";
 import { getOwnerBillingSummary } from "@/lib/billing-service";
 import { resolveShareByToken } from "@/lib/share-resolve";
@@ -93,24 +93,25 @@ export default async function VesselPage({ params, searchParams }: Props) {
   // reconcile. Re-reads lifecycle_status/dormant_cause afterward since
   // this call can change them for the very vessel being rendered.
   if (vessel.qr_status === "active") {
-    const reconcileService = createSupabaseServiceClient();
-    if (reconcileService) {
-      const { data: dormancy } = await reconcileService.rpc("reconcile_owner_dormancy", { p_owner_id: vessel.owner_id });
-      // This can be the moment vessels pause — for a failed payment or an
-      // expired downgrade window — including on a stranger's badge scan. The
-      // owner is told, once: the ids come back only to the call that paused
-      // them, so the next scan finds nothing to report.
-      await notifyOwnerDormancyResult(vessel.owner_id, dormancy);
-      const { data: freshLifecycle } = await reconcileService
-        .from("vessels")
-        .select("lifecycle_status, dormant_cause")
-        .eq("id", vessel.id)
-        .maybeSingle();
-      if (freshLifecycle) {
-        const fresh = freshLifecycle as { lifecycle_status: string | null; dormant_cause: string | null };
-        vessel.lifecycle_status = fresh.lifecycle_status;
-        vessel.dormant_cause = fresh.dormant_cause;
-      }
+    // Was `if (reconcileService)`, which silently skipped the reconcile and
+    // rendered the vessel's stale status — a lapsed vessel shown as active
+    // on a stranger's badge scan. A missing service role is ours to fix.
+    const reconcileService = requireSupabaseServiceClient("app/[mxeId]/page reconcile");
+    const { data: dormancy } = await reconcileService.rpc("reconcile_owner_dormancy", { p_owner_id: vessel.owner_id });
+    // This can be the moment vessels pause — for a failed payment or an
+    // expired downgrade window — including on a stranger's badge scan. The
+    // owner is told, once: the ids come back only to the call that paused
+    // them, so the next scan finds nothing to report.
+    await notifyOwnerDormancyResult(vessel.owner_id, dormancy);
+    const { data: freshLifecycle } = await reconcileService
+      .from("vessels")
+      .select("lifecycle_status, dormant_cause")
+      .eq("id", vessel.id)
+      .maybeSingle();
+    if (freshLifecycle) {
+      const fresh = freshLifecycle as { lifecycle_status: string | null; dormant_cause: string | null };
+      vessel.lifecycle_status = fresh.lifecycle_status;
+      vessel.dormant_cause = fresh.dormant_cause;
     }
   }
 
@@ -208,31 +209,29 @@ export default async function VesselPage({ params, searchParams }: Props) {
 
     let hasPendingDecommissionRequest = false;
     let activeTransfer: ActiveTransfer | null = null;
-    const service = createSupabaseServiceClient();
-    if (service) {
-      const { data: pendingRequest } = await service
-        .from("vessel_decommission_requests")
-        .select("id")
-        .eq("vessel_id", vessel.id)
-        .eq("status", "pending")
-        .maybeSingle();
-      hasPendingDecommissionRequest = !!pendingRequest;
+    const service = requireSupabaseServiceClient("app/[mxeId]/page owner-extras");
+    const { data: pendingRequest } = await service
+      .from("vessel_decommission_requests")
+      .select("id")
+      .eq("vessel_id", vessel.id)
+      .eq("status", "pending")
+      .maybeSingle();
+    hasPendingDecommissionRequest = !!pendingRequest;
 
-      const { data: transferRow } = await service
-        .from("ownership_transfers")
-        .select("id, status, buyer_email, expires_at")
-        .eq("vessel_id", vessel.id)
-        .in("status", ["pending", "awaiting_payment"])
-        .maybeSingle();
-      if (transferRow) {
-        const t = transferRow as { id: string; status: string; buyer_email: string; expires_at: string };
-        activeTransfer = {
-          id: t.id,
-          status: t.status as "pending" | "awaiting_payment",
-          buyerEmail: t.buyer_email,
-          expiresAt: t.expires_at,
-        };
-      }
+    const { data: transferRow } = await service
+      .from("ownership_transfers")
+      .select("id, status, buyer_email, expires_at")
+      .eq("vessel_id", vessel.id)
+      .in("status", ["pending", "awaiting_payment"])
+      .maybeSingle();
+    if (transferRow) {
+      const t = transferRow as { id: string; status: string; buyer_email: string; expires_at: string };
+      activeTransfer = {
+        id: t.id,
+        status: t.status as "pending" | "awaiting_payment",
+        buyerEmail: t.buyer_email,
+        expiresAt: t.expires_at,
+      };
     }
 
     return (

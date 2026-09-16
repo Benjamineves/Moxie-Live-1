@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { buildBadgeSvg, assertBadgeQrVersionWithinBudget } from "@/lib/qr-render";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { QrDownload } from "./QrDownload";
 
@@ -28,11 +28,7 @@ export default async function VesselQrPage({ params, searchParams }: Props) {
     redirect(`/login?next=/dashboard/${encodeURIComponent(mxeId)}/qr`);
   }
 
-  const service = createSupabaseServiceClient();
-  if (!service) {
-    redirect("/dashboard");
-  }
-
+  const service = requireSupabaseServiceClient("app/dashboard/[mxeId]/qr/page");
   const ownerIds = [user.id];
   const normalizedEmail = user.email?.trim().toLowerCase();
   if (normalizedEmail) {

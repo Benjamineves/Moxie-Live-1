@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { getStripe } from "@/lib/stripe/server";
 import { resolveOwnerIds, loadOwnedVessel } from "@/lib/vessel-ownership";
 import { normalizeStateCode } from "@/lib/us-states";
@@ -26,9 +26,7 @@ export async function updateVesselPhoto(mxeId: string, photoUrl: string): Promis
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { error: "You must be signed in." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/lib/owner-actions");
   const { data: vesselRow } = await service
     .from("vessels")
     .select("id, owner_id")
@@ -164,9 +162,7 @@ export async function updateVesselIntrinsicFields(mxeId: string, patch: Intrinsi
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { error: "You must be signed in." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/lib/owner-actions");
   const vessel = await loadOwnedVessel(service, mxeId, ownerIds);
   if (!vessel) return { error: "Vessel not found." };
 
@@ -190,9 +186,7 @@ export async function updateVesselOwnerFields(mxeId: string, patch: OwnerPatch):
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { error: "You must be signed in." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/lib/owner-actions");
   const vessel = await loadOwnedVessel(service, mxeId, ownerIds);
   if (!vessel) return { error: "Vessel not found." };
 
@@ -261,9 +255,7 @@ export async function updateVesselDocument(
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { error: "You must be signed in." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/lib/owner-actions");
   const vessel = await loadOwnedVessel(service, mxeId, ownerIds);
   if (!vessel) return { error: "Vessel not found." };
 
@@ -296,8 +288,7 @@ export async function checkStorageCapacity(incomingBytes: number): Promise<{ ok:
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { ok: false, error: "You must be signed in." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { ok: false, error: "Missing Supabase service role configuration." };
+  const service = requireSupabaseServiceClient("lib/owner-actions");
 
   const { data: ownerRow } = await service
     .from("users")
@@ -351,9 +342,7 @@ export async function submitIdentityCorrectionRequest(
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { error: "You must be signed in." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/lib/owner-actions");
   const { data: vesselRow } = await service
     .from("vessels")
     .select(`id, owner_id, mxe_id, ${fieldName}`)
@@ -405,9 +394,7 @@ export async function submitDecommissionRequest(
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { error: "You must be signed in." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/lib/owner-actions");
   const { data: vesselRow } = await service
     .from("vessels")
     .select("id, owner_id, mxe_id, lifecycle_status")
@@ -458,9 +445,7 @@ export async function openBillingPortal(): Promise<{ error?: string }> {
   } = await authClient.auth.getUser();
   if (!user?.email) return { error: "You must be signed in." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/lib/owner-actions");
   const normalizedEmail = user.email.trim().toLowerCase();
   const { data: ownerRow } = await service
     .from("users")
@@ -509,9 +494,7 @@ export async function initiateOwnershipTransfer(
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { error: "You must be signed in." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/lib/owner-actions");
   const { data: vesselRow } = await service
     .from("vessels")
     .select("id, owner_id, mxe_id, vessel_name, qr_status, lifecycle_status, owner_email, owner_name")
@@ -572,9 +555,7 @@ export async function cancelOwnershipTransfer(transferId: string): Promise<{ err
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { error: "You must be signed in." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/lib/owner-actions");
   const { data: transferRow } = await service
     .from("ownership_transfers")
     .select("id, seller_id, status")
@@ -632,9 +613,7 @@ export async function deleteUnactivatedVessel(mxeId: string): Promise<{ error?: 
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user?.email) return { error: "You must be signed in." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/lib/owner-actions");
   const { data: vesselRow, error: vesselError } = await service
     .from("vessels")
     .select("id, owner_id, mxe_id, qr_status")
@@ -704,9 +683,7 @@ export async function dismissNotification(notificationId: string): Promise<{ err
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { error: "You must be signed in." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/lib/owner-actions");
   const { error } = await service
     .from("owner_notifications")
     .update({ read_at: new Date().toISOString() })

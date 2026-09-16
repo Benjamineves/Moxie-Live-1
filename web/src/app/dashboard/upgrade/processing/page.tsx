@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { ActivationPoller } from "@/components/ActivationPoller";
 
 /**
@@ -31,11 +31,7 @@ export default async function UpgradeProcessingPage({ searchParams }: Props) {
     redirect("/login?next=/dashboard/upgrade/processing");
   }
 
-  const service = createSupabaseServiceClient();
-  if (!service) {
-    redirect("/dashboard");
-  }
-
+  const service = requireSupabaseServiceClient("app/dashboard/upgrade/processing/page");
   const normalizedEmail = user.email?.trim().toLowerCase();
   type Row = { subscription_status: string | null; subscription_tier: string | null };
   let row: Row | null = null;

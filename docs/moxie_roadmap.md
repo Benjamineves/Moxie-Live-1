@@ -177,14 +177,20 @@ downgraded on the first run. It must also compare against what was paid
   split needs middleware to set the pathname on the request, which means
   editing the Supabase session-refresh dance in `middleware.ts`; not worth
   the risk for copy, but that's the route if it's ever wanted.
-- **Other pages still turn a missing service role into a non-error.**
-  `s/[token]` is fixed (see Done), but the same `if (!service)` check
-  elsewhere variously redirects to `/login` (`dashboard/page.tsx`), to
-  `/dashboard` (`admin/page.tsx`), or renders a 200 "isn't configured
-  correctly" page (`transfer/accept`). None of them is a 500, so a
-  misconfigured deploy looks like an ordinary empty state and monitoring
-  sees nothing. Worth one shared decision rather than eighteen local ones;
-  none is as misleading as the badge scan was.
+- **The anon client has the same shape, one env var over.**
+  `createSupabaseServerClient()` returns null when
+  `NEXT_PUBLIC_SUPABASE_ANON_KEY`/`URL` is missing, and callers fold that
+  into "not signed in" — `requireAdmin()` opens with
+  `if (!authClient) return null`, and `fetchVesselByMxeId` falls back to
+  **demo vessel data**. The service-role sweep (see Done) did not touch it.
+  Same fix shape: a `requireSupabaseServerClient()` and a second entry in
+  the guard test.
+- **A share-link query failure still reads as an expired link.**
+  `lib/share-resolve.ts` returns `server_error` for a failed RPC as well as
+  for config, and `[mxeId]/page.tsx:55` renders every error as "Link no
+  longer active — expired, revoked, or already been used". Config now
+  throws, so only the RPC case is left. Noticed during the sweep; out of
+  its scope.
 - **`shipped_at` / `received_at` renames** + per-identity despatch
   timestamp. From the provisioning build; do together.
 - **Confirm `ben@` removed from `ADMIN_EMAILS`** in Vercel.
@@ -267,4 +273,10 @@ batches — so a message only names a thing where that thing genuinely was
 what failed · `/dashboard/<mxeId>` redirects to `/<mxeId>?role=owner`
 instead of 404ing (307, case-normalised; sub-routes unaffected) · a badge
 scan with no service role returns 500 and its own error screen instead of
-telling a scanner the badge doesn't exist
+telling a scanner the badge doesn't exist · **a missing service role is a
+500 everywhere** (2026-09-15): 65 call sites in 54 files now go through
+`requireSupabaseServiceClient()`, which throws, replacing 22 redirects,
+4 silent skips and 34 inline errors. The seven routes that already return
+their own 5xx keep the raw factory, held to it by
+`lib/supabase/service.guard.test.mts`. Signed-out paths are byte-identical
+with and without the key — verified by removing it

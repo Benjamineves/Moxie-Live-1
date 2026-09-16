@@ -1,7 +1,7 @@
 "use server";
 
 import { requireAdmin } from "@/lib/admin-verify";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 
 const STATUSES = ["not_ordered", "ordered", "printed", "shipped"] as const;
 export type StickerOrderStatus = (typeof STATUSES)[number];
@@ -18,9 +18,7 @@ export async function updateStickerOrderStatus(
 
   if (!STATUSES.includes(status)) return { error: "Invalid status." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/app/admin/stickers/actions");
   const { error } = await service
     .from("vessels")
     .update({ sticker_order_status: status })

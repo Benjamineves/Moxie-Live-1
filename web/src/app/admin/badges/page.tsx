@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/admin-verify";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { AdminNav } from "@/components/AdminNav";
 import { MintBatchForm } from "./MintBatchForm";
 import { RenderArtworkButton } from "./RenderArtworkButton";
@@ -39,9 +39,7 @@ export default async function BadgeInventoryPage() {
   const admin = await requireAdmin();
   if (!admin) redirect("/dashboard");
 
-  const service = createSupabaseServiceClient();
-  if (!service) redirect("/dashboard");
-
+  const service = requireSupabaseServiceClient("app/admin/badges/page");
   const { data: batchRows, error: batchError } = await service
     .from("badge_print_batches")
     .select("id, label, minted_count, copies_per_identity, printed_count, qr_version, minted_at")

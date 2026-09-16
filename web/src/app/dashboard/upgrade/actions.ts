@@ -1,7 +1,7 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe/server";
 import { IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES } from "@/lib/stripe/payment-methods";
@@ -46,9 +46,7 @@ export async function createPlanSubscriptionIntent(tier: SubscriptionTier): Prom
   } = await authClient.auth.getUser();
   if (!user) return { error: "You must be signed in." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/app/dashboard/upgrade/actions");
   type OwnerRow = {
     id: string;
     email: string;
@@ -222,9 +220,7 @@ export async function upgradeToFullAccess(input: { expectedAmountCents: number; 
   } = await authClient.auth.getUser();
   if (!user) return { error: "You must be signed in." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/app/dashboard/upgrade/actions");
   type OwnerRow = {
     id: string;
     subscription_tier: string | null;

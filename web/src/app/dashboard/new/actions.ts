@@ -1,7 +1,7 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { isValidStateCode, normalizeStateCode } from "@/lib/us-states";
 import { VESSEL_LIMIT, type SubscriptionTier } from "@/lib/tier-config";
 import { countActiveVessels, evaluateVesselCap } from "@/lib/vessel-cap";
@@ -78,9 +78,7 @@ export async function createVessel(
   } = await authClient.auth.getUser();
   if (!user) return { error: "You must be signed in." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/app/dashboard/new/actions");
   const ownerEmail = user.email?.trim().toLowerCase();
   if (!ownerEmail) return { error: "Your account is missing an email address." };
   const fullNameFromEmail = ownerEmail.split("@")[0]?.replace(/[._-]+/g, " ").trim() || "Vessel Owner";

@@ -81,9 +81,10 @@ test("a badge scan tells a config failure apart from an unknown token", () => {
   const page = readFileSync(new URL("../app/s/[token]/page.tsx", import.meta.url), "utf8");
   const body = page.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   // The defect: a missing service role used to 404, telling someone holding
-  // a real badge that it did not exist.
+  // a real badge that it did not exist. It now goes through the shared
+  // helper, which throws — see supabase/service.guard.test.mts.
   assert.doesNotMatch(body, /if \(!service\) notFound\(\)/, "a missing service role must not 404");
-  assert.match(body, /if \(!service\) \{[\s\S]*?throw new Error/, "it must throw, for a 500");
+  assert.match(body, /requireSupabaseServiceClient\(/, "it must use the throwing helper, for a 500");
   // And a genuinely unknown token must still 404, not 500.
   assert.match(body, /outcome\.kind === "notFound"\) notFound\(\)/, "an unknown token still 404s");
   // The error boundary exists to carry the distinction.

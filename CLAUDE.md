@@ -199,6 +199,18 @@ arguments a client sends.
   test that fails if anything else calls it. Example:
   `lib/unpaid-vessel-delete.ts` is the only caller of
   `delete_unactivated_vessel`, enforced by its test.
+- **A configuration failure is a 500, decided once.** Use
+  `requireSupabaseServiceClient()`, never `createSupabaseServiceClient()`
+  plus a local null branch —
+  `lib/supabase/service.guard.test.mts` fails if anything outside its
+  allow-list (routes that already return their own 5xx) calls the factory.
+  Handled locally it stops looking like a failure at all: 22 pages
+  redirected, so a missing service role read as "you are not an admin" or
+  "you have been signed out"; four skipped their work silently, one showing
+  an owner an empty fleet; 34 actions returned a tidy inline error. Vercel
+  reported success and nothing alerted. **A broken deploy must not be
+  reported as a fact about the visitor** — not as a permission, a session,
+  an expired link, or an empty state.
 - A check at one moment doesn't cover a grant at a later one. The vessel cap
   is checked at the Pay click (a courtesy), and **enforced** by
   `reconcile_vessel_overflow` after activation and transfer completion.

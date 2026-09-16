@@ -3,7 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { MARKETING_ORIGIN } from "@/lib/site-domains";
 import { normalizeBadgeToken } from "@/lib/badge-token";
 import { resolveBadgeScan } from "@/lib/badge-scan";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 
 /**
  * `/s/<token>` — what every printed badge's QR actually points at
@@ -72,12 +72,7 @@ export default async function BadgeScanPage({
   // one, in the flow where trust matters most. Throwing gives a 500 and
   // the segment's error boundary, which says "we cannot check it right
   // now" and keeps a genuine unknown token as the only thing that 404s.
-  const service = createSupabaseServiceClient();
-  if (!service) {
-    console.error("[badge-scan] SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL is not set; cannot resolve badge tokens.");
-    throw new Error("Badge lookup is not configured.");
-  }
-
+  const service = requireSupabaseServiceClient("app/s/[token]/page");
   const { data } = await service
     .from("badge_identities")
     // The embed is hinted by column because there are FKs in BOTH

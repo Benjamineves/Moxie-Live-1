@@ -1,7 +1,7 @@
 "use server";
 
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 
 /**
  * The owner's explicit "choose which vessels stay active" action —
@@ -19,9 +19,7 @@ export async function chooseActiveVessels(vesselIds: string[]): Promise<{ error?
   } = await authClient.auth.getUser();
   if (!user) return { error: "You must be signed in." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/app/dashboard/manage-fleet/actions");
   // The canonical owner id is the users row matched by email, not
   // auth.uid() — same resolution every other owner-scoped action in this
   // app uses (see resolveOwnerIds), needed here as a single id rather

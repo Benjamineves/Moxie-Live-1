@@ -1,7 +1,7 @@
 "use server";
 
 import { requireAdmin } from "@/lib/admin-verify";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 
 /**
  * Applies the requested value to the vessel and resolves the request in
@@ -18,9 +18,7 @@ export async function approveAndApplyCorrection(requestId: string): Promise<{ er
   const admin = await requireAdmin();
   if (!admin) return { error: "Not authorized." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/app/admin/vessel-correction-requests/actions");
   const { error } = await service.rpc("apply_vessel_identity_correction", {
     p_request_id: requestId,
     p_admin_email: admin.email,

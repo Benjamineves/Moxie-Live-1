@@ -1,5 +1,5 @@
 import { decideHealth } from "@/lib/scheduler/health";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 
 /**
  * Polled by an external uptime monitor (spec §7). 200 "ok" when a run
@@ -22,9 +22,7 @@ function respond(healthy: boolean, lastFinishedAt: string | null) {
 }
 
 export async function GET() {
-  const service = createSupabaseServiceClient();
-  if (!service) return respond(false, null);
-
+  const service = requireSupabaseServiceClient("app/api/health/scheduler/route");
   const { data, error } = await service
     .from("scheduler_runs")
     .select("status, finished_at")

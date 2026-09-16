@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/admin-verify";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { AdminNav } from "@/components/AdminNav";
 import { StickerQueueTable, type StickerRow } from "./StickerQueueTable";
 import { readBadgePoolStatus } from "@/lib/badge-pool";
@@ -26,11 +26,7 @@ export default async function StickerFulfillmentPage({ searchParams }: Props) {
     redirect("/dashboard");
   }
 
-  const service = createSupabaseServiceClient();
-  if (!service) {
-    redirect("/dashboard");
-  }
-
+  const service = requireSupabaseServiceClient("app/admin/stickers/page");
   const sp = await searchParams;
   const showingShipped = sp.shipped === "1";
 

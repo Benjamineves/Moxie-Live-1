@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/admin-verify";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { AdminNav } from "@/components/AdminNav";
 import { ApproveApplyButton } from "./ApproveApplyButton";
 
@@ -49,11 +49,7 @@ export default async function VesselCorrectionRequestsPage({ searchParams }: Pro
     redirect("/dashboard");
   }
 
-  const service = createSupabaseServiceClient();
-  if (!service) {
-    redirect("/dashboard");
-  }
-
+  const service = requireSupabaseServiceClient("app/admin/vessel-correction-requests/page");
   const sp = await searchParams;
   const showingResolved = sp.resolved === "1";
 

@@ -1,7 +1,7 @@
 "use server";
 
 import { requireAdmin } from "@/lib/admin-verify";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { notifyOwner } from "@/lib/notify";
 import { vesselReactivatedByMoxieMessage } from "@/lib/dormancy-notifications";
 
@@ -18,9 +18,7 @@ export async function approveDecommission(requestId: string): Promise<{ error?: 
   const admin = await requireAdmin();
   if (!admin) return { error: "Not authorized." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/app/admin/vessel-decommission-requests/actions");
   const { error } = await service.rpc("apply_vessel_decommission", {
     p_request_id: requestId,
     p_admin_email: admin.email,
@@ -38,9 +36,7 @@ export async function declineDecommission(requestId: string, declineReason: stri
   const admin = await requireAdmin();
   if (!admin) return { error: "Not authorized." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/app/admin/vessel-decommission-requests/actions");
   const { error } = await service
     .from("vessel_decommission_requests")
     .update({
@@ -68,9 +64,7 @@ export async function reactivateVessel(vesselId: string): Promise<{ error?: stri
   const admin = await requireAdmin();
   if (!admin) return { error: "Not authorized." };
 
-  const service = createSupabaseServiceClient();
-  if (!service) return { error: "Missing Supabase service role configuration." };
-
+  const service = requireSupabaseServiceClient("/app/admin/vessel-decommission-requests/actions");
   // Read first: after reactivation the owner is emailed, and the owner id
   // and MXE ID are needed to do it.
   const { data: vesselRow } = await service.from("vessels").select("owner_id, mxe_id").eq("id", vesselId).maybeSingle();

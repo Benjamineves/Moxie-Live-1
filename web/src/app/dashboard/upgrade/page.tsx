@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { UpgradeForm } from "./UpgradeForm";
 import { UpgradeToFullForm } from "./UpgradeToFullForm";
 import { PastDueBillingPrompt } from "./PastDueBillingPrompt";
@@ -51,11 +51,7 @@ export default async function UpgradePage() {
     redirect("/login?next=/dashboard/upgrade");
   }
 
-  const service = createSupabaseServiceClient();
-  if (!service) {
-    redirect("/dashboard");
-  }
-
+  const service = requireSupabaseServiceClient("app/dashboard/upgrade/page");
   type OwnerRow = { subscription_status: string | null; subscription_tier: string | null; stripe_subscription_id: string | null };
 
   const normalizedEmail = user.email?.trim().toLowerCase();

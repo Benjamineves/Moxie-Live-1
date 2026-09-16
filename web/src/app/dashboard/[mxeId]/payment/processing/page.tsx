@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { ActivationPoller } from "@/components/ActivationPoller";
 
 type Props = {
@@ -33,11 +33,7 @@ export default async function PaymentProcessingPage({ params }: Props) {
     redirect(`/login?next=/dashboard/${encodeURIComponent(mxeId)}/payment/processing`);
   }
 
-  const service = createSupabaseServiceClient();
-  if (!service) {
-    redirect("/dashboard");
-  }
-
+  const service = requireSupabaseServiceClient("app/dashboard/[mxeId]/payment/processing/page");
   const ownerIds = [user.id];
   const normalizedEmail = user.email?.trim().toLowerCase();
   if (normalizedEmail) {

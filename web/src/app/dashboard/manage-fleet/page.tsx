@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { VESSEL_LIMIT, type SubscriptionTier } from "@/lib/tier-config";
 import { ManageFleetForm } from "./ManageFleetForm";
 
@@ -23,11 +23,7 @@ export default async function ManageFleetPage() {
     redirect("/login?next=/dashboard/manage-fleet");
   }
 
-  const service = createSupabaseServiceClient();
-  if (!service) {
-    redirect("/dashboard");
-  }
-
+  const service = requireSupabaseServiceClient("app/dashboard/manage-fleet/page");
   const normalizedEmail = user.email?.trim().toLowerCase();
   let ownerId = user.id;
   if (normalizedEmail) {

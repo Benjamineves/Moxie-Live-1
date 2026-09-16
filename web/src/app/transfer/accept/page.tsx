@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { notifyOwner } from "@/lib/notify";
 import { hashShareToken } from "@/lib/share-token";
 import { AcceptTransferButton } from "./AcceptTransferButton";
@@ -63,11 +63,7 @@ export default async function AcceptTransferPage({ searchParams }: Props) {
     );
   }
 
-  const service = createSupabaseServiceClient();
-  if (!service) {
-    return <TerminalMessage headline="Not available." body="This page isn't configured correctly right now." />;
-  }
-
+  const service = requireSupabaseServiceClient("app/transfer/accept/page");
   const { data: transferRow } = await service
     .from("ownership_transfers")
     .select("id, mxe_id, buyer_email, status, expires_at, seller_id, vessel_id")

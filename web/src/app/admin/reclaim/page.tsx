@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { requireAdmin } from "@/lib/admin-verify";
-import { createSupabaseServiceClient } from "@/lib/supabase/service";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { AdminNav } from "@/components/AdminNav";
 import { ReclaimForm } from "./ReclaimForm";
 
@@ -17,9 +17,7 @@ export default async function ReclaimPage() {
   const admin = await requireAdmin();
   if (!admin) redirect("/dashboard");
 
-  const service = createSupabaseServiceClient();
-  if (!service) redirect("/dashboard");
-
+  const service = requireSupabaseServiceClient("app/admin/reclaim/page");
   const { data: logRows } = await service
     .from("badge_reclaim_log")
     .select("mxe_id, vessel_name, owner_email, reason, reclaimed_by, reclaimed_at")
