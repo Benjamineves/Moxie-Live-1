@@ -1,4 +1,4 @@
-import { NotFoundView } from "@/components/NotFoundView";
+import { StatusScreen } from "@/components/StatusScreen";
 
 /**
  * A print batch id that matched no row. Admin-only, and the reader is
@@ -6,7 +6,7 @@ import { NotFoundView } from "@/components/NotFoundView";
  */
 export default function BatchNotFound() {
   return (
-    <NotFoundView
+    <StatusScreen
       title="Batch"
       accent="not found."
       body="No print batch has that id. It may have been removed, or the link may be out of date."

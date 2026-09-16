@@ -1,4 +1,4 @@
-import { NotFoundView } from "@/components/NotFoundView";
+import { StatusScreen } from "@/components/StatusScreen";
 
 /**
  * The app-wide 404: every unmatched URL in the app renders this, whatever
@@ -14,7 +14,7 @@ import { NotFoundView } from "@/components/NotFoundView";
  */
 export default function NotFound() {
   return (
-    <NotFoundView
+    <StatusScreen
       title="Page"
       accent="not found."
       body="The address may have a typo, or the link may be out of date. Nothing is wrong with your account."

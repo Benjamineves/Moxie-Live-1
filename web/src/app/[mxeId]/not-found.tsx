@@ -1,4 +1,4 @@
-import { NotFoundView } from "@/components/NotFoundView";
+import { StatusScreen } from "@/components/StatusScreen";
 
 /**
  * The 404 for `/<something>` — one URL segment at the root.
@@ -29,7 +29,7 @@ import { NotFoundView } from "@/components/NotFoundView";
  */
 export default function VesselNotFound() {
   return (
-    <NotFoundView
+    <StatusScreen
       title="Not"
       accent="found."
       body="Nothing matches this address. If you were looking for a vessel, that code does not exist or its profile is not published yet — codes look like MXE-01024, printed on the badge."

@@ -65,6 +65,34 @@ test("every 404 boundary renders on the server", () => {
   }
 });
 
+test("/dashboard/<mxeId> redirects to the owner view instead of 404ing", () => {
+  const src = readFileSync(new URL("../app/dashboard/[mxeId]/page.tsx", import.meta.url), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "")
+    .replace(/^\s*\/\/.*$/gm, "");
+  assert.match(src, /redirect\(/, "it should redirect, not render a second owner view");
+  assert.match(src, /\?role=owner/, "to the shape every in-app link already uses");
+  assert.match(src, /looksLikeMxeId/, "and 404 a path that is not a vessel code at all");
+  // A permanent redirect would be cached indefinitely; this mapping has to
+  // stay correctable (same reasoning as /s/<token>, spec §1.7).
+  assert.doesNotMatch(src, /permanentRedirect|RedirectType\.replace|308/, "307, not a permanent redirect");
+});
+
+test("a badge scan tells a config failure apart from an unknown token", () => {
+  const page = readFileSync(new URL("../app/s/[token]/page.tsx", import.meta.url), "utf8");
+  const body = page.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  // The defect: a missing service role used to 404, telling someone holding
+  // a real badge that it did not exist.
+  assert.doesNotMatch(body, /if \(!service\) notFound\(\)/, "a missing service role must not 404");
+  assert.match(body, /if \(!service\) \{[\s\S]*?throw new Error/, "it must throw, for a 500");
+  // And a genuinely unknown token must still 404, not 500.
+  assert.match(body, /outcome\.kind === "notFound"\) notFound\(\)/, "an unknown token still 404s");
+  // The error boundary exists to carry the distinction.
+  const err = readFileSync(new URL("../app/s/[token]/error.tsx", import.meta.url), "utf8");
+  const errCopy = err.replace(/\/\*[\s\S]*?\*\//g, "");
+  assert.match(errCopy, /^\s*["']use client["']/m, "error.tsx must be a client component");
+  assert.doesNotMatch(errCopy, /not recognised|does not exist|not found/i, "a 500 must not read as a verdict on the badge");
+});
+
 test("only the boundaries that know what failed name it", () => {
   const read = (p: string) =>
     readFileSync(new URL(p, import.meta.url), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");

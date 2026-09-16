@@ -66,8 +66,17 @@ export default async function BadgeScanPage({
   const normalized = normalizeBadgeToken(token);
   if (!normalized) notFound();
 
+  // A missing service role is OUR failure, not a verdict on the badge.
+  // This used to call notFound(), which told someone holding a real badge
+  // that it did not exist — a configuration error dressed up as a product
+  // one, in the flow where trust matters most. Throwing gives a 500 and
+  // the segment's error boundary, which says "we cannot check it right
+  // now" and keeps a genuine unknown token as the only thing that 404s.
   const service = createSupabaseServiceClient();
-  if (!service) notFound();
+  if (!service) {
+    console.error("[badge-scan] SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL is not set; cannot resolve badge tokens.");
+    throw new Error("Badge lookup is not configured.");
+  }
 
   const { data } = await service
     .from("badge_identities")

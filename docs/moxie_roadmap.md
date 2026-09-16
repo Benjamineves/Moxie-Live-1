@@ -177,16 +177,14 @@ downgraded on the first run. It must also compare against what was paid
   split needs middleware to set the pathname on the request, which means
   editing the Supabase session-refresh dance in `middleware.ts`; not worth
   the risk for copy, but that's the route if it's ever wanted.
-- **`/dashboard/<mxeId>` is not a route.** Only its children exist
-  (`documents`, `payment`, `qr`, `shares`), so the bare path 404s for a
-  vessel the owner holds. This is what made the misleading copy expensive
-  to diagnose. Either give it a page or redirect it to the vessel's
-  profile — decide which.
-- **A misconfigured service role reads as a missing badge.**
-  `s/[token]/page.tsx` calls `notFound()` when `createSupabaseServiceClient()`
-  returns null, so a bad env var tells a scanner the badge doesn't exist.
-  A configuration failure should be a 500, not a 404. Found during the 404
-  sweep; out of its scope.
+- **Other pages still turn a missing service role into a non-error.**
+  `s/[token]` is fixed (see Done), but the same `if (!service)` check
+  elsewhere variously redirects to `/login` (`dashboard/page.tsx`), to
+  `/dashboard` (`admin/page.tsx`), or renders a 200 "isn't configured
+  correctly" page (`transfer/accept`). None of them is a 500, so a
+  misconfigured deploy looks like an ordinary empty state and monitoring
+  sees nothing. Worth one shared decision rather than eighteen local ones;
+  none is as misleading as the badge scan was.
 - **`shipped_at` / `received_at` renames** + per-identity despatch
   timestamp. From the provisioning build; do together.
 - **Confirm `ben@` removed from `ADMIN_EMAILS`** in Vercel.
@@ -266,4 +264,7 @@ and `--danger` pairing wasn't needed. Ratios in brand addendum §6b ·
 vessel code failed. Four boundaries now — generic at the root, and one each
 next to the code that calls `notFound()` for vessels, badge scans and print
 batches — so a message only names a thing where that thing genuinely was
-what failed
+what failed · `/dashboard/<mxeId>` redirects to `/<mxeId>?role=owner`
+instead of 404ing (307, case-normalised; sub-routes unaffected) · a badge
+scan with no service role returns 500 and its own error screen instead of
+telling a scanner the badge doesn't exist
