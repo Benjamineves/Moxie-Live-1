@@ -14,6 +14,7 @@ import {
   reminderKey,
   reminderThresholdFor,
 } from "./decide.ts";
+import { REVIEW_NOTES } from "./config.ts";
 import { decideHealth } from "./health.ts";
 import { checkCronAuthorization } from "./auth.ts";
 import type { AccountRow, ActiveVesselRow, StripeAccountFacts } from "./types.ts";
@@ -98,11 +99,23 @@ test("tier: paying for more applies at once; paying for less waits for a second 
   assert.equal(second.next.tier, "basic");
 });
 
-test("tier: 90806ee6's shape reports a downgrade and carries its review note", () => {
-  const a = account({ id: "90806ee6-7f4d-4f17-aa7a-894e9fdb07d1", subscription_tier: "full", stripe_subscription_id: "sub_1UBJeTF2ijdqsFlLZ7sdkun1" });
-  const r = decideTier({ account: a, exempt: false, facts: found({ live: { id: "sub_1UBJeTF2ijdqsFlLZ7sdkun1", status: "active" }, paidTier: "basic" }), previousSignatures: none, state: initialState(a, []) });
-  assert.equal(r.findings[0].signature, "tier:full->basic");
-  assert.match(String(r.findings[0].detail.review_note), /^Known test account/);
+// Written against 90806ee6…, whose drift was corrected on 2026-09-15, so
+// REVIEW_NOTES is empty today. Driven by the list rather than by one id: the
+// negative case is the half that has to hold when it's empty, or every
+// account would be quietly excused.
+test("tier: only an account in REVIEW_NOTES carries a review note", () => {
+  const plain = account({ id: "11111111-1111-1111-1111-111111111111", subscription_tier: "full" });
+  const unlisted = decideTier({ account: plain, exempt: false, facts: found({ paidTier: "basic" }), previousSignatures: none, state: initialState(plain, []) });
+  assert.equal(unlisted.findings[0].signature, "tier:full->basic");
+  assert.equal(unlisted.findings[0].detail.review_note, undefined, "an unlisted account is never excused");
+
+  for (const [id, n] of Object.entries(REVIEW_NOTES)) {
+    const a = account({ id, subscription_tier: "full" });
+    const noted = decideTier({ account: a, exempt: false, facts: found({ paidTier: "basic" }), previousSignatures: none, state: initialState(a, []) });
+    assert.equal(noted.findings[0].detail.review_note, n.label);
+    assert.equal(noted.findings[0].detail.review_until, n.untilWhen);
+    assert.equal(noted.findings[0].kind, "would_change", "a note is not an exemption");
+  }
 });
 
 test("tier: no live plan in Stripe lapses only on a second sighting", () => {

@@ -63,10 +63,10 @@ export const BREAKER = {
  * re-raise what's already understood. A note is not an exemption: the
  * finding is still recorded, still listed, and still blocks switching its
  * step on. Anomalies and failures on a noted account still need a human.
+ *
+ * Empty is the right state. The only entry was `90806ee6…`, whose tier drift
+ * was corrected in Stripe and the database on 2026-09-15 (spec §3.1); leaving
+ * the note behind would file a future finding on that account under "no
+ * action needed" and hide a real one.
  */
-export const REVIEW_NOTES: Record<string, { label: string; untilWhen: string }> = {
-  "90806ee6-7f4d-4f17-aa7a-894e9fdb07d1": {
-    label: "Known test account (test data left by the upgrade bug fixed on 2 September)",
-    untilWhen: "until the tier step is switched on, when it has to be resolved first",
-  },
-};
+export const REVIEW_NOTES: Record<string, { label: string; untilWhen: string }> = {};

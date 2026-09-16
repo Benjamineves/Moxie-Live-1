@@ -224,13 +224,17 @@ export default async function SchedulerAdminPage({ searchParams }: Props) {
           </div>
           <div className="rounded-xl border border-[var(--divider)] bg-[var(--white)] p-4">
             <p className="font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--text3)]">Known accounts</p>
-            <ul className={`mt-2 ${text}`}>
-              {Object.entries(REVIEW_NOTES).map(([owner, n]) => (
-                <li key={owner} className="mb-1">
-                  <strong>{emailById.get(owner) ?? `${owner.slice(0, 8)}…`}</strong>: {n.label}. No action needed {n.untilWhen}.
-                </li>
-              ))}
-            </ul>
+            {noteOwners.length === 0 ? (
+              <p className={`mt-2 ${text}`}>None. No account&apos;s findings are being filed as already explained, so anything a run finds is new.</p>
+            ) : (
+              <ul className={`mt-2 ${text}`}>
+                {Object.entries(REVIEW_NOTES).map(([owner, n]) => (
+                  <li key={owner} className="mb-1">
+                    <strong>{emailById.get(owner) ?? `${owner.slice(0, 8)}…`}</strong>: {n.label}. No action needed {n.untilWhen}.
+                  </li>
+                ))}
+              </ul>
+            )}
           </div>
         </section>
 

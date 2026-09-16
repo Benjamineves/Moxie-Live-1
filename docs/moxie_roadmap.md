@@ -50,10 +50,13 @@ question.
 ## Tier 3 — Unblocked once Tier 1 lands
 
 ### Scheduler (tier reconciliation, transfer window, dormancy, reminders)
-**Phase 1 built: report-only** (2026-09-15; spec §13). Before its first run
-you need to: run migration `20261004`, set `CRON_SECRET` in Vercel
-Production, then set up the uptime monitor. Then a week of digests, resolve
-`90806ee6…`, and switch steps on one at a time. **Spec:**
+**Phase 1 built: report-only** (2026-09-15; spec §13). Migration `20261004`
+**is run** (confirmed by reading the four tables and the two new `users`
+columns), and `90806ee6…`'s tier drift **is corrected** (see Done). What's
+left before the first scheduled run: **set `CRON_SECRET` in Vercel
+Production** — without it the route refuses to run — then set up the uptime
+monitor after the first run. Then a week of digests, and switch steps on one
+at a time. **Spec:**
 `docs/moxie_digital_scheduler_spec.md`. Decisions recorded 2026-09-15 in
 its §12: 30-day transfer window, reminders Full-only at 30/7/0 days,
 per-owner opt-out, proportional circuit breaker, external uptime monitor.
@@ -96,9 +99,10 @@ is `users.subscription_tier = 'basic'` with the live subscription's item on
 with `proration_behavior: "none"` and delete its pending proration items —
 ask first.
 
-**Existing data, not this gap:** `90806ee6…` (`sub_1UBJeT…`) is Full in
-both Stripe and the app, having paid only for Basic; its two pending
-proration items (net $89.99) will go on its 2027-09-02 renewal.
+**Existing data, not this gap:** `90806ee6…` (`sub_1UBJeT…`) was Full in
+both Stripe and the app, having paid only for Basic, with two pending
+proration items (net $89.99) queued for its 2027-09-02 renewal.
+**Corrected 2026-09-15** — see Done. No account is in this state now.
 
 ### Upgrading to Full doesn't restore locked vessels
 `clear_vessels_lapsed` only restores `dormant_cause = 'lapsed'`. An owner
@@ -204,4 +208,13 @@ swapped by the webhook only after payment · saved cards offered on the
 upgrade form (seen rendering; the upgrade invoice's intent has no
 `setup_future_usage` with or without a saved card — both read in test mode) · a paid upgrade that can't be applied alerts every admin and
 the owner, and retries while the subscription could recover · tier follows the paid invoice, not the
-subscription's price · admin account exempt from Stripe tier sync
+subscription's price · admin account exempt from Stripe tier sync ·
+scheduler phase 1 report-only, digest and admin page written as plain
+sentences · **`90806ee6…`'s tier drift corrected** (2026-09-15): the
+subscription item swapped back to the Basic price with
+`proration_behavior: "none"`, both pending proration items deleted, stored
+tier set to `basic`, and `reconcile_vessel_overflow` run — it holds 3
+active vessels on a 2-vessel plan, so a 14-day clock runs to 2026-09-30.
+Its renewal is now $59.00 instead of $238.99, a dry run shows no tier
+findings, and its `REVIEW_NOTES` entry is gone so the next finding there
+reads as new

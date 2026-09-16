@@ -180,22 +180,35 @@ take it away wait 24 hours, and a genuine missed cancellation is still
 fixed the next day.
 
 **First-run effects, known today:**
-- `90806ee6…` (`sub_1UBJeT…`) is **your own account**, with test-mode
-  data left by the upgrade bug from before the 2 Sept fix: stored `full`,
-  Stripe price Full, paid only for Basic. Reconciliation must not
-  downgrade it and record that as a correction. **Gate: the tier step
-  can't be switched to acting while this account shows drift.** Resolve it
-  first, in one of two ways:
-  1. **Correct the test data (recommended):** swap the subscription item
-     back to Basic with `proration_behavior: "none"`, delete the two
-     pending proration items, and set the stored tier to match whichever
-     plan you want the account on. These are Stripe and database writes,
-     asked for when the time comes. It keeps the exempt list meaning "plan
-     set by hand, no Stripe subscription".
+- `90806ee6…` (benjamineves@gmail.com, `sub_1UBJeT…`) was **your own
+  account** carrying test-mode data left by the upgrade bug from before
+  the 2 Sept fix: stored `full`, Stripe price Full, paid only for Basic.
+  **Corrected on 2026-09-15** by option 1 below, with the writes approved
+  first: item `si_VBh28lBOQfvWEG` swapped to the Basic price
+  `price_1UBJBvF2ijdqsFlLI53vIrU5` with `proration_behavior: "none"`, the
+  two pending proration items (`ii_…LQlNYPbl` −$58.99, `ii_…xczoO84C`
+  +$148.98) deleted, `subscription_tier` set to `basic`, and
+  `reconcile_vessel_overflow` called because Basic covers 2 active vessels
+  and the account holds 3 — which started a 14-day clock to
+  **2026-09-30**. Its 2027-09-02 renewal is now $59.00, not $238.99. A dry
+  run the same day produced no tier findings for it, and its `REVIEW_NOTES`
+  entry was removed so a future finding there reads as new.
+  1. **Correct the data (recommended, and what was done):** swap the
+     subscription item back to Basic with `proration_behavior: "none"`,
+     delete the pending proration items, set the stored tier, and
+     reconcile the vessel cap so the end state matches what an acting run
+     would have produced. Stripe and database writes, approved first. It
+     keeps the exempt list meaning "plan set by hand, no Stripe
+     subscription".
   2. **Add it to `lib/billing-exempt.ts`** with the reason. That's quicker,
      but the account would never be reconciled again, and the list would
      stop meaning one thing.
 - `2255a040…` (admin): exempt, so untouched.
+
+**The gate, still standing.** The tier step can't be switched to acting
+while a known account shows drift a run would "correct" by downgrading it.
+Satisfied today — no account does — but it applies to the next one that
+turns up, not only to `90806ee6…`.
 
 **Stripe read budget.** About 3 reads per subscribed account per run. Stripe
 allows 500 reads per transaction over 30 days, with a floor of 10,000 a
@@ -579,7 +592,7 @@ even `service_role` (CLAUDE.md: audit logs are append-only).
 **When a run locks vessels or sends 40 emails, you find out three ways:**
 1. **Admin digest email** for any run that changed or would change
    something, or wasn't clean. For example: "Tier: 1 corrected
-   (`90806ee6…` full → basic). Dormancy: 3 vessels locked for 1 account.
+   (one account full → basic). Dormancy: 3 vessels locked for 1 account.
    Reminders: 40 sent, 0 failed." It links to the run. **A no-op
    successful run sends nothing**, so the email means something happened.
 2. **`/admin/scheduler`**: the last 30 runs with status and counts, and
@@ -684,16 +697,21 @@ are additive, and existing rows get nulls.
 
 ## 10. Rollout
 
-1. **Migrations** (§9). You run them.
+1. ~~**Migrations** (§9). You run them.~~ **Done.** `20261004` was run by
+   2026-09-15: all four tables exist and `users.no_plan_since` /
+   `expiry_reminders_opt_out_at` are live, confirmed by reading them.
 2. **`CRON_SECRET` and `EMAIL_UNSUBSCRIBE_SECRET`** in Vercel Production (§4).
-3. **Deploy the route and the health endpoint with every step
-   report-only.** Modes live in `lib/scheduler-config.ts`, so switching a
-   step on is a reviewed commit, not a dashboard toggle.
+   Still outstanding — until `CRON_SECRET` is set the route refuses to run.
+3. ~~**Deploy the route and the health endpoint with every step
+   report-only.**~~ **Done** (2026-09-15). Modes live in
+   `lib/scheduler/config.ts`, so switching a step on is a reviewed commit,
+   not a dashboard toggle.
 4. **After the first run, set up the uptime monitor** (§7) and test its alert once.
 5. **About a week of daily digests.** Review what each step would do,
    especially tier drift.
-6. **Resolve `90806ee6…`** (§3.1). The tier step can't be switched on while
-   it shows drift.
+6. ~~**Resolve `90806ee6…`** (§3.1).~~ **Done** (2026-09-15): corrected in
+   Stripe and the database, not exempted. The gate itself stands for any
+   future account (§3.1).
 7. **Switch steps on one at a time,** in pipeline order:
    1. tier;
    2. the transfer window (30 days; `b6cac9fa…`'s clock starts here);
@@ -729,7 +747,7 @@ are additive, and existing rows get nulls.
 | # | Question | Decision |
 |---|---|---|
 | 1 | Step order and shape | **Per account**: tier → transfer window → dormancy → reminders (§2). |
-| 2 | `90806ee6…` | Your own account; test-mode data from the pre-fix upgrade bug. **Exempt or correct it before the first acting run**, never "corrected" by a downgrade. Spec recommends correcting it, with the writes asked for at the time (§3.1). |
+| 2 | `90806ee6…` | Your own account; test-mode data from the pre-fix upgrade bug. **Exempt or correct it before the first acting run**, never "corrected" by a downgrade. **Settled 2026-09-15: corrected, not exempted** — writes approved and made, `REVIEW_NOTES` now empty (§3.1). |
 | 3 | Transfer window | **30 days**; revisit with real data. The clock starts at the first acting run, including for `b6cac9fa…` (§3.2). |
 | 4 | Reminder eligibility | **Full Access only.** Basic keeps the in-app badges (§3.4). |
 | 5 | Thresholds | **30, 7, 0 days**; nothing after expiry; at most 3 per document per expiry date (§3.4). |
@@ -739,7 +757,8 @@ are additive, and existing rows get nulls.
 | 9 | Page-load dormancy | **Removed** after three clean acting runs of the dormancy step (§3.3). |
 
 **Still to settle when building, not now:**
-- How to resolve `90806ee6…` (item 2), and approving its writes.
+- ~~How to resolve `90806ee6…` (item 2), and approving its writes.~~
+  Settled and done, 2026-09-15 (§3.1).
 - The copy for `no_plan_window_started` and `vessel_lapsed_no_plan`.
 
 ---
