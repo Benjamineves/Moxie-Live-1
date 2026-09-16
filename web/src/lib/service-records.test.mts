@@ -195,6 +195,13 @@ test("the migration freezes logged_at for every role and proves it", () => {
   assert.match(sql, /logged_at moved on UPDATE/, "the guard proves the freeze rather than trusting it");
   assert.match(sql, /UPDATE service_records\s*\n\s*SET file_path = NULL/, "transfer detaches files");
   assert.doesNotMatch(sql, /DELETE FROM service_records\s+WHERE vessel_id/, "transfer must not delete the history");
+  // The body is the LIVE definition plus one statement. These three are
+  // what a rebuild-from-a-migration-file dropped once already: the
+  // return type, the redelivery guard, and the ownership_history writes.
+  assert.match(sql, /RETURNS void/, "the live function returns void");
+  assert.doesNotMatch(sql, /RETURNS JSONB\s*\nLANGUAGE plpgsql\s*\nAS \$function\$/, "not JSONB");
+  assert.match(sql, /IF t\.status = 'completed' THEN\s*\n\s*RETURN;/, "webhook redelivery stays idempotent");
+  assert.match(sql, /INSERT INTO ownership_history/, "ownership_history writes survive");
 });
 
 test("an edit date shows only once it differs from the logged date", () => {

@@ -35,7 +35,10 @@
 -- entry HAD evidence and ask for it directly.
 --
 -- EXISTING ROWS: none change. One new table; complete_ownership_transfer
--- gains one statement and is otherwise identical to 20260920's version.
+-- gains exactly one statement, on top of the body read out of the LIVE
+-- database rather than copied from a migration file. The newest file
+-- defining it (20260920) is not what is deployed — see the note above the
+-- function.
 --
 -- DEPLOY ORDER: EITHER, but prefer running this BEFORE the deploy. The app
 -- tolerates the table being absent (PGRST205/42P01 read as "no records
@@ -151,35 +154,78 @@ GRANT EXECUTE ON FUNCTION public.service_records_freeze_logged_at() TO service_r
 -- ─────────────────────────────────────────────────────────────────────────
 -- complete_ownership_transfer — entries carry, files do not
 --
--- Identical to 20260920_mailing_address.sql's version except for the one
--- UPDATE on service_records marked below. CREATE OR REPLACE with the same
--- signature and return type, so no DROP and no re-grant is needed; the
--- guard still checks the overload count and the EXECUTE privileges.
+-- THIS BODY IS THE LIVE DEFINITION, read out of the database, with ONE
+-- statement added (marked below). It is NOT rebuilt from an earlier
+-- migration file: the newest file defining this function differs from what
+-- is deployed — it returns JSONB where the live one returns void, and the
+-- live one carries a completed-status early return and the whole
+-- ownership_history block that no migration file contains. Replacing the
+-- live body with a file's version would have silently dropped both.
+--
+-- RETURNS void is kept, so CREATE OR REPLACE works with no DROP and
+-- therefore no grant reset (CLAUDE.md: a dropped function is recreated
+-- executable by PUBLIC).
 -- ─────────────────────────────────────────────────────────────────────────
-CREATE OR REPLACE FUNCTION public.complete_ownership_transfer(p_transfer_id UUID, p_stripe_payment_intent_id TEXT)
-RETURNS JSONB
+CREATE OR REPLACE FUNCTION public.complete_ownership_transfer(p_transfer_id uuid, p_stripe_payment_intent_id text)
+RETURNS void
 LANGUAGE plpgsql
-AS $$
+AS $function$
 DECLARE
-  t     RECORD;
-  snap  JSONB;
+  t RECORD;
+  v RECORD;
+  snap JSONB;
+  buyer_name TEXT;
 BEGIN
-  SELECT * INTO t FROM ownership_transfers WHERE id = p_transfer_id FOR UPDATE;
+  SELECT * INTO t FROM ownership_transfers WHERE id = p_transfer_id;
   IF NOT FOUND THEN
-    RAISE EXCEPTION 'complete_ownership_transfer: transfer not found' USING ERRCODE = 'MX001';
+    RAISE EXCEPTION 'Transfer % not found', p_transfer_id;
+  END IF;
+
+  IF t.status = 'completed' THEN
+    RETURN;  -- already processed by an earlier webhook delivery
   END IF;
   IF t.status <> 'awaiting_payment' THEN
-    RAISE EXCEPTION 'complete_ownership_transfer: transfer is not awaiting payment' USING ERRCODE = 'MX002';
-  END IF;
-  IF t.buyer_id IS NULL THEN
-    RAISE EXCEPTION 'complete_ownership_transfer: transfer has no buyer' USING ERRCODE = 'MX003';
+    RAISE EXCEPTION 'Transfer is not awaiting payment (status: %)', t.status;
   END IF;
 
-  SELECT to_jsonb(v) INTO snap FROM vessels v WHERE v.id = t.vessel_id;
+  SELECT * INTO v FROM vessels WHERE id = t.vessel_id;
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'Vessel % not found', t.vessel_id;
+  END IF;
 
-  -- Contact, insurance, personal credentials, storage and location all
-  -- reset: what describes the boat carries, what describes you doesn't.
-  -- The registration fields reset too (confirmed decisions): stale data
+  snap := to_jsonb(v) - 'owner_id';
+
+  SELECT full_name INTO buyer_name FROM users WHERE id = t.buyer_id;
+
+  -- ownership_history: close the seller's tenure, open the buyer's.
+  -- This is the first time this table (build spec §11's extensibility
+  -- hook) is ever actually written to. If no open row exists for this
+  -- vessel (true for every vessel today -- nothing has populated this
+  -- table before now), fall back to the vessel's own created_at as the
+  -- seller's ownership_start, since that's the best available proxy
+  -- for "when they became the owner of this MXE ID."
+  IF EXISTS (SELECT 1 FROM ownership_history WHERE vessel_id = t.vessel_id AND ownership_end IS NULL) THEN
+    UPDATE ownership_history
+      SET ownership_end = CURRENT_DATE,
+          transfer_type = CASE WHEN t.initiated_via = 'escrow' THEN 'escrow_sale' ELSE 'private_sale' END
+      WHERE vessel_id = t.vessel_id AND ownership_end IS NULL;
+  ELSE
+    INSERT INTO ownership_history (vessel_id, owner_name, ownership_start, ownership_end, transfer_type)
+    VALUES (
+      t.vessel_id, COALESCE(v.owner_name, 'Unknown'), v.created_at::date, CURRENT_DATE,
+      CASE WHEN t.initiated_via = 'escrow' THEN 'escrow_sale' ELSE 'private_sale' END
+    );
+  END IF;
+
+  INSERT INTO ownership_history (vessel_id, owner_name, ownership_start, ownership_end, transfer_type)
+  VALUES (t.vessel_id, COALESCE(buyer_name, 'New owner'), CURRENT_DATE, NULL, NULL);
+
+  -- Owner-specific fields cleared on the live row -- not because the
+  -- data is discarded (it's already safe in snap above), but because
+  -- leaving them in place would mean the buyer's own future edits
+  -- overwrite the seller's historical values in place, corrupting the
+  -- frozen record snap was just built to protect. Storage/marina and
+  -- registration fields reset too (confirmed decisions): stale data
   -- that looks current is worse than a blank field prompting the new
   -- owner to fill it in.
   UPDATE vessels SET
@@ -198,9 +244,9 @@ BEGIN
     public_notes = NULL
   WHERE id = t.vessel_id;
 
-  -- ── NEW IN 20261005 ──────────────────────────────────────────────────
+  -- ── THE ONLY ADDED STATEMENT (20261005) ──────────────────────────────
   -- The service history carries; its attachments do not. The rows stay,
-  -- both dates stay, file_was_attached stays true — so the buyer sees the
+  -- both dates stay, file_was_attached stays true -- so the buyer sees the
   -- cadence and sees which entries had documents, and asks the seller for
   -- those directly. The bytes stay in the seller's storage path, which is
   -- exactly what already happens to the primary documents above.
@@ -214,11 +260,9 @@ BEGIN
   UPDATE ownership_transfers
     SET status = 'completed', completed_at = now(), payment_status = 'paid',
         stripe_payment_intent_id = p_stripe_payment_intent_id, vessel_snapshot = snap
-  WHERE id = p_transfer_id;
-
-  RETURN jsonb_build_object('vessel_id', t.vessel_id, 'buyer_id', t.buyer_id, 'seller_id', t.seller_id);
+    WHERE id = p_transfer_id;
 END;
-$$;
+$function$;
 
 -- ─────────────────────────────────────────────────────────────────────────
 -- Guard: roll the whole file back unless every claim above is true.
