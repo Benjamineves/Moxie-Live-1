@@ -25,7 +25,18 @@
   --divider: rgba(13, 31, 53, 0.1);
   --text: #0d1f35;
   --text2: #3a5068;
-  --text3: #6b8299;
+
+  /* The third text level, and a LIGHT-SURFACE token only. It was #6b8299,
+     which failed AA everywhere it was used — 3.98:1 on white, 3.56:1 on
+     cream, 3.22:1 on a --gold-dim panel over cream — across 215 elements,
+     73 of them smaller than 12px. Same hue and saturation, lightness 51% →
+     41%: 5.61:1 on white, 5.02:1 on cream, 4.55:1 on its worst real
+     surface. Unlike --gold and --danger this needs no dark counterpart,
+     because it is never used on navy; if it ever is, it measures 2.93:1 on
+     --navy3 and fails even the 3:1 large-text floor. Darkening it narrows
+     the gap to --text2 from 2.09:1 to 1.48:1 — a deliberately flatter
+     ramp, accepted 2026-09-15. Ratios: brand addendum §6b. */
+  --text3: #566a7b;
   --aqua-bright: #17c3b2;
   --aqua-vapor: #13f1d1;
   --aqua-lagoon: #1fa394;

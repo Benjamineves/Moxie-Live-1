@@ -22,7 +22,9 @@ export const BROKER_PREVIEW_HTML = `
   :root{
     --navy:#0d1f35; --navy2:#132943; --gold:#C9A84C; --gold-dim:rgba(201,168,76,.14);
     --cream:#f5f2ec; --white:#fff; --aqua:#1FA394; --aqua-bright:#17C3B2;
-    --text2:#3a5068; --text3:#6b8299; --divider:rgba(13,31,53,0.1);
+    /* --text3 kept in step with globals.css (§6b); this document carries its
+       own copy of the tokens, so it does not inherit the app's. */
+    --text2:#3a5068; --text3:#566a7b; --divider:rgba(13,31,53,0.1);
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:'DM Sans',-apple-system,sans-serif;background:var(--cream);color:var(--navy);line-height:1.6;-webkit-font-smoothing:antialiased}

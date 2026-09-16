@@ -143,8 +143,33 @@ downgraded on the first run. It must also compare against what was paid
   lapse, leaving the seller believing a sale is in progress.
 - **Public/owner view toggle.** Owners have no way to see what a stranger
   sees on their own badge.
-- **`--text3` contrast sweep.** Below AA at 12px on light surfaces. Same
-  class as the gold sweep.
+- **Inactive states drawn with `opacity` are unreadable.** Six places wrap
+  content in `opacity-50/60/70` to mean "inactive": the dormant-vessel edit
+  block (`VesselOwnerProfile:462,536`, `VesselDocuments:138`), a used
+  document slot (`DocumentsEdit:692`), a revoked share
+  (`shares/page:193`) and a shipped batch (`badges/[batchId]:394`). The
+  opacity composites the text toward the background: 2.00–2.44:1 before
+  the `--text3` sweep, 2.38–2.99:1 after it. **No token fixes these** —
+  the state needs showing another way (a label, a border, or a muted
+  token at full opacity). State-dependent, so they look fine until the
+  vessel is dormant or the share revoked.
+- **`--gold` as a hover border on a light surface.** `/pricing`'s "Get in
+  touch" CTA (`MoxiePricing:209`) hovers `border-[var(--gold)]`, 2.05:1
+  on cream, under the 3:1 that 1.4.11 asks of a control boundary. Its
+  resting `--divider` border is 1.22:1, so the hover is an improvement
+  and this is really about `--divider` as a control boundary generally.
+  Found during the `--text3` sweep; out of its scope.
+- **`ScanSuccess` hardcodes a colour instead of using a token.** Lines 91,
+  111 and 179 use the literal `#6b8299` — `--text3`'s value before the
+  2026-09-15 sweep — as 14px text on `--navy-deep`. It measures 4.78:1 and
+  passes, and it only still passes because being a literal kept it out of
+  the sweep (the corrected token is 3.39:1 there). It wants a named
+  dark-surface token rather than a literal, so the next sweep sees it.
+  Found by grepping the hex, not the token name.
+- **Marketing mock card renders text at 7–8px.** `MoxieMarketingHome:296,
+  311, 325` — the fake vessel metadata inside the product mock. A sizing
+  and design question, not a contrast one; no colour makes 7px readable.
+  Decided 2026-09-15 to leave the size alone for now.
 - **Misleading 404 copy.** Every miss reads "That vessel code does not
   exist," including route errors unrelated to vessels. Cost real
   diagnosis time.
@@ -217,4 +242,9 @@ tier set to `basic`, and `reconcile_vessel_overflow` run — it holds 3
 active vessels on a 2-vessel plan, so a 14-day clock runs to 2026-09-30.
 Its renewal is now $59.00 instead of $238.99, a dry run shows no tier
 findings, and its `REVIEW_NOTES` entry is gone so the next finding there
-reads as new
+reads as new · **`--text3` contrast sweep** (2026-09-15): `#6b8299` failed
+AA on all nine surfaces it lands on, not only at 12px — 215 elements, 73 of
+them under 12px. Now `#566a7b`: 5.61:1 on white, 5.02:1 on cream, 4.55:1 on
+its worst surface. One token change, no call-site splits, because the
+parent chain of every instance resolves to a light surface — the `--gold`
+and `--danger` pairing wasn't needed. Ratios in brand addendum §6b

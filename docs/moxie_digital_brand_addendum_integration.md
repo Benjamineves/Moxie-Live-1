@@ -165,6 +165,29 @@ different surface means changing its tokens, not just its container.**
 |---|---|---|
 | Gold — links, triggers, accents | `--gold` `#c9a84c` | `--gold-deep` `#7d6119` |
 | Danger — errors, destructive controls | `--danger-on-dark` `#ff9e80` | `--red-fg` `#712b13` |
+| Third-level text — labels, eyebrows, metadata | `#6b8299`, unnamed — see below | `--text3` `#566a7b` |
+
+**`--text3` is a light-surface token.** Swept 2026-09-15. It was `#6b8299`
+and failed AA on every surface it was used on — not just at 12px, as the
+roadmap had it. The parent chain of all 215 elements carrying the token was
+resolved and **not one lands on a dark surface**, so no pairing and no
+shared-class split was needed: one value in `globals.css` corrected all of
+them.
+
+**But the dark half of this row exists anyway, and is not a token.**
+`ScanSuccess.tsx` (lines 91, 111, 179) hardcodes the hex `#6b8299` — the
+token's *old* value — as 14px text on `--navy-deep`, where it measures
+**4.78:1** and passes. Because those three are literals rather than
+`var(--text3)`, the sweep did not touch them, which is the only reason they
+still pass: the corrected token measures **3.39:1** on `--navy-deep` and
+would have failed. So the pairing rule holds here exactly as it does for
+gold and danger — the light value is wrong on navy — but one side of the
+pair is currently an unnamed literal in one component. Naming it is on the
+roadmap.
+
+The lesson is the one in "Where the tokens live": **this was found by
+grepping the hex, not the token name.** A search for `--text3` reports 215
+instances and misses these three entirely.
 
 Measured, so the choice is checkable rather than a matter of taste:
 
@@ -196,6 +219,38 @@ floor, so a 62px display accent in `--gold` on cream fails as surely as a
 | on `--gold-dim` over `--navy-deep` | **7.51:1** ✓ | 1.48:1 ✗ |
 | on `--white` | 2.01:1 ✗ | **10.21:1** ✓ |
 | on `--cream` | — | **9.14:1** ✓ |
+
+**Third-level text**
+
+Every surface `--text3` actually lands on, with the count of elements on
+each. The old value cleared the 3:1 large-text floor everywhere and AA
+nowhere, which is why it survived a casual look: it fails only at the sizes
+it is actually used at, and 73 of the 215 are smaller than 12px (down to
+7px).
+
+| | composites to | `#6b8299` (old) | `#566a7b` (now) | n |
+|---|---|---|---|---|
+| on `--white` | `#ffffff` | 3.98:1 ✗ | **5.61:1** ✓ | 100 |
+| on `--cream` | `#f5f2ec` | 3.56:1 ✗ | **5.02:1** ✓ | 62 |
+| on `--cream2` | `#ede9e0` | 3.28:1 ✗ | **4.63:1** ✓ | 5 |
+| on `--gray-bg` | `#f1efe8` | 3.46:1 ✗ | **4.88:1** ✓ | 1 |
+| on `--blue-bg` | `#e6f1fb` | 3.47:1 ✗ | **4.90:1** ✓ | 1 |
+| on `--amber-bg` | `#faeeda` | 3.47:1 ✗ | **4.89:1** ✓ | 3 |
+| on `--gold-dim` over `--cream` | `rgb(238,231,212)` | 3.22:1 ✗ | **4.55:1** ✓ | 3 |
+| on aqua `.04` over `--white` | `rgb(246,253,252)` | 3.86:1 ✗ | **5.44:1** ✓ | 2 |
+| on aqua `.05` over `--white` | `rgb(243,252,251)` | 3.81:1 ✗ | **5.38:1** ✓ | 1 |
+
+The ramp on white is now `--text` 16.61:1, `--text2` 8.31:1, `--text3`
+5.61:1. That is **deliberately flatter than before**: the gap between the
+second and third levels drops from 2.09:1 to 1.48:1. AA at these sizes
+leaves no room below `--text2` — at 32% lightness the two are 1.05:1 apart
+and indistinguishable — so a legible third level costs some of the
+hierarchy. Accepted 2026-09-15 on the grounds that the old third level was
+a legibility failure in 214 places.
+
+One instance was already compliant and was left alone: the 24px
+"Commercial" column head on `/pricing`, where the 3:1 large-text floor
+applies and 3.56:1 cleared it.
 
 Note that the failures are symmetrical. `--gold-deep` on navy is as wrong
 as `--gold` on cream; this is a pairing, not a ranking, and "use the
@@ -236,6 +291,31 @@ darker one to be safe" is not a rule that works.
    So: check `hover:text-*`, `hover:bg-*`, and `hover:border-*` against
    each other, not just the resting pair.
 
+   **And it runs the other way too.** The `--text3` sweep found the
+   mirror image: all three colour-changing hovers *improved* on their
+   resting state — `ReplacePhotoControl` and the `/pricing` "Get in
+   touch" CTA rested at 3.56:1 and hovered to `--gold-deep` at 5.23:1,
+   and the share `RevokeButton` rested at 3.98:1 and hovered to
+   `--red-fg` at 10.21:1. Three controls were legible only while being
+   pointed at. A hover that improves things is not a fix, because the
+   resting state is what the user reads first and what a keyboard or
+   touch user may never leave; it also *masks* the resting failure from
+   anyone checking by hovering. Measure the resting state on its own.
+
+4. **`opacity` defeats a token, and no token can fix it.** Six `--text3`
+   elements sit inside `opacity-50/60/70` wrappers used to say "inactive"
+   — a dormant vessel's edit block, a used document slot, a revoked
+   share, a shipped batch. The wrapper composites the text toward the
+   background: those six measured 2.00–2.44:1 before the sweep and
+   2.38–2.99:1 after it. **Darkening the token moved them and still left
+   them failing.** These need the state shown some other way — a label, a
+   border, a dedicated muted token at full opacity — not a darker colour.
+   Two things follow: an `opacity` ancestor belongs in the same walk as a
+   background ancestor, and a sweep's own report has to say which
+   instances it does *not* fix rather than counting them as swept. They
+   are also **state-dependent**, so they look fine in the default render
+   and only fail once the vessel is dormant or the share revoked.
+
 ### The one genuine exemption
 
 The wordmark's gold **M** and aqua **.** are a logotype, and logotypes are
@@ -255,12 +335,28 @@ deliberately left alone:
   visual effect. Changing the token there would be a no-op, so they were
   left as they are.
 
+And one from the `--text3` sweep, which is a **sizing** problem wearing a
+contrast problem's clothes: the marketing home's mock vessel card renders
+fake metadata ("Length 26'", "HIN ···1234", "Scan or tap to verify") at
+**7–8px** (`MoxieMarketingHome.tsx:296, 311, 325`). It is live DOM inside a
+picture of the product, so the 1.4.3 "part of a picture" exemption is
+arguable rather than clear, but no colour makes 7px text readable. It
+inherits the corrected token like everything else; the size is on the
+roadmap as a design item, not an accessibility one. Decided 2026-09-15.
+
 ### Where the tokens live
 
 `web/src/app/globals.css`, each with a comment giving its measured ratios
 and the surface it was chosen against. Add the ratio to the comment when
 adding a token — a number in the file is what makes the next reviewer
 able to check rather than guess.
+
+**`globals.css` is not the only copy.** `web/src/lib/broker-preview-html.ts`
+is a standalone document with its own `:root` block, served at an admin-only
+route; it does not inherit the app's tokens. It was updated by hand in the
+`--text3` sweep. A token change that skips it drifts silently, because
+nothing imports one from the other — grep the hex value, not just the token
+name, when changing one.
 
 
 ---
