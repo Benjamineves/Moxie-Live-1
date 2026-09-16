@@ -70,6 +70,9 @@ checking. Before stating a fact about the system, observe it:
     transaction, so it shows whether a function or overload exists (and its
     result shape) without being able to write.
   - The OpenAPI document at `/rest/v1/` lists RPCs and their parameters.
+  - `pg_get_functiondef(p.oid)` gives a function's **deployed body**, which
+    is the only valid source when replacing one (see the migrations
+    section). It needs the SQL editor, so ask for it.
 - **Library APIs:** check the installed type definitions in `node_modules`
   (e.g. `stripe@22`, `@stripe/stripe-js`) rather than assuming field names.
 - **What the browser renders:** if a dev-server result contradicts the
@@ -121,6 +124,28 @@ standing instruction, not a per-request one.
   which uses the real Postgres parser and can parse plpgsql bodies).
 - **Say what changes for existing rows** and whether it can run before or
   after the deploy.
+
+### Replacing a function body: copy it, don't recall it
+
+A function body is rebuilt **from `pg_get_functiondef` against the live
+database**, or from the migration file *after confirming that file matches
+live* — never from memory. Ask for the live definition if you can't read it
+yourself; it is one query and the user can paste it.
+
+**If you haven't read the source you're copying, say so** rather than
+describing the result as a copy. A false claim of equivalence is worse than
+an acknowledged guess, because it removes the reader's reason to check.
+
+This is not hypothetical. `20261005` shipped a `complete_ownership_transfer`
+body written from memory and labelled "identical to 20260920's except one
+UPDATE". It was identical to nothing: it returned JSONB instead of void and
+dropped the completed-status early return (webhook idempotency), the whole
+`ownership_history` block, the vessel existence check and the `- 'owner_id'`
+on the frozen snapshot. Only the return-type mismatch would have stopped it
+— had the types matched, `CREATE OR REPLACE` would have replaced the live
+function silently, and no guard, test or review of the file would have
+caught it. The first diagnosis then blamed a stale migration file; that was
+also wrong, and blaming a working process is its own cost.
 
 ### Dropping a function reopens EXECUTE to PUBLIC
 
