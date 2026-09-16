@@ -9,7 +9,7 @@ import { VesselOwnerProfile, type OwnerProfileTier } from "@/components/VesselOw
 import type { ActiveTransfer } from "@/components/vessel-edit/TransferOwnershipPanel";
 import { SharedVesselProfile } from "@/components/share/SharedVesselProfile";
 import { fetchVesselByMxeId, filterVesselForRole } from "@/lib/vessel-service";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { emailsMatch, getOwnerEmailByUserId } from "@/lib/owner-verify";
 import { getOwnerBillingSummary } from "@/lib/billing-service";
@@ -136,17 +136,15 @@ export default async function VesselPage({ params, searchParams }: Props) {
     // way out. Computed from the same auth.getUser() call as
     // destinationRole above, not a second lookup.
     let exitHref: string = MARKETING_ORIGIN;
-    const scanSupabase = await createSupabaseServerClient();
-    if (scanSupabase) {
-      const {
-        data: { user: scanUser },
-      } = await scanSupabase.auth.getUser();
-      if (scanUser?.email) {
-        exitHref = "/dashboard";
-        const scanOwnerEmail = await getOwnerEmailByUserId(vessel.owner_id);
-        if (scanOwnerEmail && emailsMatch(scanUser.email, scanOwnerEmail)) {
-          destinationRole = "owner";
-        }
+    const scanSupabase = await requireSupabaseServerClient("app/[mxeId]/page scan");
+    const {
+      data: { user: scanUser },
+    } = await scanSupabase.auth.getUser();
+    if (scanUser?.email) {
+      exitHref = "/dashboard";
+      const scanOwnerEmail = await getOwnerEmailByUserId(vessel.owner_id);
+      if (scanOwnerEmail && emailsMatch(scanUser.email, scanOwnerEmail)) {
+        destinationRole = "owner";
       }
     }
     return <ScanSuccess mxeId={vessel.mxe_id} destinationRole={destinationRole} exitHref={exitHref} />;
@@ -155,12 +153,8 @@ export default async function VesselPage({ params, searchParams }: Props) {
   const roleParam = sp.role?.toLowerCase();
 
   if (roleParam === "owner") {
-    const supabase = await createSupabaseServerClient();
+    const supabase = await requireSupabaseServerClient("app/[mxeId]/page role=owner");
     const nextUrl = `/${encodeURIComponent(vessel.mxe_id)}?role=owner`;
-
-    if (!supabase) {
-      redirect(`/login?next=${encodeURIComponent(nextUrl)}`);
-    }
 
     const {
       data: { user },
@@ -336,14 +330,12 @@ export default async function VesselPage({ params, searchParams }: Props) {
   // (a stranger who scanned a dock badge has no dashboard to bounce to
   // — sending them to the marketing origin instead turns the end of the
   // path into a discovery surface rather than a dead end).
-  const headerSupabase = await createSupabaseServerClient();
+  const headerSupabase = await requireSupabaseServerClient("app/[mxeId]/page header");
   let publicHeaderAuthenticated = false;
-  if (headerSupabase) {
-    const {
-      data: { user: headerUser },
-    } = await headerSupabase.auth.getUser();
-    publicHeaderAuthenticated = !!headerUser;
-  }
+  const {
+    data: { user: headerUser },
+  } = await headerSupabase.auth.getUser();
+  publicHeaderAuthenticated = !!headerUser;
   const wordmarkHref = publicHeaderAuthenticated ? "/dashboard" : MARKETING_ORIGIN;
 
   return (

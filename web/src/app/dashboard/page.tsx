@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PixelMMark, INVERTED_MARK_COLOR } from "@/components/brand/PixelMMark";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { requireAdmin } from "@/lib/admin-verify";
 import { DeleteUnactivatedVesselButton } from "@/components/vessel-edit/DeleteUnactivatedVesselButton";
@@ -15,10 +15,8 @@ import type { VesselRecord } from "@/types/vessel";
 async function signOutAction() {
   "use server";
 
-  const supabase = await createSupabaseServerClient();
-  if (supabase) {
-    await supabase.auth.signOut();
-  }
+  const supabase = await requireSupabaseServerClient("app/dashboard/page signOut");
+  await supabase.auth.signOut();
   redirect("/login");
 }
 
@@ -36,11 +34,7 @@ export default async function DashboardPage({ searchParams }: Props) {
   // with a single moment rather than drifting between two calls.
   const now = new Date().getTime();
 
-  const supabase = await createSupabaseServerClient();
-  if (!supabase) {
-    redirect("/login?next=/dashboard");
-  }
-
+  const supabase = await requireSupabaseServerClient("app/dashboard/page");
   const {
     data: { user },
   } = await supabase.auth.getUser();

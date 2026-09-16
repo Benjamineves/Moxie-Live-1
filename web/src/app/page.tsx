@@ -1,11 +1,8 @@
 import { MoxieMarketingHome } from "@/components/marketing/MoxieMarketingHome";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 
 export default async function Home() {
-  const supabase = await createSupabaseServerClient();
-  if (!supabase) {
-    return <MoxieMarketingHome isAuthenticated={false} />;
-  }
+  const supabase = await requireSupabaseServerClient("app/page");
 
   const {
     data: { user },

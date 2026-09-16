@@ -1,15 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PixelMMark, INVERTED_MARK_COLOR } from "@/components/brand/PixelMMark";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { VesselIntakeForm } from "./VesselIntakeForm";
 
 export default async function NewVesselPage() {
-  const supabase = await createSupabaseServerClient();
-  if (!supabase) {
-    redirect("/login?next=/dashboard/new");
-  }
-
+  const supabase = await requireSupabaseServerClient("app/dashboard/new/page");
   const {
     data: { user },
   } = await supabase.auth.getUser();

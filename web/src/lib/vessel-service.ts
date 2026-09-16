@@ -1,6 +1,6 @@
 import type { ProfileRole, VesselPreview, VesselRecord } from "@/types/vessel";
-import { getDemoVessel } from "@/lib/demo-vessel";
 import { getPublicSupabase } from "@/lib/supabase-public";
+import { AnonKeyNotConfiguredError } from "@/lib/supabase/server";
 
 function normalizeRecord(row: Record<string, unknown>): VesselRecord {
   const r = row as VesselRecord;
@@ -12,10 +12,12 @@ export async function fetchVesselByMxeId(mxeId: string): Promise<VesselRecord | 
   const supabase = getPublicSupabase();
 
   if (!supabase) {
-    console.warn(
-      `[vessel-service] NEXT_PUBLIC_SUPABASE_URL/ANON_KEY not set — serving demo vessel data for ${normalized} instead of Supabase.`,
-    );
-    return getDemoVessel(normalized);
+    // Was `return getDemoVessel(normalized)`, which served a FAKE BOAT at a
+    // real MXE ID: a stranger scanning a hull badge would read invented
+    // details as though they were the registry's. A missing anon key is a
+    // broken deploy, and the page it produces must say so.
+    console.error(`[config] Supabase anon key missing at lib/vessel-service (${normalized}).`);
+    throw new AnonKeyNotConfiguredError(`lib/vessel-service ${normalized}`);
   }
 
   const { data, error } = await supabase.from("vessels").select("*").eq("mxe_id", normalized).maybeSingle();

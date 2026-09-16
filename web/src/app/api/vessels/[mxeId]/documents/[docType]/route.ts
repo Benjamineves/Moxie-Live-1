@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { emailsMatch, getOwnerEmailByUserId } from "@/lib/owner-verify";
 import { isDocumentLocked, type DocumentSlot } from "@/lib/vessel-transfer";
@@ -40,10 +40,7 @@ export async function GET(request: Request, context: { params: Promise<{ mxeId: 
     return NextResponse.json({ error: "Invalid document type" }, { status: 400 });
   }
 
-  const supabase = await createSupabaseServerClient();
-  if (!supabase) {
-    return NextResponse.json({ error: "Server misconfigured (missing Supabase env)." }, { status: 503 });
-  }
+  const supabase = await requireSupabaseServerClient("app/api/vessels/[mxeId]/documents/[docType]/route");
 
   const {
     data: { user },

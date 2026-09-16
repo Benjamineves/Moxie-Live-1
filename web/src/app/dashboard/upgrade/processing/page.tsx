@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { ActivationPoller } from "@/components/ActivationPoller";
 
@@ -19,11 +19,7 @@ type Props = {
 
 export default async function UpgradeProcessingPage({ searchParams }: Props) {
   const { tier: awaitedTier } = await searchParams;
-  const supabase = await createSupabaseServerClient();
-  if (!supabase) {
-    redirect("/login?next=/dashboard/upgrade/processing");
-  }
-
+  const supabase = await requireSupabaseServerClient("app/dashboard/upgrade/processing/page");
   const {
     data: { user },
   } = await supabase.auth.getUser();

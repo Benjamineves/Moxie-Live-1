@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { MoxiePricing } from "@/components/marketing/MoxiePricing";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "Pricing · Moxie",
@@ -8,10 +8,7 @@ export const metadata: Metadata = {
 };
 
 export default async function PricingPage() {
-  const supabase = await createSupabaseServerClient();
-  if (!supabase) {
-    return <MoxiePricing isAuthenticated={false} />;
-  }
+  const supabase = await requireSupabaseServerClient("app/pricing/page");
 
   const {
     data: { user },

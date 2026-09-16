@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { VESSEL_LIMIT, type SubscriptionTier } from "@/lib/tier-config";
 import { ManageFleetForm } from "./ManageFleetForm";
@@ -11,11 +11,7 @@ import { ManageFleetForm } from "./ManageFleetForm";
  * overflow banner and from a locked vessel's own dormant banner.
  */
 export default async function ManageFleetPage() {
-  const supabase = await createSupabaseServerClient();
-  if (!supabase) {
-    redirect("/login?next=/dashboard/manage-fleet");
-  }
-
+  const supabase = await requireSupabaseServerClient("app/dashboard/manage-fleet/page");
   const {
     data: { user },
   } = await supabase.auth.getUser();

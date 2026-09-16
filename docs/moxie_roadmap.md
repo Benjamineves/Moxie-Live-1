@@ -236,20 +236,19 @@ downgraded on the first run. It must also compare against what was paid
   split needs middleware to set the pathname on the request, which means
   editing the Supabase session-refresh dance in `middleware.ts`; not worth
   the risk for copy, but that's the route if it's ever wanted.
-- **The anon client has the same shape, one env var over.**
-  `createSupabaseServerClient()` returns null when
-  `NEXT_PUBLIC_SUPABASE_ANON_KEY`/`URL` is missing, and callers fold that
-  into "not signed in" — `requireAdmin()` opens with
-  `if (!authClient) return null`, and `fetchVesselByMxeId` falls back to
-  **demo vessel data**. The service-role sweep (see Done) did not touch it.
-  Same fix shape: a `requireSupabaseServerClient()` and a second entry in
-  the guard test.
-- **A share-link query failure still reads as an expired link.**
-  `lib/share-resolve.ts` returns `server_error` for a failed RPC as well as
-  for config, and `[mxeId]/page.tsx:55` renders every error as "Link no
-  longer active — expired, revoked, or already been used". Config now
-  throws, so only the RPC case is left. Noticed during the sweep; out of
-  its scope.
+- **Seller filenames persist on the buyer's row after a transfer.**
+  `complete_ownership_transfer` nulls every document URL but not
+  `doc_registration_filename`, `doc_insurance_filename` or
+  `doc_boater_card_filename`, so the buyer's row keeps strings like
+  "Dave Smith insurance 2026.pdf". Harmless on screen — the UI only reads a
+  filename for a slot that has a URL (`20260918`'s note) — but it is the
+  seller's personal data sitting on someone else's record. Found
+  2026-09-16 while checking the fishing-licence question; a one-line
+  addition to the same UPDATE.
+- **`lib/demo-vessel.ts` is now dead code.** Its only caller was
+  `fetchVesselByMxeId`'s missing-anon-key fallback, removed 2026-09-16.
+  Delete it, or keep it deliberately for local development and say so in
+  the file.
 - **`shipped_at` / `received_at` renames** + per-identity despatch
   timestamp. From the provisioning build; do together.
 - **Confirm `ben@` removed from `ADMIN_EMAILS`** in Vercel.
@@ -338,4 +337,7 @@ telling a scanner the badge doesn't exist · **a missing service role is a
 4 silent skips and 34 inline errors. The seven routes that already return
 their own 5xx keep the raw factory, held to it by
 `lib/supabase/service.guard.test.mts`. Signed-out paths are byte-identical
-with and without the key — verified by removing it
+with and without the key — verified by removing it · **the anon client too**
+(2026-09-16): 42 sites now use `requireSupabaseServerClient()`,
+`fetchVesselByMxeId` no longer serves demo data at a real MXE ID, and
+`share-resolve` no longer reports a failed query as an expired link

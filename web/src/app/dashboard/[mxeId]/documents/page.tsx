@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
 import { AccountBillingPanel } from "@/components/AccountBillingPanel";
 import { SignOutButton } from "@/components/SignOutButton";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { resolveOwnerIds, loadOwnedVessel } from "@/lib/vessel-ownership";
 import { getOwnerBillingSummary } from "@/lib/billing-service";
@@ -48,8 +48,7 @@ export default async function VesselDocumentsPage({ params }: Props) {
   const { mxeId } = await params;
   const next = `/dashboard/${encodeURIComponent(mxeId)}/documents`;
 
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) redirect(`/login?next=${next}`);
+  const authClient = await requireSupabaseServerClient("app/dashboard/[mxeId]/documents/page");
 
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) redirect(`/login?next=${next}`);

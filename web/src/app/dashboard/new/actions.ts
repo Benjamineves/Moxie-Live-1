@@ -1,6 +1,6 @@
 "use server";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { isValidStateCode, normalizeStateCode } from "@/lib/us-states";
 import { VESSEL_LIMIT, type SubscriptionTier } from "@/lib/tier-config";
@@ -70,8 +70,7 @@ export async function createVessel(
   const basicError = validate(input);
   if (basicError) return { error: basicError };
 
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) return { error: "Missing Supabase auth configuration." };
+  const authClient = await requireSupabaseServerClient("app/dashboard/new/actions");
 
   const {
     data: { user },

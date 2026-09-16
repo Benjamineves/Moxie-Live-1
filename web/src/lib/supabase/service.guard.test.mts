@@ -73,6 +73,42 @@ test("every allow-listed caller still answers with a 5xx of its own", () => {
   }
 });
 
+/**
+ * The anon client, same rule. A null from `createSupabaseServerClient()`
+ * was folded into "not signed in", so a missing anon key signed everyone
+ * out; `fetchVesselByMxeId` went further and served **demo vessel data**,
+ * showing a stranger a fake boat at a real MXE ID.
+ */
+const ANON_ALLOWED = new Map<string, string>([
+  ["lib/supabase/server.ts", "defines both"],
+]);
+
+test("only the allow-list calls createSupabaseServerClient directly", () => {
+  const offenders: string[] = [];
+  for (const file of sourceFiles(SRC)) {
+    const rel = file.slice(SRC.length);
+    if (ANON_ALLOWED.has(rel)) continue;
+    const src = readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    if (/(?<!typeof\s)\bcreateSupabaseServerClient\s*\(/.test(src)) offenders.push(rel);
+  }
+  assert.deepEqual(offenders, [], `these must use requireSupabaseServerClient instead:\n  ${offenders.join("\n  ")}`);
+});
+
+test("a missing anon key never becomes vessel data", () => {
+  const src = readFileSync(join(SRC, "lib/vessel-service.ts"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.doesNotMatch(src, /getDemoVessel/, "a real MXE ID must never render an invented boat");
+  assert.match(src, /throw new AnonKeyNotConfiguredError/);
+});
+
+test("a share link says it is dead only when the token says so", () => {
+  // Both server_error returns are gone: config and a failed RPC now throw,
+  // so "expired, revoked, or already used" is only ever the token's verdict.
+  const src = readFileSync(join(SRC, "lib/share-resolve.ts"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.doesNotMatch(src, /return\s*\{\s*error:\s*"server_error"\s*\}/);
+});
+
 test("the helper throws a named error rather than returning null", () => {
   const src = readFileSync(join(SRC, "lib/supabase/service.ts"), "utf8");
   assert.match(src, /export class ServiceRoleNotConfiguredError/);

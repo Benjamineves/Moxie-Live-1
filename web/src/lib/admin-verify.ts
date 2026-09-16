@@ -1,4 +1,4 @@
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 
 export type AdminUser = { id: string; email: string };
@@ -38,9 +38,7 @@ export function isAdminEmail(email: string | null | undefined): boolean {
  *     email-matching mechanism alone isn't enough — both must agree.
  */
 export async function requireAdmin(): Promise<AdminUser | null> {
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) return null;
-
+  const authClient = await requireSupabaseServerClient("lib/admin-verify");
   const {
     data: { user },
   } = await authClient.auth.getUser();

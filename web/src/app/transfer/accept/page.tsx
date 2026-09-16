@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { notifyOwner } from "@/lib/notify";
 import { hashShareToken } from "@/lib/share-token";
@@ -154,10 +154,10 @@ export default async function AcceptTransferPage({ searchParams }: Props) {
     .maybeSingle();
   const vessel = vesselRow as VesselPreview | null;
 
-  const authClient = await createSupabaseServerClient();
+  const authClient = await requireSupabaseServerClient("app/transfer/accept/page");
   const {
     data: { user },
-  } = authClient ? await authClient.auth.getUser() : { data: { user: null } };
+  } = await authClient.auth.getUser();
   const signedInEmail = user?.email?.trim().toLowerCase() ?? null;
   const nextPath = `/transfer/accept?token=${encodeURIComponent(token)}`;
 

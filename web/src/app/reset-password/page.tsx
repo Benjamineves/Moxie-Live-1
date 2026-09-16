@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { ResetPasswordForm } from "./ResetPasswordForm";
 
 export const metadata: Metadata = {
@@ -8,10 +8,10 @@ export const metadata: Metadata = {
 };
 
 export default async function ResetPasswordPage() {
-  const supabase = await createSupabaseServerClient();
+  const supabase = await requireSupabaseServerClient("app/reset-password/page");
   const {
     data: { user },
-  } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
+  } = await supabase.auth.getUser();
 
   // No session means the recovery link's code exchange (in /auth/callback)
   // never succeeded — missing, expired, or already-used token. There's no

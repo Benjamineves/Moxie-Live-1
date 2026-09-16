@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { UpgradeForm } from "./UpgradeForm";
 import { UpgradeToFullForm } from "./UpgradeToFullForm";
@@ -39,11 +39,7 @@ async function quoteUpgradeAsOfNow(subscriptionId: string) {
  * deliberate decision from "upgrade."
  */
 export default async function UpgradePage() {
-  const supabase = await createSupabaseServerClient();
-  if (!supabase) {
-    redirect("/login?next=/dashboard/upgrade");
-  }
-
+  const supabase = await requireSupabaseServerClient("app/dashboard/upgrade/page");
   const {
     data: { user },
   } = await supabase.auth.getUser();

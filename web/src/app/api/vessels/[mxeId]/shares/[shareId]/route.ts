@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { resolveOwnerIds, loadOwnedVessel } from "@/lib/vessel-ownership";
 
@@ -12,8 +12,7 @@ import { resolveOwnerIds, loadOwnedVessel } from "@/lib/vessel-ownership";
 export async function DELETE(_request: Request, context: { params: Promise<{ mxeId: string; shareId: string }> }) {
   const { mxeId, shareId } = await context.params;
 
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) return NextResponse.json({ error: "Missing Supabase auth configuration." }, { status: 503 });
+  const authClient = await requireSupabaseServerClient("app/api/vessels/[mxeId]/shares/[shareId]/route");
 
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });

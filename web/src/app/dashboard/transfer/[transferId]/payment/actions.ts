@@ -1,6 +1,6 @@
 "use server";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { getStripe } from "@/lib/stripe/server";
 import { resolveOwnerIds } from "@/lib/vessel-ownership";
@@ -40,8 +40,7 @@ type IntentResult = { clientSecret: string } | { error: string };
  * can only make that comparison fail, never change what is charged.
  */
 export async function createTransferFeeIntent(transferId: string, expectedAmountCents: number): Promise<IntentResult> {
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) return { error: "Missing Supabase auth configuration." };
+  const authClient = await requireSupabaseServerClient("app/dashboard/transfer/[transferId]/payment/actions");
 
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { error: "You must be signed in." };

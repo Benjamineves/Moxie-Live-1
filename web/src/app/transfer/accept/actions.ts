@@ -1,6 +1,6 @@
 "use server";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { notifyOwner } from "@/lib/notify";
 
@@ -17,8 +17,7 @@ import { notifyOwner } from "@/lib/notify";
  * there may be no users row for them yet at all.
  */
 export async function acceptOwnershipTransfer(transferId: string): Promise<{ error?: string }> {
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) return { error: "Missing Supabase auth configuration." };
+  const authClient = await requireSupabaseServerClient("app/transfer/accept/actions");
 
   const {
     data: { user },

@@ -52,8 +52,12 @@ export async function resolveShareByToken(token: string, clientIp: string): Prom
     p_token_hash: hashShareToken(token),
   });
   if (rpcError) {
+    // Throws rather than returning server_error. The caller renders every
+    // returned error as "Link no longer active — expired, revoked, or
+    // already used", so a failed query told a Trusted Contact their link
+    // was dead. Only the token's own verdicts may say that.
     console.error(`[share-resolve] resolve_vessel_share RPC failed: token_prefix=${tokenPrefix}`, rpcError);
-    return { error: "server_error" };
+    throw new Error(`resolve_vessel_share failed: ${rpcError.message}`);
   }
 
   const share = (Array.isArray(rpcData) ? rpcData[0] : null) as ShareRow | null;

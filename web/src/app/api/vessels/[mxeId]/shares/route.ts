@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { resolveOwnerIds, loadOwnedVessel } from "@/lib/vessel-ownership";
 import { generateShareToken } from "@/lib/share-token";
@@ -16,8 +16,7 @@ function computeExpiresAt(expiresIn: ExpiryOption): string | null {
 }
 
 async function authorizeOwner(mxeId: string) {
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) return { error: NextResponse.json({ error: "Missing Supabase auth configuration." }, { status: 503 }) };
+  const authClient = await requireSupabaseServerClient("app/api/vessels/[mxeId]/shares/route");
 
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };

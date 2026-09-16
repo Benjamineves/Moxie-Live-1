@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { resolveOwnerIds } from "@/lib/vessel-ownership";
 
@@ -81,10 +81,7 @@ function DocLink({ label, url }: { label: string; url: string | null | undefined
 export default async function PreviouslyOwnedPage({ params }: Props) {
   const { transferId } = await params;
 
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) {
-    redirect(`/login?next=${encodeURIComponent(`/dashboard/transfer/${transferId}/previously-owned`)}`);
-  }
+  const authClient = await requireSupabaseServerClient("app/dashboard/transfer/[transferId]/previously-owned/page");
 
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) {

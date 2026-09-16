@@ -1,6 +1,6 @@
 "use server";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 
 /**
@@ -11,8 +11,7 @@ import { requireSupabaseServiceClient } from "@/lib/supabase/service";
  * which does the real validation (cap check, ownership check) atomically.
  */
 export async function chooseActiveVessels(vesselIds: string[]): Promise<{ error?: string }> {
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) return { error: "Missing Supabase auth configuration." };
+  const authClient = await requireSupabaseServerClient("app/dashboard/manage-fleet/actions");
 
   const {
     data: { user },

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { resolveOwnerIds } from "@/lib/vessel-ownership";
 import { ActivationPoller } from "@/components/ActivationPoller";
@@ -18,10 +18,7 @@ type Props = {
 export default async function TransferPaymentProcessingPage({ params }: Props) {
   const { transferId } = await params;
 
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) {
-    redirect(`/login?next=${encodeURIComponent(`/dashboard/transfer/${transferId}/payment/processing`)}`);
-  }
+  const authClient = await requireSupabaseServerClient("app/dashboard/transfer/[transferId]/payment/processing/page");
 
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) {

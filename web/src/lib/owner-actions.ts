@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { getStripe } from "@/lib/stripe/server";
 import { resolveOwnerIds, loadOwnedVessel } from "@/lib/vessel-ownership";
@@ -20,8 +20,7 @@ import { getAccountStorageUsageBytes } from "@/lib/storage-usage";
  * called, identical to what VesselIntakeForm.tsx already does.
  */
 export async function updateVesselPhoto(mxeId: string, photoUrl: string): Promise<{ error?: string }> {
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) return { error: "Missing Supabase auth configuration." };
+  const authClient = await requireSupabaseServerClient("lib/owner-actions");
 
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { error: "You must be signed in." };
@@ -156,8 +155,7 @@ function pickAllowed<T extends object>(patch: T, allowed: readonly (keyof T)[]):
  * nothing different from updateVesselOwnerFields beyond the allow-list.
  */
 export async function updateVesselIntrinsicFields(mxeId: string, patch: IntrinsicPatch): Promise<{ error?: string }> {
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) return { error: "Missing Supabase auth configuration." };
+  const authClient = await requireSupabaseServerClient("lib/owner-actions");
 
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { error: "You must be signed in." };
@@ -180,8 +178,7 @@ export async function updateVesselIntrinsicFields(mxeId: string, patch: Intrinsi
  * saves these directly.
  */
 export async function updateVesselOwnerFields(mxeId: string, patch: OwnerPatch): Promise<{ error?: string }> {
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) return { error: "Missing Supabase auth configuration." };
+  const authClient = await requireSupabaseServerClient("lib/owner-actions");
 
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { error: "You must be signed in." };
@@ -249,8 +246,7 @@ export async function updateVesselDocument(
   url: string,
   fileName?: string | null,
 ): Promise<{ error?: string }> {
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) return { error: "Missing Supabase auth configuration." };
+  const authClient = await requireSupabaseServerClient("lib/owner-actions");
 
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { error: "You must be signed in." };
@@ -282,8 +278,7 @@ export async function updateVesselDocument(
  * count instead — BASIC_DOCUMENT_LIMIT), so this is a no-op there.
  */
 export async function checkStorageCapacity(incomingBytes: number): Promise<{ ok: true } | { ok: false; error: string }> {
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) return { ok: false, error: "Missing Supabase auth configuration." };
+  const authClient = await requireSupabaseServerClient("lib/owner-actions");
 
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { ok: false, error: "You must be signed in." };
@@ -336,8 +331,7 @@ export async function submitIdentityCorrectionRequest(
   if (!requestedValue.trim()) return { error: "Requested value is required." };
   if (!documentPath.trim()) return { error: "A supporting document is required." };
 
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) return { error: "Missing Supabase auth configuration." };
+  const authClient = await requireSupabaseServerClient("lib/owner-actions");
 
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { error: "You must be signed in." };
@@ -388,8 +382,7 @@ export async function submitDecommissionRequest(
 ): Promise<{ error?: string }> {
   if (!isDecommissionReason(reason)) return { error: "Invalid reason." };
 
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) return { error: "Missing Supabase auth configuration." };
+  const authClient = await requireSupabaseServerClient("lib/owner-actions");
 
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { error: "You must be signed in." };
@@ -437,8 +430,7 @@ export async function submitDecommissionRequest(
  * instead of a hand-rolled card form.
  */
 export async function openBillingPortal(): Promise<{ error?: string }> {
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) return { error: "Missing Supabase auth configuration." };
+  const authClient = await requireSupabaseServerClient("lib/owner-actions");
 
   const {
     data: { user },
@@ -488,8 +480,7 @@ export async function initiateOwnershipTransfer(
     return { error: "Enter a valid email address." };
   }
 
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) return { error: "Missing Supabase auth configuration." };
+  const authClient = await requireSupabaseServerClient("lib/owner-actions");
 
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { error: "You must be signed in." };
@@ -549,8 +540,7 @@ export async function initiateOwnershipTransfer(
  * state, so there's nothing to refund.
  */
 export async function cancelOwnershipTransfer(transferId: string): Promise<{ error?: string }> {
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) return { error: "Missing Supabase auth configuration." };
+  const authClient = await requireSupabaseServerClient("lib/owner-actions");
 
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { error: "You must be signed in." };
@@ -607,8 +597,7 @@ export async function cancelOwnershipTransfer(transferId: string): Promise<{ err
  * qr_status for a friendlier error; and the function is the enforcement.
  */
 export async function deleteUnactivatedVessel(mxeId: string): Promise<{ error?: string }> {
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) return { error: "Missing Supabase auth configuration." };
+  const authClient = await requireSupabaseServerClient("lib/owner-actions");
 
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user?.email) return { error: "You must be signed in." };
@@ -677,8 +666,7 @@ export async function deleteUnactivatedVessel(mxeId: string): Promise<{ error?: 
  * guessing an id.
  */
 export async function dismissNotification(notificationId: string): Promise<{ error?: string }> {
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) return { error: "Missing Supabase auth configuration." };
+  const authClient = await requireSupabaseServerClient("lib/owner-actions");
 
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { error: "You must be signed in." };

@@ -1,6 +1,6 @@
 "use server";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { getStripe } from "@/lib/stripe/server";
 import { resolveOwnerIds } from "@/lib/vessel-ownership";
@@ -55,8 +55,7 @@ type IntentResult =
  * charge, never from here.
  */
 export async function createBadgeFeeIntent(mxeId: string): Promise<IntentResult> {
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) return { error: "Missing Supabase auth configuration." };
+  const authClient = await requireSupabaseServerClient("app/dashboard/[mxeId]/payment/actions");
 
   const {
     data: { user },
@@ -203,8 +202,7 @@ export async function createSignupBundleIntent(mxeId: string, tier: Subscription
     return { error: "Choose a plan." };
   }
 
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) return { error: "Missing Supabase auth configuration." };
+  const authClient = await requireSupabaseServerClient("app/dashboard/[mxeId]/payment/actions");
 
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { error: "You must be signed in." };

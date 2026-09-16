@@ -200,8 +200,8 @@ arguments a client sends.
   `lib/unpaid-vessel-delete.ts` is the only caller of
   `delete_unactivated_vessel`, enforced by its test.
 - **A configuration failure is a 500, decided once.** Use
-  `requireSupabaseServiceClient()`, never `createSupabaseServiceClient()`
-  plus a local null branch —
+  `requireSupabaseServiceClient()` / `requireSupabaseServerClient()`, never
+  a `create…` factory plus a local null branch —
   `lib/supabase/service.guard.test.mts` fails if anything outside its
   allow-list (routes that already return their own 5xx) calls the factory.
   Handled locally it stops looking like a failure at all: 22 pages

@@ -1,6 +1,6 @@
 "use server";
 
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe/server";
@@ -38,8 +38,7 @@ export async function createPlanSubscriptionIntent(tier: SubscriptionTier): Prom
     return { error: "Choose a plan." };
   }
 
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) return { error: "Missing Supabase auth configuration." };
+  const authClient = await requireSupabaseServerClient("app/dashboard/upgrade/actions");
 
   const {
     data: { user },
@@ -212,8 +211,7 @@ export async function upgradeToFullAccess(input: { expectedAmountCents: number; 
     return { error: "Reload the page to see your upgrade total." };
   }
 
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) return { error: "Missing Supabase auth configuration." };
+  const authClient = await requireSupabaseServerClient("app/dashboard/upgrade/actions");
 
   const {
     data: { user },

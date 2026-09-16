@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { getOwnerBillingSummary } from "@/lib/billing-service";
 
@@ -7,10 +7,7 @@ import { getOwnerBillingSummary } from "@/lib/billing-service";
 export async function GET(_request: Request, context: { params: Promise<{ userId: string }> }) {
   const { userId } = await context.params;
 
-  const authClient = await createSupabaseServerClient();
-  if (!authClient) {
-    return NextResponse.json({ error: "Missing Supabase auth configuration." }, { status: 503 });
-  }
+  const authClient = await requireSupabaseServerClient("app/api/users/[userId]/billing/route");
 
   const {
     data: { user },

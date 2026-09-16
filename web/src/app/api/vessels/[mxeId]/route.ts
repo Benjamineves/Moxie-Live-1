@@ -3,7 +3,7 @@ import {
   fetchVesselByMxeId,
   filterVesselForRole,
 } from "@/lib/vessel-service";
-import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { emailsMatch, getOwnerEmailByUserId } from "@/lib/owner-verify";
 import type { ProfileRole } from "@/types/vessel";
 
@@ -43,13 +43,7 @@ export async function GET(
     );
   }
 
-  const supabase = await createSupabaseServerClient();
-  if (!supabase) {
-    return NextResponse.json(
-      { error: "Server misconfigured (missing Supabase env)." },
-      { status: 503 },
-    );
-  }
+  const supabase = await requireSupabaseServerClient("app/api/vessels/[mxeId]/route");
 
   const {
     data: { user },
