@@ -50,8 +50,17 @@ question.
 ## Tier 3 — Unblocked once Tier 1 lands
 
 ### Service records and miscellaneous documents (Full Access)
-**High priority. Not built, and already advertised.** Captured 2026-09-16;
-not specced — this is the thinking, not a design.
+**Built 2026-09-16, migration `20261005` not yet run.** The design below
+is as shipped. Still open: the three questions in the build report
+(editing after creation, a deleted entry's file, and whether a buyer
+sees the seller's logged-at dates), plus the copy pass on `/pricing` and
+the marketing home, which this build deliberately did not touch.
+
+**Not yet reachable from a share link.** A buyer usually reads the
+history before the sale, and share links carry per-field flags that this
+build did not extend. Today the history shows on the owner's own page,
+so a buyer sees it after transfer. Wiring it into the share sheet is the
+obvious next increment.
 
 **The live claim.** `/pricing` lists "Documents per vessel — Basic: 3,
 Full: Unlimited†", with the footnote qualifying only the storage cap

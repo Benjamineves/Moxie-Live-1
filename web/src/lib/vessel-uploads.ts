@@ -130,6 +130,38 @@ export async function uploadVesselDocument(
  * review, so a later request's evidence must not silently overwrite an
  * earlier pending one the way document "replace" intentionally does.
  */
+/**
+ * A service record's optional invoice or receipt.
+ *
+ * Like uploadCorrectionRequestDocument and unlike uploadVesselDocument,
+ * the path is NOT deterministic — every entry is its own record and a
+ * later one must not overwrite an earlier one's evidence.
+ *
+ * Under the uploading user's own folder on purpose. Attachments do not
+ * transfer with the vessel, so after a sale the bytes are still in the
+ * seller's path and the buyer's row simply has no pointer to them — the
+ * same shape the four primary documents already have after a transfer.
+ */
+export async function uploadServiceRecordFile(file: File, mxeId: string): Promise<{ path: string; fileName: string }> {
+  const supabase = createSupabaseBrowserClient();
+  if (!supabase) throw new Error("Missing Supabase browser configuration.");
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error("Please sign in again before uploading.");
+
+  const ext = extFor(file);
+  const path = `${user.id}/${mxeId}/service-records/${Date.now()}.${ext}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("vessel-docs")
+    .upload(path, file, { contentType: file.type });
+  if (uploadError) throw uploadError;
+
+  return { path, fileName: file.name };
+}
+
 export async function uploadCorrectionRequestDocument(file: File, mxeId: string): Promise<string> {
   const supabase = createSupabaseBrowserClient();
   if (!supabase) throw new Error("Missing Supabase browser configuration.");

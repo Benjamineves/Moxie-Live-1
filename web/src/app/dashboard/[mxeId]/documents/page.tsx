@@ -139,6 +139,24 @@ export default async function VesselDocumentsPage({ params }: Props) {
           documentMeta={documentMeta}
           singleVessel={(activeVesselCount ?? 0) <= 1}
         />
+
+        {/*
+          Service history lives on its own page, not in this list. These
+          four are identity papers with renewal dates; that is a log of work
+          done. Linked from here because this is where an owner comes
+          looking for "the boat's paperwork".
+        */}
+        {subscriptionTier === "full" ? (
+          <p className="mt-10 font-[family-name:var(--font-dm)] text-sm">
+            <Link
+              className="text-[var(--gold-deep)] underline underline-offset-2"
+              href={`/dashboard/${encodeURIComponent(vessel.mxe_id)}/service`}
+            >
+              Service history
+            </Link>{" "}
+            <span className="text-[var(--text3)]">— what&rsquo;s been done to the boat, and when.</span>
+          </p>
+        ) : null}
       </main>
     </div>
   );
