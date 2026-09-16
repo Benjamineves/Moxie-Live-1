@@ -36,9 +36,7 @@
 --
 -- EXISTING ROWS: none change. One new table; complete_ownership_transfer
 -- gains exactly one statement, on top of the body read out of the LIVE
--- database rather than copied from a migration file. The newest file
--- defining it (20260920) is not what is deployed — see the note above the
--- function.
+-- database — see the note above the function.
 --
 -- DEPLOY ORDER: EITHER, but prefer running this BEFORE the deploy. The app
 -- tolerates the table being absent (PGRST205/42P01 read as "no records
