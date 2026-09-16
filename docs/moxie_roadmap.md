@@ -3,7 +3,7 @@
 Open items and what depends on what. Update as items close; add what
 turns up. Where this disagrees with the code, the code wins.
 
-_Last updated 15 September 2026_
+_Last updated 16 September 2026_
 
 ---
 
@@ -49,6 +49,54 @@ question.
 
 ## Tier 3 — Unblocked once Tier 1 lands
 
+### Service records and miscellaneous documents (Full Access)
+**High priority. Not built, and already advertised.** Captured 2026-09-16;
+not specced — this is the thinking, not a design.
+
+**The live claim.** `/pricing` lists "Documents per vessel — Basic: 3,
+Full: Unlimited†", with the footnote qualifying only the storage cap
+(`MoxiePricing.tsx:38`). Checked against the code: documents are **four
+fixed columns** on `vessels` — `doc_registration_url`, `doc_insurance_url`,
+`doc_boater_card_url`, `doc_fishing_license_url` — and there is no path to
+upload anything else. So the ceiling is four on *every* plan and
+"Unlimited" is not a stretch, it is false; the storage cap it is
+footnoted against can never bind. Same standing-copy-rule violation as the
+email reminders below, and the same fix options: remove the claim or build
+the thing. **The marketing home promises it twice more** —
+"Insurance docs, registration, maintenance logs — always with the boat,
+always current" (`MoxieMarketingHome.tsx:211`) and "Insurance,
+registration, maintenance — always current" (`:349`) — which name
+maintenance history specifically, so they are closer to promising this
+feature than the pricing table is. This also subsumes **"Document limit
+can never trigger"** below: with fixed slots, `BASIC_DOCUMENT_LIMIT = 3`
+against exactly three countable slots is arithmetic, not a policy.
+
+**Design direction.**
+- **Primary documents stay as they are.** Registration, insurance, boater
+  card and fishing licence remain fixed slots with expiry tracking. They
+  are identity papers with renewal dates, and the expiry machinery
+  (`document-expiry.ts`, the reminder thresholds, the dashboard badges)
+  is built around exactly that. Nothing here changes them.
+- **Service records are a separate collection**, not more document slots:
+  their own table, one row per record, with **date, category, description
+  and an optional attached file**. A record is meaningful without a file;
+  the file is evidence, not the record.
+- **Display as a service history grouped by category**, not a flat
+  document list. The value is *cadence* — when the engine was last
+  serviced, how regularly the bottom is cleaned — which a list of files
+  cannot show. This is also what a buyer is actually reading.
+
+**Open decision, deliberately not resolved:** whether service records
+transfer with the vessel, and separately whether an attached file
+transfers with its entry. **Proposed direction: the entry carries, the
+file is the seller's choice.** The history belongs to the boat and is
+most of what makes it worth having at sale; a scanned invoice may carry a
+name, an address or a price the seller does not intend to hand over.
+Settle this before building, because it decides whether the table hangs
+off the vessel or the owner, and `accept_ownership_transfer` has to know.
+Related: the transfer flow already leaves documents behind with the seller
+(see the `vessel_transferred` email copy).
+
 ### Scheduler (tier reconciliation, transfer window, dormancy, reminders)
 **Phase 1 built: report-only** (2026-09-15; spec §13). Migration `20261004`
 **is run** (confirmed by reading the four tables and the two new `users`
@@ -77,6 +125,11 @@ Currently `p=none`. Moving to `quarantine` makes spoofing harder.
 The Full plan list and badge checkout both mention email reminders. The
 template exists; nothing sends it. Direct violation of the standing copy
 rule. Either remove the claims or wait for the scheduler.
+
+**One of two live copy violations**, the other being unlimited documents
+and maintenance history (Tier 3, above). Worth one pass over marketing and
+plan copy rather than two, since both end the same way: remove the claim
+or ship the feature.
 
 ### Abandoned Basic → Full upgrades: Stripe on Full, app on Basic
 **The gap.** Until `2026-09-15`'s checkout conversion deploys, the live
@@ -122,6 +175,12 @@ A seller can pay a transfer fee and hand someone indefinite free service.
 count is always zero. Either Basic allows 2 — making document access a
 real upgrade reason — or drop the concept from the tier story. Decide
 with pricing.
+
+**Probably decided by service records** (Tier 3, above) rather than on its
+own: while documents are four fixed slots there is no quantity for a limit
+to govern on either plan. If service records land as a separate
+collection, the Basic/Full line is drawn there instead, and this item
+becomes "drop the concept".
 
 ### Stored tier disagreeing with Stripe
 If they diverge with no tier event to correct it, the grace clock is
