@@ -170,9 +170,23 @@ downgraded on the first run. It must also compare against what was paid
   311, 325` — the fake vessel metadata inside the product mock. A sizing
   and design question, not a contrast one; no colour makes 7px readable.
   Decided 2026-09-15 to leave the size alone for now.
-- **Misleading 404 copy.** Every miss reads "That vessel code does not
-  exist," including route errors unrelated to vessels. Cost real
-  diagnosis time.
+- **`/[mxeId]`'s 404 can't tell a bad code from a bad URL.** Fixed as far
+  as it goes (see Done), but that one boundary still shows conditional
+  copy — "if you were looking for a vessel" — because a not-found boundary
+  gets no params and `headers()` there carries no path (probed). The clean
+  split needs middleware to set the pathname on the request, which means
+  editing the Supabase session-refresh dance in `middleware.ts`; not worth
+  the risk for copy, but that's the route if it's ever wanted.
+- **`/dashboard/<mxeId>` is not a route.** Only its children exist
+  (`documents`, `payment`, `qr`, `shares`), so the bare path 404s for a
+  vessel the owner holds. This is what made the misleading copy expensive
+  to diagnose. Either give it a page or redirect it to the vessel's
+  profile — decide which.
+- **A misconfigured service role reads as a missing badge.**
+  `s/[token]/page.tsx` calls `notFound()` when `createSupabaseServiceClient()`
+  returns null, so a bad env var tells a scanner the badge doesn't exist.
+  A configuration failure should be a 500, not a 404. Found during the 404
+  sweep; out of its scope.
 - **`shipped_at` / `received_at` renames** + per-identity despatch
   timestamp. From the provisioning build; do together.
 - **Confirm `ben@` removed from `ADMIN_EMAILS`** in Vercel.
@@ -247,4 +261,9 @@ AA on all nine surfaces it lands on, not only at 12px — 215 elements, 73 of
 them under 12px. Now `#566a7b`: 5.61:1 on white, 5.02:1 on cream, 4.55:1 on
 its worst surface. One token change, no call-site splits, because the
 parent chain of every instance resolves to a light surface — the `--gold`
-and `--danger` pairing wasn't needed. Ratios in brand addendum §6b
+and `--danger` pairing wasn't needed. Ratios in brand addendum §6b ·
+**404 copy made honest** (2026-09-15): the app-wide 404 no longer claims a
+vessel code failed. Four boundaries now — generic at the root, and one each
+next to the code that calls `notFound()` for vessels, badge scans and print
+batches — so a message only names a thing where that thing genuinely was
+what failed

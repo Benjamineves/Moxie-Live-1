@@ -1,20 +1,23 @@
-import Link from "next/link";
+import { NotFoundView } from "@/components/NotFoundView";
 
+/**
+ * The app-wide 404: every unmatched URL in the app renders this, whatever
+ * it was about. So it says nothing about vessels — most things reaching it
+ * are not one. A route that never existed (`/dashboard/<mxeId>`), a
+ * mistyped marketing path, a stale link: all of them land here, and being
+ * told a vessel code was wrong sent at least one debugging session looking
+ * at the database instead of the routes.
+ *
+ * The cases that DO know what failed have their own boundary next to the
+ * code that calls notFound(): app/[mxeId], app/s/[token] and
+ * app/admin/badges/[batchId].
+ */
 export default function NotFound() {
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center bg-[var(--cream)] px-6 text-center">
-      <h1 className="font-[family-name:var(--font-display)] text-3xl font-light text-[var(--navy)]">
-        Not found
-      </h1>
-      <p className="mt-3 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
-        That vessel code does not exist or is not published yet.
-      </p>
-      <Link
-        className="mt-8 font-[family-name:var(--font-dm)] text-sm text-[var(--blue-fg)] underline"
-        href="/"
-      >
-        Back to home
-      </Link>
-    </div>
+    <NotFoundView
+      title="Page"
+      accent="not found."
+      body="The address may have a typo, or the link may be out of date. Nothing is wrong with your account."
+    />
   );
 }

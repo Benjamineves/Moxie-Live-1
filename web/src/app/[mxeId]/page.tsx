@@ -17,8 +17,9 @@ import { resolveShareByToken } from "@/lib/share-resolve";
 import { getDormantInfo, DORMANT_PUBLIC_COPY } from "@/lib/vessel-dormancy";
 import { MARKETING_ORIGIN } from "@/lib/site-domains";
 import { notifyOwnerDormancyResult } from "@/lib/dormancy-notify";
-
-const MXE_RE = /^MXE-\d{5}$/i;
+// Shared with not-found.tsx, which decides between the vessel wording and
+// the generic one by asking this same question of the path.
+import { looksLikeMxeId } from "@/lib/mxe-id";
 
 type Props = {
   params: Promise<{ mxeId: string }>;
@@ -74,7 +75,7 @@ export default async function VesselPage({ params, searchParams }: Props) {
     );
   }
 
-  if (!MXE_RE.test(mxeId.trim())) {
+  if (!looksLikeMxeId(mxeId)) {
     notFound();
   }
 
