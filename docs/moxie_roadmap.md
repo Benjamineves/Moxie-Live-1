@@ -56,11 +56,14 @@ is as shipped. Still open: the three questions in the build report
 sees the seller's logged-at dates), plus the copy pass on `/pricing` and
 the marketing home, which this build deliberately did not touch.
 
-**Not yet reachable from a share link.** A buyer usually reads the
-history before the sale, and share links carry per-field flags that this
-build did not extend. Today the history shows on the owner's own page,
-so a buyer sees it after transfer. Wiring it into the share sheet is the
-obvious next increment.
+**Share links carry it** (2026-09-16), which is the pre-sale case the
+feature exists for: a seller shows a prospective buyer the maintenance
+record during evaluation, rather than the buyer first seeing it after the
+transfer. A sixth `service` flag, optional in the type so the five-key
+flags on existing links keep resolving with the history off — absent reads
+as false, because those owners agreed to five choices. On by default for
+the escrow preset only. Entries and dates travel; file paths are stripped
+server-side before the payload leaves.
 
 **The live claim.** `/pricing` lists "Documents per vessel — Basic: 3,
 Full: Unlimited†", with the footnote qualifying only the storage cap

@@ -1,5 +1,7 @@
 import Link from "next/link";
 import type { FilteredShareVessel } from "@/lib/share-filter";
+import type { ServiceRecord } from "@/lib/service-records";
+import { AttachmentPolicyNote, ServiceHistory } from "@/components/service/ServiceHistory";
 
 function Row({ label, value }: { label: string; value: string | number | null | undefined }) {
   if (value === null || value === undefined || value === "") return null;
@@ -20,11 +22,14 @@ export function SharedVesselProfile({
   sharedBy,
   label,
   expiresAt,
+  serviceRecords = [],
 }: {
   vessel: FilteredShareVessel;
   sharedBy: string | null;
   label: string | null;
   expiresAt: string | null;
+  /** Empty unless the link carries the service flag. Never has file paths. */
+  serviceRecords?: ServiceRecord[];
 }) {
   const hasLocation = vessel.marina_name !== undefined;
   const hasContact = vessel.owner_name !== undefined;
@@ -183,6 +188,27 @@ export function SharedVesselProfile({
             <p className="font-[family-name:var(--font-dm)] text-sm font-light leading-relaxed text-[var(--text2)]">
               {vessel.public_notes}
             </p>
+          </section>
+        ) : null}
+
+        {/*
+          The maintenance record, when the seller chose to include it. This
+          is the pre-sale case the history exists for: a buyer evaluating
+          the boat, reading how it has been looked after, before there is
+          any transfer to inherit it through.
+
+          Entries and dates only — resolveShareByToken strips every file
+          path before this renders, and ServiceHistory has no way to show
+          one. The note says why, so a buyer asks the seller rather than
+          hunting for a download.
+        */}
+        {serviceRecords.length > 0 ? (
+          <section className="border-b border-[var(--divider)] bg-[var(--cream)] px-5 py-5">
+            <p className="mb-3 font-[family-name:var(--font-dm)] text-[9px] font-medium uppercase tracking-[0.2em] text-[var(--text3)]">
+              Service history
+            </p>
+            <ServiceHistory records={serviceRecords} now={new Date()} />
+            <AttachmentPolicyNote />
           </section>
         ) : null}
 

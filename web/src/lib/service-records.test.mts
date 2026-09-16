@@ -14,6 +14,7 @@ import {
   type ServiceRecord,
 } from "./service-records.ts";
 import { withoutFilePaths } from "./service-records-store.ts";
+import { PRESET_FLAGS, isShareFieldFlags, shareShowsService } from "./share-filter.ts";
 
 const TODAY = new Date("2026-09-16T12:00:00Z");
 
@@ -213,4 +214,32 @@ test("the history renders the edit date, and only then", () => {
   const src = readFileSync(new URL("../components/service/ServiceHistory.tsx", import.meta.url), "utf8");
   assert.match(src, /wasEditedAfterLogging\(r\) \?/, "guarded, not unconditional");
   assert.match(src, /Edited \{formatDate\(r\.updated_at\)\}/);
+});
+
+// ── Share links (2026-09-16) ─────────────────────────────────────────────
+
+test("a link made before the service flag existed does not start sharing history", () => {
+  // Five-key flags are what every existing share row holds. They must keep
+  // resolving, with the history OFF: their owner agreed to five choices.
+  const legacy = { location: true, contact: true, docs: true, ownership: true, access: false };
+  assert.equal(isShareFieldFlags(legacy), true, "still a valid share");
+  assert.equal(shareShowsService(legacy as never), false, "absent means off");
+  assert.equal(shareShowsService({ ...legacy, service: false } as never), false);
+  assert.equal(shareShowsService({ ...legacy, service: true } as never), true);
+  assert.equal(isShareFieldFlags({ ...legacy, service: "yes" }), false, "wrong type is still invalid");
+});
+
+test("escrow shares the history; marina and vendor do not", () => {
+  // Escrow is the buyer-evaluating-a-purchase preset, which is the case
+  // the history exists for.
+  assert.equal(PRESET_FLAGS.escrow.service, true);
+  assert.equal(PRESET_FLAGS.marina.service, false);
+  assert.equal(PRESET_FLAGS.vendor.service, false);
+});
+
+test("a share can never carry a file path", () => {
+  const src = readFileSync(new URL("./share-resolve.ts", import.meta.url), "utf8");
+  assert.match(src, /withoutFilePaths\(await loadServiceRecords/, "stripped on the server, before it leaves");
+  const view = readFileSync(new URL("../components/service/ServiceHistory.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(view, /file_path/, "and the view has no way to render one");
 });

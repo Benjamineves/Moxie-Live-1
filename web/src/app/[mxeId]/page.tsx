@@ -71,6 +71,7 @@ export default async function VesselPage({ params, searchParams }: Props) {
         sharedBy={result.sharedBy}
         label={result.label}
         expiresAt={result.expiresAt}
+        serviceRecords={result.serviceRecords}
       />
     );
   }

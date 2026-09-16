@@ -25,6 +25,7 @@ const TAG_LABELS: Record<keyof ShareFieldFlags, string> = {
   docs: "Documents",
   ownership: "Ownership",
   access: "Access",
+  service: "Service history",
 };
 
 function tagsFor(flags: unknown): string[] {

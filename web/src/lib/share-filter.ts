@@ -6,6 +6,13 @@ export type ShareFieldFlags = {
   docs: boolean;
   ownership: boolean;
   access: boolean;
+  /**
+   * The service history. OPTIONAL on purpose: links created before this
+   * existed have five keys, and they must keep resolving — with the
+   * history off, because their owner never agreed to share it. Absent
+   * means false, everywhere; read it through shareShowsService().
+   */
+  service?: boolean;
 };
 
 export const SHARE_PRESETS = ["escrow", "marina", "vendor", "custom"] as const;
@@ -13,9 +20,12 @@ export type SharePreset = (typeof SHARE_PRESETS)[number];
 
 /** Spec §3: "client sets these field_flags combinations; server doesn't need to know about presets, just validates the resulting flags." Exported anyway so the owner UI and any future caller share one definition. */
 export const PRESET_FLAGS: Record<Exclude<SharePreset, "custom">, ShareFieldFlags> = {
-  escrow: { location: true, contact: true, docs: true, ownership: true, access: false },
-  marina: { location: true, contact: true, docs: false, ownership: false, access: true },
-  vendor: { location: true, contact: false, docs: false, ownership: false, access: true },
+  // Escrow is the buyer-evaluating-a-purchase preset, and the maintenance
+  // record is most of what a buyer is there to read — so it is on by
+  // default here and nowhere else. A marina or a vendor has no use for it.
+  escrow: { location: true, contact: true, docs: true, ownership: true, access: false, service: true },
+  marina: { location: true, contact: true, docs: false, ownership: false, access: true, service: false },
+  vendor: { location: true, contact: false, docs: false, ownership: false, access: true, service: false },
 };
 
 /** Baseline is always present; the rest are present only when their flag is on — matches SharedVesselProfile's optional-field props exactly, so no unsafe cast is needed where the two meet. */
@@ -54,7 +64,23 @@ export type FilteredShareVessel = {
 export function isShareFieldFlags(value: unknown): value is ShareFieldFlags {
   if (!value || typeof value !== "object") return false;
   const v = value as Record<string, unknown>;
-  return (["location", "contact", "docs", "ownership", "access"] as const).every((k) => typeof v[k] === "boolean");
+  if (!(["location", "contact", "docs", "ownership", "access"] as const).every((k) => typeof v[k] === "boolean")) {
+    return false;
+  }
+  // `service` may be absent (a link created before it existed) but not of
+  // the wrong type.
+  return v.service === undefined || typeof v.service === "boolean";
+}
+
+/**
+ * Whether this link carries the service history.
+ *
+ * Absent reads as false. A link created before the flag existed was agreed
+ * to on the basis of five choices, and silently adding a sixth would share
+ * something its owner never opted into.
+ */
+export function shareShowsService(flags: ShareFieldFlags): boolean {
+  return flags.service === true;
 }
 
 /**

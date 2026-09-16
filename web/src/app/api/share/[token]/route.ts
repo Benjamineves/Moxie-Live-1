@@ -25,5 +25,8 @@ export async function GET(request: Request, context: { params: Promise<{ token: 
     shared_by: result.sharedBy,
     share_label: result.label,
     expires_at: result.expiresAt,
+    // Empty unless the link carries the service flag, and never with file
+    // paths — resolveShareByToken strips those before they reach here.
+    service_records: result.serviceRecords,
   });
 }

@@ -1,7 +1,9 @@
 import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { hashShareToken } from "@/lib/share-token";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { filterVesselForShare, isShareFieldFlags } from "@/lib/share-filter";
+import { filterVesselForShare, isShareFieldFlags, shareShowsService } from "@/lib/share-filter";
+import { loadServiceRecords, withoutFilePaths } from "@/lib/service-records-store";
+import type { ServiceRecord } from "@/lib/service-records";
 import type { VesselRecord } from "@/types/vessel";
 
 type ShareRow = {
@@ -17,6 +19,8 @@ export type ResolvedShare = {
   sharedBy: string | null;
   label: string | null;
   expiresAt: string | null;
+  /** Empty unless the link's `service` flag is on. Never carries file paths. */
+  serviceRecords: ServiceRecord[];
 };
 
 /**
@@ -85,10 +89,24 @@ export async function resolveShareByToken(token: string, clientIp: string): Prom
     return { error: "not_active" };
   }
 
+  // The maintenance record, when the link carries it. THE ENTRIES ONLY:
+  // withoutFilePaths strips every path before this leaves the server, so
+  // the share cannot hand over an invoice even by accident. That is the
+  // same line drawn at transfer — the history belongs to the boat, the
+  // documents behind it belong to whoever uploaded them.
+  //
+  // Tolerates the table not existing yet (migrations run after the
+  // deploy): an empty history, not a dead link.
+  let serviceRecords: ServiceRecord[] = [];
+  if (shareShowsService(share.field_flags)) {
+    serviceRecords = withoutFilePaths(await loadServiceRecords(service, share.vessel_id));
+  }
+
   return {
     vessel: filterVesselForShare(vessel, share.field_flags, share.access_note),
     sharedBy: vessel.owner_name,
     label: share.label,
     expiresAt: share.expires_at,
+    serviceRecords,
   };
 }

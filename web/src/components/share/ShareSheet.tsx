@@ -25,9 +25,10 @@ const VIS_ITEMS: { key: keyof ShareFieldFlags; label: string; sub: string }[] = 
   { key: "docs", label: "Documents", sub: "Insurance, registration, uploaded files" },
   { key: "ownership", label: "Ownership record", sub: "HIN, registration #, title status" },
   { key: "access", label: "Access & instructions", sub: "Lockbox code, gate code, notes for this contact" },
+  { key: "service", label: "Service history", sub: "What's been done and when. The entries, not the invoices" },
 ];
 
-const DEFAULT_FLAGS: ShareFieldFlags = { location: true, contact: true, docs: false, ownership: false, access: false };
+const DEFAULT_FLAGS: ShareFieldFlags = { location: true, contact: true, docs: false, ownership: false, access: false, service: false };
 
 export function ShareSheet({
   mxeId,
