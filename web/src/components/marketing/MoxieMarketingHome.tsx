@@ -1,6 +1,7 @@
 import { APP_ORIGIN } from "@/lib/site-domains";
 import { WaitlistForm } from "@/components/marketing/WaitlistForm";
 import { MarketingNav } from "@/components/marketing/MarketingNav";
+import { ScanDemo } from "@/components/marketing/ScanDemo";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 
 /** Marketing homepage — structure & content from `Guide2/moxie_homepage_v2.html` (technical spec). */
@@ -269,65 +270,8 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
 
       <section id="profile" className="bg-[var(--cream2)] px-6 py-[100px] md:px-12">
         <div className="mx-auto grid max-w-[1160px] items-center gap-12 lg:grid-cols-2 lg:gap-20">
-          <div className="mx-auto w-[280px] shrink-0 overflow-hidden rounded-[36px] border-8 border-[var(--navy2)] bg-[var(--navy)] shadow-[0_32px_80px_rgba(13,31,53,0.35)]">
-            <div className="mx-auto h-[22px] w-20 rounded-b-[14px] bg-[var(--navy2)]" />
-            <div className="relative h-[180px] overflow-hidden bg-gradient-to-br from-[var(--navy)] via-[var(--navy2)] to-[var(--navy3)]">
-              <span className="absolute left-[18px] top-3.5 font-[family-name:var(--font-display)] text-xs italic text-[var(--gold)]">
-                <span className="text-[var(--gold)]">M</span>oxie
-              </span>
-              <div className="absolute bottom-[18px] left-[18px] z-[1] font-[family-name:var(--font-display)] text-[22px] font-light italic text-white">
-                Discovery One
-              </div>
-              <div className="absolute bottom-8 left-[18px] z-[1] text-[9px] uppercase tracking-[0.12em] text-[rgba(255,255,255,0.5)]">
-                2023 Nimbus T8 · Power
-              </div>
-            </div>
-            <div className="bg-[var(--white)] px-[18px] pb-6 pt-4">
-              <div className="mb-4 grid grid-cols-3 gap-2.5">
-                {[
-                  ["Make", "Nimbus"],
-                  ["Year", "2023"],
-                  ["Length", "26'"],
-                  ["Type", "Power"],
-                  ["Model", "T8"],
-                  ["HIN", "···1234"],
-                ].map(([k, v]) => (
-                  <div key={k}>
-                    <div className="mb-0.5 text-[7px] uppercase tracking-[0.1em] text-[var(--text3)]">{k}</div>
-                    <div className="text-xs font-semibold text-[var(--navy)]">{v}</div>
-                  </div>
-                ))}
-              </div>
-              <div className="my-3.5 h-px bg-[var(--divider)]" />
-              <div className="mb-4 flex items-center gap-2.5">
-                <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--gold-dim)]">
-                  <svg className="h-3.5 w-3.5 stroke-[var(--gold)]" viewBox="0 0 24 24" fill="none" strokeWidth={1.5}>
-                    <circle cx="12" cy="12" r="3" />
-                    <path d="M12 2v4M12 18v4M2 12h4M18 12h4" />
-                  </svg>
-                </div>
-                <div>
-                  <div className="text-[11px] font-semibold text-[var(--navy)]">Portobello Marina</div>
-                  <div className="text-[8px] uppercase tracking-[0.08em] text-[var(--text3)]">
-                    Home marina · Oakland, CA
-                  </div>
-                </div>
-              </div>
-              <div className="text-center">
-                <div className="mx-auto inline-grid grid-cols-7 gap-px bg-[var(--navy)] p-2">
-                  {Array.from({ length: 49 }).map((_, i) => (
-                    <div
-                      key={i}
-                      className={`h-[7px] w-[7px] rounded-[0.5px] ${i === 48 ? "bg-[var(--aqua-bright)]" : [0, 1, 2, 4, 5, 6, 7, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 20, 21, 22, 23, 24, 25, 26, 27, 28, 30, 31, 32, 33, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47].includes(i) ? "bg-[var(--gold)]" : "bg-[rgba(255,255,255,0.06)]"}`}
-                    />
-                  ))}
-                </div>
-                <p className="mt-2 font-[family-name:var(--font-dm)] text-[7px] font-medium uppercase tracking-[0.16em] text-[var(--text3)]">
-                  Scan or tap to verify
-                </p>
-              </div>
-            </div>
-          </div>
+          <ScanDemo />
+
           <div>
             <p className="mb-4 flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--gold-deep)]">
               <span className="h-px w-6 bg-[var(--gold)]" />

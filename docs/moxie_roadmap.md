@@ -308,10 +308,17 @@ downgraded on the first run. It must also compare against what was paid
   the sweep (the corrected token is 3.39:1 there). It wants a named
   dark-surface token rather than a literal, so the next sweep sees it.
   Found by grepping the hex, not the token name.
-- **Marketing mock card renders text at 7–8px.** `MoxieMarketingHome:296,
-  311, 325` — the fake vessel metadata inside the product mock. A sizing
-  and design question, not a contrast one; no colour makes 7px readable.
-  Decided 2026-09-15 to leave the size alone for now.
+- **Four sizes under 10px remain on the marketing home.**
+  `MoxieMarketingHome:135` (8px hero badge), `:246` (9px card badges),
+  `:367` and `:376` (9px contact labels). The phone mockup's six were
+  fixed 2026-09-17 when it became the scan demo — nothing inside it is
+  under 11px now — but these four sit elsewhere on the page and were
+  outside that task. Same class of problem: no colour makes 8px readable.
+- **The Polaris photo on the home page is 3572×3021, 2.2 MB.** It is the
+  real photo already in the public bucket, shown in a 320×200 box, so the
+  marketing home downloads roughly fifteen times the pixels it displays.
+  Lazy-loaded, so it does not block first paint, but a resized copy is
+  worth having — dimensions asked for in the 2026-09-17 build report.
 - **`/[mxeId]`'s 404 can't tell a bad code from a bad URL.** Fixed as far
   as it goes (see Done), but that one boundary still shows conditional
   copy — "if you were looking for a vessel" — because a not-found boundary

@@ -28,6 +28,17 @@ type Props = {
    * unauthenticated scanner, so MARKETING_ORIGIN is the common case.
    */
   exitHref: string;
+  /**
+   * Marketing only. When given, the component reports that its animation
+   * has run instead of redirecting, so the homepage can loop it inside a
+   * phone frame (components/marketing/ScanDemo.tsx). A real scan never
+   * passes this and redirects exactly as it always has — the point of the
+   * prop is that the demo and the real thing cannot drift, because they
+   * are the same component.
+   */
+  onSettled?: () => void;
+  /** Marketing only: fill the parent instead of the viewport. */
+  fill?: boolean;
 };
 
 type PreviewResponse = VesselPreview | { status: "pending_payment" | "decommissioned"; mxe_id: string };
@@ -39,7 +50,7 @@ function previewStatus(data: PreviewResponse): "pending_payment" | "decommission
   return null;
 }
 
-export function ScanSuccess({ mxeId, destinationRole, exitHref }: Props) {
+export function ScanSuccess({ mxeId, destinationRole, exitHref, onSettled, fill }: Props) {
   const router = useRouter();
   const [preview, setPreview] = useState<VesselPreview | null>(null);
   const [pending, setPending] = useState(false);
@@ -76,14 +87,20 @@ export function ScanSuccess({ mxeId, destinationRole, exitHref }: Props) {
     // terminal state.
     if (pending || decommissioned) return;
     const t = window.setTimeout(() => {
+      // The demo hands us a callback instead of a destination: navigating
+      // would take the visitor off the marketing page they are reading.
+      if (onSettled) {
+        onSettled();
+        return;
+      }
       router.replace(`/${encodeURIComponent(mxeId)}?role=${destinationRole}`);
     }, REDIRECT_MS);
     return () => window.clearTimeout(t);
-  }, [mxeId, router, pending, decommissioned, destinationRole]);
+  }, [mxeId, router, pending, decommissioned, destinationRole, onSettled]);
 
   if (pending) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[var(--navy-deep)] px-6 text-center">
+      <div className={`flex ${fill ? "h-full" : "min-h-screen"} flex-col items-center justify-center gap-3 bg-[var(--navy-deep)] px-6 text-center`}>
         <PixelMMark size={56} markColor={INVERTED_MARK_COLOR} />
         <p className="mt-3 font-[family-name:var(--font-display)] text-2xl font-light italic text-white">
           Not yet active
@@ -103,7 +120,7 @@ export function ScanSuccess({ mxeId, destinationRole, exitHref }: Props) {
 
   if (decommissioned) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[var(--navy-deep)] px-6 text-center">
+      <div className={`flex ${fill ? "h-full" : "min-h-screen"} flex-col items-center justify-center gap-3 bg-[var(--navy-deep)] px-6 text-center`}>
         <PixelMMark size={56} markColor={INVERTED_MARK_COLOR} />
         <p className="mt-3 font-[family-name:var(--font-display)] text-2xl font-light italic text-white">
           No longer active
@@ -134,7 +151,7 @@ export function ScanSuccess({ mxeId, destinationRole, exitHref }: Props) {
   ];
 
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center overflow-hidden bg-[var(--navy-deep)]">
+    <div className={`relative flex ${fill ? "h-full" : "min-h-screen"} flex-col items-center justify-center overflow-hidden bg-[var(--navy-deep)]`}>
       <div className="pointer-events-none scan-glow absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(23,195,178,.18)_0%,rgba(19,241,209,.06)_30%,transparent_70%)]" />
 
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
