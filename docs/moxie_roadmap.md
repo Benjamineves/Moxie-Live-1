@@ -3,7 +3,7 @@
 Open items and what depends on what. Update as items close; add what
 turns up. Where this disagrees with the code, the code wins.
 
-_Last updated 16 September 2026_
+_Last updated 17 September 2026_
 
 ---
 
