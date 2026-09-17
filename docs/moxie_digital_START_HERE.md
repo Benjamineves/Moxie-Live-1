@@ -59,7 +59,8 @@ The rule that used to govern this folder — "anything named `moxie_digital_` is
 | [`moxie_digital_schema.sql`](moxie_digital_schema.sql) | **Out of date — don't run it.** Header says "CURRENT" | A copy of `supabase/seed.sql` plus what migration `20260825` adds, from August. Has none of the tables or functions from the 36 migrations since. For the base schema use `supabase/seed.sql`; for what actually exists, query the live database |
 | [`moxie_digital_scheduler_spec.md`](moxie_digital_scheduler_spec.md) | **Phase 1 built, report-only** (2026-09-15). The daily cron: tier reconciliation, transfer-buyer window, dormancy, expiry reminders | New; decisions recorded in its §12 |
 | [`moxie_digital_broker_role_spec.md`](moxie_digital_broker_role_spec.md) | **Not built**, and says so. "Commercial / Broker" is advertised on `/pricing` with a contact button | Accurate as far as checked |
-| [`moxie_digital_marina_registry_spec.md`](moxie_digital_marina_registry_spec.md) | **Not built**, and says so | Accurate as far as checked |
+| [`moxie_digital_marina_registry_spec.md`](moxie_digital_marina_registry_spec.md) | **Not built**, and says so. Internal CRM seed — a *different* feature from the one below | Accurate as far as checked |
+| [`moxie_digital_marina_access_spec.md`](moxie_digital_marina_access_spec.md) | **Specified 2026-09-17, not built.** The customer-facing marina role view: owner-granted, per-marina, fixed field set | New. Three items inside await a decision and are marked. §3 records that neither existing marina field definition matches the spec's field set |
 | [`docs/email/README.md`](email/README.md) | Current — how the Supabase password-reset template is generated and pasted | None known |
 
 ---

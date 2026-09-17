@@ -202,6 +202,15 @@ management" was dropped: it was in no spec and no code.
 `coastguard`. Fine for a paused feature, but nothing in the code will flag
 the copy if it drifts back.
 
+**Spec written 2026-09-17:
+[`moxie_digital_marina_access_spec.md`](moxie_digital_marina_access_spec.md).**
+Not built. It changes the sentence above: the planned bullets should match
+the spec's fixed field set (§2.2), not `filterVesselForRole`'s `marina`
+branch, which is wrong in both directions — no emergency contact, and it
+leaks `slip_notes` and `is_liveaboard`. Three items in the spec await a
+decision before building (accept step, dormant vessels, where the owner
+grants it).
+
 ### App copy promises email reminders that nothing sends
 The Full plan list and badge checkout both mention email reminders. The
 template exists; nothing sends it. Direct violation of the standing copy
