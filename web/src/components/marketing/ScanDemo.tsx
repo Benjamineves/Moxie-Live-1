@@ -15,8 +15,8 @@ import { APP_ORIGIN } from "@/lib/site-domains";
  * Reusing ScanSuccess rather than reimplementing it is the point: a
  * hand-drawn imitation would drift the first time the real animation
  * changed, and the homepage would then be advertising something the
- * product no longer does. ScanSuccess gained exactly two optional props
- * for this (onSettled, fill); its real behaviour is untouched.
+ * product no longer does. ScanSuccess gained three optional props for
+ * this (onSettled, fill, durationMs); its real behaviour is untouched.
  *
  * POLARIS IS A REAL VESSEL — MXE-01016, registered and active, with the
  * owner's own photo. The old mockup invented "Discovery One", a 2023
@@ -48,6 +48,13 @@ export const DEMO_VESSEL = {
 
 /** How long the resolved profile holds before the scan replays. */
 const PROFILE_MS = 5200;
+
+/**
+ * The scan runs a second longer here than at a real boat (SCAN_DURATION_MS,
+ * 2.4s). On a homepage the animation is what earns attention; for someone
+ * standing on a dock it would only be a delay.
+ */
+const DEMO_SCAN_MS = 3400;
 
 export function ScanDemo() {
   const [phase, setPhase] = useState<"scan" | "profile">("profile");
@@ -104,6 +111,7 @@ export function ScanDemo() {
               destinationRole="public"
               exitHref={APP_ORIGIN}
               fill
+              durationMs={DEMO_SCAN_MS}
               onSettled={() => setPhase("profile")}
             />
           ) : (

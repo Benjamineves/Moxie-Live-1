@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { APP_ORIGIN } from "@/lib/site-domains";
 import { WaitlistForm } from "@/components/marketing/WaitlistForm";
 import { MarketingNav } from "@/components/marketing/MarketingNav";
@@ -99,7 +100,7 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
               Every <span className="italic text-[var(--aqua-bright)]">identity.</span>
             </h2>
             <p className="mb-10 max-w-[480px] text-[15px] font-light leading-relaxed text-[rgba(255,255,255,0.55)]">
-              A single weatherproof vinyl QR sticker goes on the stern, dock box, or companionway. Anyone with a phone
+              A single weatherproof vinyl QR sticker goes on the hull. Anyone with a phone
               can scan it. What they see depends on who they are — your personal information is never exposed to the
               public.
             </p>
@@ -213,14 +214,25 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
                 items: [
                   "Store insurance, registration, boater card",
                   "Manage who sees what",
-                  "Edit from any phone — no app needed",
+                  // Not "no app needed": an owner is better served by the
+                  // installed web app, which opens straight to their boats and
+                  // keeps them signed in. A link rather than an install button,
+                  // because iOS cannot install a web app programmatically — the
+                  // FAQ walks through Safari's Share → Add to Home Screen.
+                  // (The FAQ's own "no app needed" is about scanning, and stays.)
+                  <>
+                    Install it on your home screen —{" "}
+                    <Link href="/faq#home-screen" className="text-[var(--gold)] underline underline-offset-2">
+                      here&rsquo;s how
+                    </Link>
+                  </>,
                 ],
               },
               {
                 badge: "Marina Operator",
                 badgeClass: "bg-[var(--blue-bg)] text-[var(--blue-fg)]",
                 title: "Every slip, verified",
-                body: "Emergency contacts, insurance verification, and vessel data — accessible by scanning the QR on the dock box or hull.",
+                body: "Emergency contacts, insurance verification, and vessel data — accessible by scanning the QR on the hull.",
                 items: ["Emergency contact access in seconds", "Insurance verification on demand", "Slip occupancy management"],
               },
               {
@@ -252,9 +264,9 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
                 </h3>
                 <p className="mb-7 text-[14px] leading-relaxed text-[rgba(255,255,255,0.5)]">{card.body}</p>
                 <ul className="list-none space-y-2">
-                  {card.items.map((li) => (
+                  {card.items.map((li, i) => (
                     <li
-                      key={li}
+                      key={i}
                       className="flex items-start gap-3 border-b border-[rgba(255,255,255,0.06)] py-2 text-[13px] leading-snug text-[rgba(255,255,255,0.6)] last:border-0"
                     >
                       <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-[var(--gold)]" />

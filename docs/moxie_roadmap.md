@@ -188,6 +188,26 @@ Currently `p=none`. Moving to `quarantine` makes spoofing harder.
 
 ## Correctness — open
 
+### Marketing home claims marina and Coast Guard role views that aren't built
+The marina-operator and Coast Guard views are paused, not built — same rule
+as the reminder copy. The claim appears in **three** places on
+`MoxieMarketingHome.tsx`, not one:
+
+- the "How it works" step 03 ("A marina operator sees emergency contacts.
+  The Coast Guard sees registration…") — rewrite drafted 2026-09-17,
+  awaiting approval;
+- the **"One scan. Four audiences."** section, with full Marina Operator
+  and Coast Guard cards (slip occupancy management, boarding inspections,
+  insurance verification on demand). Removing two cards turns the heading
+  into three audiences — a positioning change, not a copy fix;
+- the profile section's list ("Marina — emergency & insurance",
+  "Coast Guard — full verification").
+
+The underlying `ProfileRole` type and `/api/vessels/[mxeId]` still accept
+`marina` and `coastguard`, which is fine for a paused feature but means the
+code will not flag the copy. `docs/design/moxie_digital_homepage.html` (the
+reference mockup) carries the same cards and the old dock-box line.
+
 ### App copy promises email reminders that nothing sends
 The Full plan list and badge checkout both mention email reminders. The
 template exists; nothing sends it. Direct violation of the standing copy

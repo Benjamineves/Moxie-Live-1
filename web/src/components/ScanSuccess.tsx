@@ -5,7 +5,13 @@ import { useRouter } from "next/navigation";
 import { PixelMMark, INVERTED_MARK_COLOR } from "@/components/brand/PixelMMark";
 import type { VesselPreview } from "@/types/vessel";
 
-const REDIRECT_MS = 2400;
+/**
+ * How long the scan plays before it resolves. 2.4s for a real scan: the
+ * person is standing at a boat and wants the profile, so every extra
+ * moment is a delay. The marketing loop passes a longer value — on a
+ * homepage the animation is the point and a longer run holds attention.
+ */
+export const SCAN_DURATION_MS = 2400;
 
 type Props = {
   mxeId: string;
@@ -39,6 +45,13 @@ type Props = {
   onSettled?: () => void;
   /** Marketing only: fill the parent instead of the viewport. */
   fill?: boolean;
+  /**
+   * How long the animation runs before redirecting (or settling). Drives
+   * the timer AND the timed CSS animations together — the rings and the
+   * load bar are 2.4s in globals.css, so stretching only the timer would
+   * leave a full load bar sitting still, which reads as a stall.
+   */
+  durationMs?: number;
 };
 
 type PreviewResponse = VesselPreview | { status: "pending_payment" | "decommissioned"; mxe_id: string };
@@ -50,7 +63,7 @@ function previewStatus(data: PreviewResponse): "pending_payment" | "decommission
   return null;
 }
 
-export function ScanSuccess({ mxeId, destinationRole, exitHref, onSettled, fill }: Props) {
+export function ScanSuccess({ mxeId, destinationRole, exitHref, onSettled, fill, durationMs = SCAN_DURATION_MS }: Props) {
   const router = useRouter();
   const [preview, setPreview] = useState<VesselPreview | null>(null);
   const [pending, setPending] = useState(false);
@@ -94,9 +107,9 @@ export function ScanSuccess({ mxeId, destinationRole, exitHref, onSettled, fill 
         return;
       }
       router.replace(`/${encodeURIComponent(mxeId)}?role=${destinationRole}`);
-    }, REDIRECT_MS);
+    }, durationMs);
     return () => window.clearTimeout(t);
-  }, [mxeId, router, pending, decommissioned, destinationRole, onSettled]);
+  }, [mxeId, router, pending, decommissioned, destinationRole, onSettled, durationMs]);
 
   if (pending) {
     return (
@@ -163,6 +176,7 @@ export function ScanSuccess({ mxeId, destinationRole, exitHref, onSettled, fill 
               width: w,
               height: w,
               animationDelay: ringDelays[i],
+              animationDuration: `${durationMs}ms`,
               borderColor: ringColors[i] ?? "#17C3B2",
             }}
           />
@@ -196,7 +210,7 @@ export function ScanSuccess({ mxeId, destinationRole, exitHref, onSettled, fill 
         <p className="font-[family-name:var(--font-dm)] text-sm text-[#6b8299]">Opening profile…</p>
 
         <div className="mx-auto mt-10 h-0.5 w-48 overflow-hidden rounded-full bg-[rgba(255,255,255,.08)]">
-          <div className="scan-load-inner h-full w-full bg-[#17C3B2]" />
+          <div className="scan-load-inner h-full w-full bg-[#17C3B2]" style={{ animationDuration: `${durationMs}ms` }} />
         </div>
       </div>
     </div>
