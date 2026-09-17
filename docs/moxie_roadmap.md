@@ -50,7 +50,7 @@ question.
 ## Tier 3 — Unblocked once Tier 1 lands
 
 ### Service records and miscellaneous documents (Full Access)
-**Built 2026-09-16, migration `20261005` not yet run.** The design below
+**Built and deployed 2026-09-16; migration `20261005` is run** (confirmed by querying the table, which holds real entries). `20261006` clears the seller's document filenames on transfer and is **not yet run**. The design below
 is as shipped. Still open: the three questions in the build report
 (editing after creation, a deleted entry's file, and whether a buyer
 sees the seller's logged-at dates), plus the copy pass on `/pricing` and

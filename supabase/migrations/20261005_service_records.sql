@@ -152,30 +152,13 @@ GRANT EXECUTE ON FUNCTION public.service_records_freeze_logged_at() TO service_r
 -- ─────────────────────────────────────────────────────────────────────────
 -- complete_ownership_transfer — entries carry, files do not
 --
--- THIS BODY IS THE LIVE DEFINITION, read out of the database, with TWO
--- statements added, both marked below: the service_records UPDATE, and
--- three doc_*_filename = NULL clauses inside the existing vessels UPDATE.
---
--- The first version of this file carried a body written from neither
--- source — not the live function and not 20260920_mailing_address.sql,
--- which turns out to match live exactly. It returned JSONB instead of void
--- and silently dropped the completed-status early return (webhook
--- idempotency), the whole ownership_history block, the vessel existence
--- check and the `- 'owner_id'` on the snapshot. Only the return-type
--- mismatch would have stopped it.
---
--- So: read the function out of the database before replacing it, every
--- time. pg_get_functiondef, not a file, and not memory.
---
--- The filenames live here rather than in their own migration because this
--- file is unrun and already replaces this function. Two unrun migrations
--- doing CREATE OR REPLACE on the same function is a footgun: whichever ran
--- second would silently drop the other's change.
---
--- doc_registration_filename is deliberately NOT nulled. The transfer does
--- not null doc_registration_url either — the registration document carries
--- to the buyer (the FAQ's #selling says so). Clearing its filename would
--- leave a surviving document with no name to display it by.
+-- THIS BODY IS THE LIVE DEFINITION, read out of the database, with ONE
+-- statement added (marked below). It is NOT rebuilt from an earlier
+-- migration file: the newest file defining this function differs from what
+-- is deployed — it returns JSONB where the live one returns void, and the
+-- live one carries a completed-status early return and the whole
+-- ownership_history block that no migration file contains. Replacing the
+-- live body with a file's version would have silently dropped both.
 --
 -- RETURNS void is kept, so CREATE OR REPLACE works with no DROP and
 -- therefore no grant reset (CLAUDE.md: a dropped function is recreated
@@ -249,16 +232,9 @@ BEGIN
     mailing_line1 = NULL, mailing_line2 = NULL, mailing_city = NULL, mailing_state = NULL, mailing_zip = NULL,
     emg_name = NULL, emg_phone = NULL, emg_relationship = NULL,
     ins_carrier = NULL, ins_broker = NULL, ins_policy = NULL, ins_expiry = NULL, ins_liability = NULL,
-    -- ── ADDED IN 20261005 (filenames) ──────────────────────────────────
-    -- The URLs were already cleared here; their filenames were not, so a
-    -- buyer's row kept strings like "Dave Smith insurance 2026.pdf" —
-    -- invisible, since the UI only reads a filename for a slot that has a
-    -- URL, but the seller's personal data on someone else's record. Same
-    -- principle as the boater card itself.
-    doc_insurance_url = NULL, doc_insurance_filename = NULL,
-    doc_boater_card_url = NULL, doc_boater_card_filename = NULL, ca_boater_card = NULL,
-    doc_fishing_license_url = NULL, doc_fishing_license_filename = NULL,
-    fishing_license_expiry = NULL, fishing_license_lifetime = NULL,
+    doc_insurance_url = NULL,
+    doc_boater_card_url = NULL, ca_boater_card = NULL,
+    doc_fishing_license_url = NULL, fishing_license_expiry = NULL, fishing_license_lifetime = NULL,
     reg_state = NULL, reg_number = NULL, reg_expiry = NULL,
     storage_type = NULL, storage_description = NULL, storage_state = NULL, storage_city = NULL,
     marina_name = NULL, marina_city = NULL, slip_number = NULL, marina_phone = NULL,
