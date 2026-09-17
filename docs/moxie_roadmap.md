@@ -328,10 +328,6 @@ downgraded on the first run. It must also compare against what was paid
   seller's personal data sitting on someone else's record. Found
   2026-09-16 while checking the fishing-licence question; a one-line
   addition to the same UPDATE.
-- **`lib/demo-vessel.ts` is now dead code.** Its only caller was
-  `fetchVesselByMxeId`'s missing-anon-key fallback, removed 2026-09-16.
-  Delete it, or keep it deliberately for local development and say so in
-  the file.
 - **`shipped_at` / `received_at` renames** + per-identity despatch
   timestamp. From the provisioning build; do together.
 - **Confirm `ben@` removed from `ADMIN_EMAILS`** in Vercel.
