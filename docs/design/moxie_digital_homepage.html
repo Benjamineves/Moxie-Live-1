@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Moxie — Your Boat's Digital Home</title>
+<title>Moxie · Vessel profiles</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
 body{font-family:'DM Sans',system-ui,sans-serif;background:#f5f2ec;color:#0d1f35;-webkit-font-smoothing:antialiased;overflow-x:hidden}
-:root{--navy:#0d1f35;--navy2:#132943;--navy3:#1a3a5c;--navy-deep:#071020;--gold:#c9a84c;--gold-lt:#dfc06a;--gold-dim:rgba(201,168,76,0.15);--gold-line:rgba(201,168,76,0.35);--cream:#f5f2ec;--cream2:#ede9e0;--white:#fff;--text:#0d1f35;--text2:#3a5068;--text3:#6b8299;--divider:rgba(13,31,53,0.1);--aqua-bright:#17C3B2;--aqua-vapor:#13F1D1;--aqua-lagoon:#1FA394;--aqua-abyss:#0B6E6A;--green-bg:#E1F5EE;--green-fg:#085041;--blue-bg:#E6F1FB;--blue-fg:#0C447C;--red-bg:#FAECE7;--red-fg:#712B13;--gray-bg:#F1EFE8;--gray-fg:#888780}
+:root{--navy:#0d1f35;--navy2:#132943;--navy3:#1a3a5c;--navy-deep:#071020;--gold:#c9a84c;--gold-lt:#dfc06a;--gold-dim:rgba(201,168,76,0.15);--gold-line:rgba(201,168,76,0.35);--cream:#f5f2ec;--cream2:#ede9e0;--white:#fff;--text:#0d1f35;--text2:#3a5068;--text3:#566a7b;--divider:rgba(13,31,53,0.1);--aqua-bright:#17C3B2;--aqua-vapor:#13F1D1;--aqua-lagoon:#1FA394;--aqua-abyss:#0B6E6A;--green-bg:#E1F5EE;--green-fg:#085041;--blue-bg:#E6F1FB;--blue-fg:#0C447C;--red-bg:#FAECE7;--red-fg:#712B13;--gray-bg:#F1EFE8;--gray-fg:#888780;--purple-bg:#EEEDFE;--purple-fg:#3C3489}
 nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;justify-content:space-between;align-items:center;padding:20px 48px;background:rgba(245,242,236,0.92);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border-bottom:1px solid var(--divider);transition:padding .3s}
 .nav-brand{display:flex;align-items:center;gap:12px;text-decoration:none}
 .nav-pixel-m{width:28px;height:28px;flex-shrink:0}
@@ -18,7 +18,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;justify-content
 .nav-wordmark span{color:var(--gold)}
 .nav-links{display:flex;gap:32px;align-items:center}
 .nav-links a{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--text2);text-decoration:none;font-weight:500;transition:color .2s}
-.nav-links a:hover{color:var(--gold)}
+.nav-links a:hover{color:var(--gold-deep)}
 .nav-cta{background:var(--navy);color:var(--gold)!important;padding:9px 22px;border:1px solid var(--navy);transition:background .2s,color .2s!important}
 .nav-cta:hover{background:var(--gold)!important;color:var(--navy)!important;border-color:var(--gold)!important}
 @media(max-width:768px){nav{padding:18px 24px}.nav-links{display:none}}
@@ -111,7 +111,7 @@ section{padding:100px 48px}
 .role-badge.owner{background:var(--green-bg);color:var(--green-fg)}
 .role-badge.marina{background:var(--blue-bg);color:var(--blue-fg)}
 .role-badge.public{background:var(--gray-bg);color:var(--gray-fg)}
-.role-badge.coastguard{background:var(--red-bg);color:var(--red-fg)}
+.role-badge.trusted{background:var(--purple-bg);color:var(--purple-fg)}
 .who-card-title{font-family:'Cormorant Garamond',serif;font-size:26px;font-weight:300;color:var(--white);margin-bottom:16px;line-height:1.2}
 .who-card-body{font-size:14px;color:rgba(255,255,255,.5);line-height:1.85;margin-bottom:28px}
 .who-list{list-style:none}
@@ -121,30 +121,26 @@ section{padding:100px 48px}
 #profile{background:var(--cream2)}
 .profile-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center}
 @media(max-width:900px){.profile-grid{grid-template-columns:1fr;gap:48px}}
-.phone-mock{width:280px;height:560px;background:var(--navy);border-radius:36px;border:8px solid var(--navy2);box-shadow:0 32px 80px rgba(13,31,53,.35),0 0 0 1px rgba(255,255,255,.08);overflow:hidden;position:relative;flex-shrink:0;margin:0 auto}
-.phone-notch{width:80px;height:22px;background:var(--navy2);border-radius:0 0 14px 14px;margin:0 auto;position:relative;z-index:2}
-.phone-screen{overflow:hidden;height:calc(100% - 22px)}
-.phone-hero-section{height:180px;background:linear-gradient(160deg,var(--navy) 0%,var(--navy2) 50%,var(--navy3) 100%);display:flex;flex-direction:column;justify-content:flex-end;padding:18px;position:relative;overflow:hidden}
-.phone-hero-section::before{content:'';position:absolute;top:-30px;right:-30px;width:140px;height:140px;border-radius:50%;background:var(--gold);opacity:.9}
-.phone-moxie-tag{position:absolute;top:14px;left:18px;font-family:'Cormorant Garamond',serif;font-size:12px;font-style:italic;color:var(--gold)}
-.phone-vessel-name{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;color:#fff;font-style:italic;position:relative;z-index:1}
-.phone-vessel-model{font-size:9px;color:rgba(255,255,255,.5);letter-spacing:.12em;text-transform:uppercase;margin-top:3px;position:relative;z-index:1}
-.phone-body{padding:16px 18px;background:var(--white);height:100%}
-.phone-specs{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px}
-.phone-spec-k{font-size:7px;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:2px}
-.phone-spec-v{font-size:12px;font-weight:600;color:var(--navy)}
-.phone-divider{height:1px;background:var(--divider);margin:14px 0}
-.phone-marina-row{display:flex;align-items:center;gap:10px;margin-bottom:16px}
-.phone-marina-icon{width:28px;height:28px;border-radius:50%;background:var(--gold-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0}
-.phone-marina-icon svg{width:14px;height:14px;stroke:var(--gold);fill:none;stroke-width:1.5}
-.phone-marina-name{font-size:11px;font-weight:600;color:var(--navy)}
-.phone-marina-label{font-size:8px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
-.phone-qr-section{text-align:center;margin-top:16px}
-.phone-qr-mini{display:inline-grid;grid-template-columns:repeat(7,7px);grid-template-rows:repeat(7,7px);gap:1px;background:var(--navy);border-radius:6px;padding:8px}
-.phone-qr-mini .dk{background:var(--gold);border-radius:.5px}
-.phone-qr-mini .lt{background:rgba(255,255,255,.06);border-radius:.5px}
-.phone-qr-mini .sig{background:var(--aqua-bright);border-radius:.5px}
-.phone-scan-label{font-size:7px;letter-spacing:.16em;text-transform:uppercase;color:var(--text3);margin-top:8px;font-weight:500}
+.phone-mock{width:320px;background:var(--navy);border-radius:40px;border:8px solid var(--navy2);box-shadow:0 32px 80px rgba(13,31,53,.35);overflow:hidden;position:relative;flex-shrink:0;margin:0 auto}
+.phone-notch{width:96px;height:22px;background:var(--navy2);border-radius:0 0 14px 14px;margin:0 auto;position:relative;z-index:2}
+.phone-screen{height:520px;overflow:hidden;background:var(--white);display:flex;flex-direction:column}
+.phone-hero-section{height:200px;flex-shrink:0;position:relative;overflow:hidden;background:var(--navy)}
+.phone-hero-section img{width:100%;height:100%;object-fit:cover;display:block}
+.phone-moxie-tag{position:absolute;top:12px;left:16px;font-family:'Cormorant Garamond',serif;font-size:14px;font-style:italic;color:var(--gold)}
+.phone-hero-footer{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:2px;padding:40px 16px 12px;background:linear-gradient(to top,rgba(7,16,32,.92),transparent)}
+.phone-vessel-name{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:300;color:#fff;font-style:italic;line-height:1.2}
+.phone-vessel-model{font-size:11px;color:rgba(255,255,255,.72);letter-spacing:.12em;text-transform:uppercase}
+.phone-body{padding:16px;display:flex;flex-direction:column;flex:1}
+.phone-specs{display:grid;grid-template-columns:1fr 1fr;gap:12px 16px}
+.phone-spec-k{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--text3);margin-bottom:2px}
+.phone-spec-v{font-size:13px;font-weight:600;color:var(--navy)}
+.phone-divider{height:1px;background:var(--divider);margin:16px 0}
+.phone-marina-row{display:flex;align-items:center;gap:12px}
+.phone-marina-icon{width:32px;height:32px;border-radius:50%;background:var(--gold-dim);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.phone-marina-icon svg{width:16px;height:16px;stroke:var(--gold-deep);fill:none;stroke-width:1.5}
+.phone-marina-name{font-size:13px;font-weight:600;color:var(--navy)}
+.phone-marina-label{font-size:11px;color:var(--text3)}
+.phone-live-link{margin-top:auto;padding-top:16px;text-align:center;font-size:12px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--gold-deep);text-underline-offset:4px}
 .profile-h2{font-family:'Cormorant Garamond',serif;font-size:clamp(32px,4.5vw,52px);font-weight:300;line-height:1.1;color:var(--navy);margin-bottom:24px}
 .profile-h2 em{font-style:italic;color:var(--gold)}
 .profile-body{font-size:15px;color:var(--text2);line-height:1.8;margin-bottom:36px;font-weight:300}
@@ -202,8 +198,10 @@ footer{background:var(--navy-deep);padding:48px;text-align:center;border-top:1px
     <a href="#qr-hero">The QR</a>
     <a href="#how">How it works</a>
     <a href="#who">Who it's for</a>
+    <a href="/pricing">Pricing</a>
     <a href="#contact">Contact</a>
-    <a href="#contact" class="nav-cta">Get early access</a>
+    <a href="https://moxieyacht.com/login">Log in</a>
+    <a href="https://moxieyacht.com/signup?next=%2Fdashboard" class="nav-cta">Sign up</a>
   </div>
 </nav>
 
@@ -216,28 +214,27 @@ footer{background:var(--navy-deep);padding:48px;text-align:center;border-top:1px
   <div class="hero-content">
     <div class="hero-eyebrow">The digital dry bag</div>
     <h1 class="hero-h1">Your Boat's<br><em>Digital</em> Home.</h1>
-    <p class="hero-sub">A weatherproof QR sticker on the hull. A persistent digital profile for every vessel. What people see depends on who they are.</p>
+    <p class="hero-sub">A weatherproof QR badge on the hull. A persistent digital profile for every vessel. What people see depends on who they are.</p>
     <div class="hero-ctas">
-      <a href="#contact" class="btn-primary">Get early access &nbsp;→</a>
+      <a href="https://moxieyacht.com/signup?next=%2Fdashboard" class="btn-primary">Create your account &nbsp;→</a>
       <a href="#qr-hero" class="btn-secondary">See how it works &nbsp;→</a>
     </div>
   </div>
-  <div class="hero-scroll"><div class="hero-scroll-line"></div><span>Scroll</span></div>
 </section>
 
 <div class="ticker"><div class="ticker-track">
-  <span>Your boat's digital home</span><span class="sep">◆</span><span>Role-gated access</span><span class="sep">◆</span><span>Weatherproof vinyl QR</span><span class="sep">◆</span><span>Free for boat owners</span><span class="sep">◆</span><span>Emergency data for Coast Guard</span><span class="sep">◆</span><span>Marina operator tools</span><span class="sep">◆</span>
-  <span>Your boat's digital home</span><span class="sep">◆</span><span>Role-gated access</span><span class="sep">◆</span><span>Weatherproof vinyl QR</span><span class="sep">◆</span><span>Free for boat owners</span><span class="sep">◆</span><span>Emergency data for Coast Guard</span><span class="sep">◆</span><span>Marina operator tools</span><span class="sep">◆</span>
+  <span>Your boat's digital home</span><span class="sep">◆</span><span>One boat, one identity</span><span class="sep">◆</span><span>Weatherproof vinyl QR</span><span class="sep">◆</span><span>Scan to verify, instantly</span><span class="sep">◆</span><span>Role-gated access</span><span class="sep">◆</span><span>Share exactly what you choose</span><span class="sep">◆</span><span>Documents always on hand</span><span class="sep">◆</span><span>Self-serve, no marina required</span><span class="sep">◆</span>
+  <span>Your boat's digital home</span><span class="sep">◆</span><span>One boat, one identity</span><span class="sep">◆</span><span>Weatherproof vinyl QR</span><span class="sep">◆</span><span>Scan to verify, instantly</span><span class="sep">◆</span><span>Role-gated access</span><span class="sep">◆</span><span>Share exactly what you choose</span><span class="sep">◆</span><span>Documents always on hand</span><span class="sep">◆</span><span>Self-serve, no marina required</span><span class="sep">◆</span>
 </div></div>
 
 <section id="qr-hero">
   <div class="container">
     <div class="qr-hero-grid fade-in">
       <div class="qr-hero-text">
-        <div class="section-eyebrow">The QR sticker</div>
-        <h2 class="qr-hero-h2">One sticker.<br>Every <span class="aq">identity.</span></h2>
-        <p class="qr-hero-body">A single weatherproof vinyl QR sticker goes on the stern, dock box, or companionway. Anyone with a phone can scan it. What they see depends on who they are — your personal information is never exposed to the public.</p>
-        <a href="#contact" class="btn-primary">Get your sticker free &nbsp;→</a>
+        <div class="section-eyebrow">The QR badge</div>
+        <h2 class="qr-hero-h2">One badge.<br>Every <span class="aq">identity.</span></h2>
+        <p class="qr-hero-body">A single weatherproof vinyl QR sticker goes on the hull. Anyone with a phone can scan it. What they see depends on who they are — your personal information is never exposed to the public.</p>
+        <a href="https://moxieyacht.com/signup?next=%2Fdashboard" class="btn-primary">Register your vessel &nbsp;→</a>
       </div>
       <div class="qr-sticker-showcase">
         <div class="qr-sticker">
@@ -255,6 +252,7 @@ footer{background:var(--navy-deep);padding:48px;text-align:center;border-top:1px
           </div>
           <div class="qr-rule"></div>
           <div class="qr-caption">Registered vessel<br>Scan · MXE-00001</div>
+          <div class="qr-caption" style="margin-top:8px;font-size:6px;color:rgba(255,255,255,.25)">Patent Pending</div>
         </div>
       </div>
     </div>
@@ -271,8 +269,8 @@ footer{background:var(--navy-deep);padding:48px;text-align:center;border-top:1px
       <div class="how-card">
         <div class="how-num">01</div>
         <div class="how-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h7v7h-7z" fill="rgba(201,168,76,0.15)"/></svg></div>
-        <h3 class="how-title">We create your vessel profile</h3>
-        <p class="how-body">Make, model, year, HIN, home marina, insurance, registration — everything in one persistent digital identity. You control what's shared and with whom.</p>
+        <h3 class="how-title">You register your vessel</h3>
+        <p class="how-body">Make, model, year, HIN, storage details, insurance, registration — everything in one persistent digital identity, filled in by you in a few minutes. You control what's shared and with whom.</p>
       </div>
       <div class="how-card">
         <div class="how-num">02</div>
@@ -284,7 +282,7 @@ footer{background:var(--navy-deep);padding:48px;text-align:center;border-top:1px
         <div class="how-num">03</div>
         <div class="how-icon"><svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12.01" y2="18"/></svg></div>
         <h3 class="how-title">Anyone can scan it</h3>
-        <p class="how-body">A marina operator sees emergency contacts. The Coast Guard sees registration. The public sees vessel specs. The owner sees everything — and can edit.</p>
+        <p class="how-body">A stranger sees the boat — make, model, year, photo — and nothing about you. You see everything, and can edit it. The people you let in — a captain, a cleaner, family — see only what you share, through a link you can revoke.</p>
       </div>
     </div>
   </div>
@@ -297,10 +295,10 @@ footer{background:var(--navy-deep);padding:48px;text-align:center;border-top:1px
       <h2 class="who-h2">One scan.<br><em>Four audiences.</em></h2>
     </div>
     <div class="who-grid fade-in">
-      <div class="who-card"><span class="role-badge owner">Boat Owner</span><h3 class="who-card-title">Your boat's command center</h3><p class="who-card-body">Full read/write access to every field. Insurance docs, registration, maintenance logs — always with the boat, always current.</p><ul class="who-list"><li>Store insurance, registration, boater card</li><li>Manage who sees what</li><li>Edit from any phone — no app needed</li></ul></div>
-      <div class="who-card"><span class="role-badge marina">Marina Operator</span><h3 class="who-card-title">Every slip, verified</h3><p class="who-card-body">Emergency contacts, insurance verification, and vessel data — accessible by scanning the QR on the dock box or hull.</p><ul class="who-list"><li>Emergency contact access in seconds</li><li>Insurance verification on demand</li><li>Slip occupancy management</li></ul></div>
+      <div class="who-card"><span class="role-badge owner">Boat Owner</span><h3 class="who-card-title">Your boat's command center</h3><p class="who-card-body">Full read/write access to every field. Insurance docs, registration, maintenance logs — always with the boat, always current.</p><ul class="who-list"><li>Store insurance, registration, boater card</li><li>Manage who sees what</li><li>Install it on your home screen — <a href="/faq#home-screen" style="color:var(--gold)">here’s how</a></li></ul></div>
+      <div class="who-card"><span class="role-badge marina">Marina Operator</span><h3 class="who-card-title">A marina view, planned</h3><p class="who-card-body">We plan to let marina staff scan a boat in their slips and see its owner’s contact details, with insurance and registration status alongside. It isn’t available yet — today, an owner can share those details with their marina through a Trusted Contact link.</p><ul class="who-list"><li>Planned: owner contact details on a scan</li><li>Planned: insurance and registration status</li><li>Available now: owners share with their marina</li></ul></div>
       <div class="who-card"><span class="role-badge public">General Public</span><h3 class="who-card-title">Admirers welcome</h3><p class="who-card-body">Vessel specs — make, model, year, type. Nothing private. The digital equivalent of reading the name on the transom.</p><ul class="who-list"><li>Make, model, year, vessel type</li><li>No personal data exposed</li><li>Clean, beautiful profile page</li></ul></div>
-      <div class="who-card"><span class="role-badge coastguard">Coast Guard</span><h3 class="who-card-title">Boarding inspections in seconds</h3><p class="who-card-body">Registration number, expiry, HIN, and insurance — everything needed for a boarding inspection, instantly.</p><ul class="who-list"><li>Registration & HIN verification</li><li>Insurance status & expiry</li><li>Emergency & safety data</li></ul></div>
+      <div class="who-card"><span class="role-badge trusted">Trusted Contact</span><h3 class="who-card-title">The people you let in</h3><p class="who-card-body">Your captain, cleaner, caterer, family or guests — each gets a link that shows only what you choose. Change your mind and revoke it, and the link stops working.</p><ul class="who-list"><li>You pick what each person sees</li><li>Expire it, or make it one-time</li><li>Revoke any link instantly</li></ul></div>
     </div>
   </div>
 </section>
@@ -311,38 +309,32 @@ footer{background:var(--navy-deep);padding:48px;text-align:center;border-top:1px
       <div class="phone-mock">
         <div class="phone-notch"></div>
         <div class="phone-screen">
+          <!-- The live page plays the real ScanSuccess animation here, then
+               resolves to this profile, on a loop (components/marketing/
+               ScanDemo.tsx). A static file cannot run it, so this shows the
+               resolved state — which is also exactly what the live page
+               server-renders and what prefers-reduced-motion keeps. -->
           <div class="phone-hero-section">
-            <span class="phone-moxie-tag"><span class="m">M</span>oxie</span>
-            <div class="phone-vessel-name">Discovery One</div>
-            <div class="phone-vessel-model">2023 Nimbus T8 · Power</div>
+            <img src="https://imhoeviehenluccjgnru.supabase.co/storage/v1/object/public/vessel-photos/2255a040-7300-407c-bc31-7fb35b383d14/MXE-01016/photo?v=mtnuzbac" alt="Polaris, a 2021 Beneteau Oceanis 30.1" width="320" height="200" loading="lazy">
+            <span class="phone-moxie-tag">Moxie</span>
+            <div class="phone-hero-footer">
+              <div class="phone-vessel-name">Polaris</div>
+              <div class="phone-vessel-model">2021 Beneteau · Sailboat</div>
+            </div>
           </div>
           <div class="phone-body">
             <div class="phone-specs">
-              <div><div class="phone-spec-k">Make</div><div class="phone-spec-v">Nimbus</div></div>
-              <div><div class="phone-spec-k">Year</div><div class="phone-spec-v">2023</div></div>
-              <div><div class="phone-spec-k">Length</div><div class="phone-spec-v">26'</div></div>
-              <div><div class="phone-spec-k">Type</div><div class="phone-spec-v">Power</div></div>
-              <div><div class="phone-spec-k">Model</div><div class="phone-spec-v">T8</div></div>
-              <div><div class="phone-spec-k">HIN</div><div class="phone-spec-v">···1234</div></div>
+              <div><div class="phone-spec-k">Model</div><div class="phone-spec-v">Oceanis 30.1</div></div>
+              <div><div class="phone-spec-k">Year</div><div class="phone-spec-v">2021</div></div>
+              <div><div class="phone-spec-k">Length</div><div class="phone-spec-v">31 ft</div></div>
+              <div><div class="phone-spec-k">Type</div><div class="phone-spec-v">Sailboat</div></div>
             </div>
             <div class="phone-divider"></div>
             <div class="phone-marina-row">
               <div class="phone-marina-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></div>
-              <div><div class="phone-marina-name">Portobello Marina</div><div class="phone-marina-label">Home marina · Oakland, CA</div></div>
+              <div><div class="phone-marina-name">Marina Plaza Harbor</div><div class="phone-marina-label">Home marina · Sausalito, CA</div></div>
             </div>
-            <div class="phone-divider"></div>
-            <div class="phone-qr-section">
-              <div class="phone-qr-mini">
-                <div class="dk"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="dk"></div>
-                <div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div>
-                <div class="dk"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="dk"></div>
-                <div class="lt"></div><div class="lt"></div><div class="lt"></div><div class="dk"></div><div class="lt"></div><div class="lt"></div><div class="lt"></div>
-                <div class="dk"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="dk"></div>
-                <div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div>
-                <div class="dk"></div><div class="dk"></div><div class="dk"></div><div class="lt"></div><div class="dk"></div><div class="dk"></div><div class="sig"></div>
-              </div>
-              <div class="phone-scan-label">Scan or tap to verify</div>
-            </div>
+            <a class="phone-live-link" href="https://moxieyacht.com/MXE-01016">MXE-01016 — see it live</a>
           </div>
         </div>
       </div>
@@ -352,8 +344,8 @@ footer{background:var(--navy-deep);padding:48px;text-align:center;border-top:1px
         <p class="profile-body">The mobile vessel profile is the #1 user-facing touchpoint. Clean, fast, and role-gated — it shows exactly the right information to the right person.</p>
         <div class="qr-features">
           <div class="qr-feature"><div class="qr-feature-icon oi"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div><div><div class="qr-feature-title">Owner — full control</div><div class="qr-feature-body">Read/write access to every field. Insurance, registration, maintenance — always current.</div></div></div>
-          <div class="qr-feature"><div class="qr-feature-icon mi"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div><div><div class="qr-feature-title">Marina — emergency & insurance</div><div class="qr-feature-body">Reach any boat owner in seconds. No more paper chase.</div></div></div>
-          <div class="qr-feature"><div class="qr-feature-icon ci"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div><div class="qr-feature-title">Coast Guard — full verification</div><div class="qr-feature-body">Registration, HIN, expiry, and insurance — boarding inspections in seconds.</div></div></div>
+          <div class="qr-feature"><div class="qr-feature-icon mi"><svg viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg></div><div><div class="qr-feature-title">Marina — planned</div><div class="qr-feature-body">A view for marina staff is planned. Until then, owners share with their marina through a Trusted Contact link.</div></div></div>
+          <div class="qr-feature"><div class="qr-feature-icon ci"><svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg></div><div><div class="qr-feature-title">Trusted Contact — what you share</div><div class="qr-feature-body">A captain, cleaner or guest sees only what you’ve chosen, through a link you can revoke.</div></div></div>
         </div>
         <a href="#contact" class="btn-primary btn-gold">Create your profile &nbsp;→</a>
       </div>
@@ -364,16 +356,17 @@ footer{background:var(--navy-deep);padding:48px;text-align:center;border-top:1px
 <section id="contact">
   <div class="container">
     <div class="contact-inner fade-in">
-      <div class="contact-eyebrow">Early access</div>
-      <h2 class="contact-h2">Be first<br><em>on the water.</em></h2>
-      <p class="contact-body">Moxie is rolling out marina by marina across California, starting in the SF Bay Area. Join the waitlist and we'll reach out when your marina is next.</p>
-      <div class="email-form"><input class="email-input" type="email" placeholder="your@email.com"><button class="email-submit">Join waitlist</button></div>
-      <div class="contact-note">Free for boat owners · No spam · Unsubscribe anytime</div>
+      <div class="contact-eyebrow">Get started</div>
+      <h2 class="contact-h2">Register today.<br><em>No marina required.</em></h2>
+      <p class="contact-body">Create an account and register your vessel — wherever it's docked, trailered, or moored. Your sticker ships once registration is complete.</p>
+      <a href="https://moxieyacht.com/signup?next=%2Fdashboard" class="btn-primary">Create your account &nbsp;→</a>
+      <div class="contact-divider"></div>
+      <div class="contact-eyebrow">Not ready yet?</div>
+      <p class="contact-body">Leave your email and we'll follow up when the time's right.</p>
+      <div class="email-form"><input class="email-input" type="email" placeholder="your@email.com"><button class="email-submit">Notify me</button></div>
       <div class="contact-divider"></div>
       <div class="contact-info">
-        <div><div class="ci-label">Contact</div><div class="ci-val">Ben Eves</div></div>
-        <div><div class="ci-label">Email</div><div class="ci-val"><a href="mailto:ben@moxieyachting.com">ben@moxieyachting.com</a></div></div>
-        <div><div class="ci-label">Phone</div><div class="ci-val"><a href="tel:+13124650672">312-465-0672</a></div></div>
+        <div><div class="ci-label">Email</div><div class="ci-val"><a href="mailto:info@moxieyachting.com">info@moxieyachting.com</a></div></div>
         <div><div class="ci-label">Based in</div><div class="ci-val">Northern California</div></div>
       </div>
     </div>
@@ -391,7 +384,8 @@ footer{background:var(--navy-deep);padding:48px;text-align:center;border-top:1px
     <span class="footer-wordmark"><span class="m">M</span>oxie</span>
     <span class="footer-aqua"></span>
   </div>
-  <div class="footer-legal">Ben Eves · CA Yacht Salesperson Lic. S-1-4046-0001 · © 2026 Moxie Marine Technology · moxieyachting.com</div>
+  <div class="footer-legal">© 2026 Moxie Marine Technology · moxieyachting.com</div>
+  <div class="footer-legal" style="margin-top:24px"><a href="/pricing" style="color:var(--gold)">Pricing</a><span aria-hidden="true"> · </span><a href="/faq" style="color:var(--gold)">FAQ</a><span aria-hidden="true"> · </span><a href="https://moxieyacht.com/login" style="color:var(--gold)">Log in</a><span aria-hidden="true"> · </span><a href="https://moxieyacht.com/signup?next=%2Fdashboard" style="color:var(--gold)">Sign up</a></div>
 </footer>
 
 <script>

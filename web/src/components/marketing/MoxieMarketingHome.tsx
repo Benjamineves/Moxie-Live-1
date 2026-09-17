@@ -172,7 +172,7 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
               {
                 n: "03",
                 title: "Anyone can scan it",
-                body: "A marina operator sees emergency contacts. The Coast Guard sees registration. The public sees vessel specs. The owner sees everything — and can edit.",
+                body: "A stranger sees the boat — make, model, year, photo — and nothing about you. You see everything, and can edit it. The people you let in — a captain, a cleaner, family — see only what you share, through a link you can revoke.",
               },
             ].map((c) => (
               <div
@@ -229,11 +229,18 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
                 ],
               },
               {
+                // PLANNED, NOT BUILT. There is no way to sign in as a marina
+                // operator today; filterVesselForRole has a "marina" data shape
+                // and nothing reaches it. Every line here is future tense on
+                // purpose. "Slip occupancy management" was dropped: it is in no
+                // spec and no code, so it was a promise with nothing behind it.
+                // What IS live is the "Marina / Dock Staff" share preset, so the
+                // body says an owner can already share with their marina.
                 badge: "Marina Operator",
                 badgeClass: "bg-[var(--blue-bg)] text-[var(--blue-fg)]",
-                title: "Every slip, verified",
-                body: "Emergency contacts, insurance verification, and vessel data — accessible by scanning the QR on the hull.",
-                items: ["Emergency contact access in seconds", "Insurance verification on demand", "Slip occupancy management"],
+                title: "A marina view, planned",
+                body: "We plan to let marina staff scan a boat in their slips and see its owner’s contact details, with insurance and registration status alongside. It isn’t available yet — today, an owner can share those details with their marina through a Trusted Contact link.",
+                items: ["Planned: owner contact details on a scan", "Planned: insurance and registration status", "Available now: owners share with their marina"],
               },
               {
                 badge: "General Public",
@@ -243,11 +250,14 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
                 items: ["Make, model, year, vessel type", "No personal data exposed", "Clean, beautiful profile page"],
               },
               {
-                badge: "Coast Guard",
-                badgeClass: "bg-[var(--red-bg)] text-[var(--red-fg)]",
-                title: "Boarding inspections in seconds",
-                body: "Registration number, expiry, HIN, and insurance — everything needed for a boarding inspection, instantly.",
-                items: ["Registration & HIN verification", "Insurance status & expiry", "Emergency & safety data"],
+                // Replaces Coast Guard, which was never built. Trusted Contact is
+                // the share flow's own term, and it ships today: owner-chosen
+                // fields, an expiry (one-time, 24h, 7d or none), revocable.
+                badge: "Trusted Contact",
+                badgeClass: "bg-[var(--purple-bg)] text-[var(--purple-fg)]",
+                title: "The people you let in",
+                body: "Your captain, cleaner, caterer, family or guests — each gets a link that shows only what you choose. Change your mind and revoke it, and the link stops working.",
+                items: ["You pick what each person sees", "Expire it, or make it one-time", "Revoke any link instantly"],
               },
             ].map((card) => (
               <div
@@ -306,14 +316,14 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
                   tone: "bg-[var(--green-bg)] text-[var(--green-fg)]",
                 },
                 {
-                  t: "Marina — emergency & insurance",
-                  d: "Reach any boat owner in seconds. No more paper chase.",
-                  tone: "bg-[var(--blue-bg)] text-[var(--blue-fg)]",
+                  t: "Trusted Contact — what you share",
+                  d: "A captain, cleaner or guest sees only what you’ve chosen, through a link you can revoke.",
+                  tone: "bg-[var(--purple-bg)] text-[var(--purple-fg)]",
                 },
                 {
-                  t: "Coast Guard — full verification",
-                  d: "Registration, HIN, expiry, and insurance — boarding inspections in seconds.",
-                  tone: "bg-[var(--red-bg)] text-[var(--red-fg)]",
+                  t: "Marina — planned",
+                  d: "A view for marina staff is planned. Until then, owners share with their marina through a Trusted Contact link.",
+                  tone: "bg-[var(--blue-bg)] text-[var(--blue-fg)]",
                 },
               ].map((x) => (
                 <div key={x.t} className="flex gap-4 py-4">

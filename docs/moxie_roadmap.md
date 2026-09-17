@@ -188,25 +188,19 @@ Currently `p=none`. Moving to `quarantine` makes spoofing harder.
 
 ## Correctness — open
 
-### Marketing home claims marina and Coast Guard role views that aren't built
-The marina-operator and Coast Guard views are paused, not built — same rule
-as the reminder copy. The claim appears in **three** places on
-`MoxieMarketingHome.tsx`, not one:
+### Marina role view: copy says "planned", the build is paused
+Resolved 2026-09-17 for Coast Guard — that audience is replaced by Trusted
+Contact, which ships today. **Marina Operator stays as an audience with
+future-tense copy** ("A marina view, planned", "It isn't available yet"),
+so the page no longer claims it works. The claim to watch is that it stays
+*planned* rather than quietly becoming "coming soon" — and that the
+planned bullets keep matching `filterVesselForRole`'s `marina` branch,
+which is the only definition of what that view would show. "Slip occupancy
+management" was dropped: it was in no spec and no code.
 
-- the "How it works" step 03 ("A marina operator sees emergency contacts.
-  The Coast Guard sees registration…") — rewrite drafted 2026-09-17,
-  awaiting approval;
-- the **"One scan. Four audiences."** section, with full Marina Operator
-  and Coast Guard cards (slip occupancy management, boarding inspections,
-  insurance verification on demand). Removing two cards turns the heading
-  into three audiences — a positioning change, not a copy fix;
-- the profile section's list ("Marina — emergency & insurance",
-  "Coast Guard — full verification").
-
-The underlying `ProfileRole` type and `/api/vessels/[mxeId]` still accept
-`marina` and `coastguard`, which is fine for a paused feature but means the
-code will not flag the copy. `docs/design/moxie_digital_homepage.html` (the
-reference mockup) carries the same cards and the old dock-box line.
+`ProfileRole` and `/api/vessels/[mxeId]` still accept `marina` and
+`coastguard`. Fine for a paused feature, but nothing in the code will flag
+the copy if it drifts back.
 
 ### App copy promises email reminders that nothing sends
 The Full plan list and badge checkout both mention email reminders. The
@@ -328,12 +322,17 @@ downgraded on the first run. It must also compare against what was paid
   the sweep (the corrected token is 3.39:1 there). It wants a named
   dark-surface token rather than a literal, so the next sweep sees it.
   Found by grepping the hex, not the token name.
-- **Four sizes under 10px remain on the marketing home.**
-  `MoxieMarketingHome:135` (8px hero badge), `:246` (9px card badges),
-  `:367` and `:376` (9px contact labels). The phone mockup's six were
-  fixed 2026-09-17 when it became the scan demo — nothing inside it is
-  under 11px now — but these four sit elsewhere on the page and were
-  outside that task. Same class of problem: no colour makes 8px readable.
+- **Six sizes under 10px remain on the marketing home** — I said four
+  before, which was an undercount from grepping only 7–9px. The badge card
+  under the QR art is **8px**, and its "Patent Pending" line is **6px**;
+  plus `:135` (8px hero badge), `:246` (9px card badges), `:367` and
+  `:376` (9px contact labels). The phone mockup's own six were fixed
+  2026-09-17 — nothing inside it is under 11px — but these sit elsewhere.
+  No colour makes 6px readable.
+- **The QR art's caption reads "Scan · MXE-00001".** That MXE ID does not
+  exist; live vessels start at MXE-01006. Now that the page demos a real
+  vessel a few sections down, an invented one in the artwork is a loose
+  end — MXE-01016 would make both consistent.
 - **The Polaris photo on the home page is 3572×3021, 2.2 MB.** It is the
   real photo already in the public bucket, shown in a 320×200 box, so the
   marketing home downloads roughly fifteen times the pixels it displays.
