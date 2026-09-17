@@ -49,3 +49,27 @@ export function vesselDocumentUrl(
   const token = documentVersionToken(uploadedAt);
   return token ? `${base}?v=${token}` : base;
 }
+
+/**
+ * A service record attachment's URL, tokenized the same way and for the
+ * same reason.
+ *
+ * The token is the entry's `updated_at` rather than Storage's own
+ * timestamp: an attachment is written once at creation and never replaced
+ * in place (uploadServiceRecordFile uses a per-entry path, not a
+ * deterministic one), so there is no "replaced bytes" case to track — but
+ * an edited entry is exactly when a cached response should stop being
+ * reused, and updated_at is the value that moves then.
+ *
+ * Not part of the offline flow: the service worker has no rule for this
+ * route, so the token only defends against the browser's own reuse.
+ */
+export function serviceRecordFileUrl(
+  mxeId: string,
+  recordId: string,
+  updatedAt: string | null | undefined,
+): string {
+  const base = `/api/vessels/${encodeURIComponent(mxeId)}/service-records/${encodeURIComponent(recordId)}`;
+  const token = documentVersionToken(updatedAt);
+  return token ? `${base}?v=${token}` : base;
+}

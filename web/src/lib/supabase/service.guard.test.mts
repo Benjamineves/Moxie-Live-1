@@ -36,6 +36,7 @@ const ALLOWED = new Map<string, string>([
   ["app/api/vessels/[mxeId]/shares/route.ts", "already 503"],
   ["app/api/vessels/[mxeId]/shares/[shareId]/route.ts", "already 503"],
   ["app/api/users/[userId]/billing/route.ts", "already 503"],
+  ["app/api/vessels/[mxeId]/service-records/[recordId]/route.ts", "already 503, same shape as its documents sibling"],
 ]);
 
 function sourceFiles(dir: string, out: string[] = []): string[] {

@@ -56,6 +56,14 @@ is as shipped. Still open: the three questions in the build report
 sees the seller's logged-at dates), plus the copy pass on `/pricing` and
 the marketing home, which this build deliberately did not touch.
 
+**Attachments are viewable by the owner** (2026-09-16): until then an
+upload stored a path and a name and the bytes were unreachable by anyone,
+including the owner — `ServiceHistory`'s comment described a download
+control that was never built. Now an owner-only route
+(`/api/vessels/[mxeId]/service-records/[recordId]`) in the same shape as
+the documents route, and a modal on the owner's page only. Readers are
+unchanged.
+
 **Share links carry it** (2026-09-16), which is the pre-sale case the
 feature exists for: a seller shows a prospective buyer the maintenance
 record during evaluation, rather than the buyer first seeing it after the

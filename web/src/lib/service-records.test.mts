@@ -250,3 +250,59 @@ test("a share can never carry a file path", () => {
   const view = readFileSync(new URL("../components/service/ServiceHistory.tsx", import.meta.url), "utf8");
   assert.doesNotMatch(view, /file_path/, "and the view has no way to render one");
 });
+
+// ── The owner's attachment view (2026-09-16) ─────────────────────────────
+
+test("only the owner's page can reach a file; the shared view still cannot", () => {
+  const history = readFileSync(new URL("../components/service/ServiceHistory.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(history, /file_path/, "ServiceHistory still takes no file path");
+  assert.doesNotMatch(history, /service-records\//, "and builds no attachment URL");
+
+  // The shared profile renders the same component with no children, so
+  // there is no per-entry control for a reader to reach.
+  const shared = readFileSync(new URL("../components/share/SharedVesselProfile.tsx", import.meta.url), "utf8");
+  assert.doesNotMatch(shared, /ServiceAttachment/, "a share link offers no attachment control");
+  assert.match(shared, /<ServiceHistory records=\{serviceRecords\} now=\{new Date\(\)\} \/>/, "children-less");
+
+  // And the payload it renders was stripped server-side regardless.
+  const resolve = readFileSync(new URL("./share-resolve.ts", import.meta.url), "utf8");
+  assert.match(resolve, /withoutFilePaths\(await loadServiceRecords/);
+});
+
+test("the attachment route refuses Basic, and is owner-scoped", () => {
+  const route = readFileSync(
+    new URL("../app/api/vessels/[mxeId]/service-records/[recordId]/route.ts", import.meta.url),
+    "utf8",
+  );
+  // Full Access only — checked in the route, not merely absent from the UI.
+  assert.match(route, /tierAllowsServiceRecords\(billing\.subscriptionTier\)/);
+  assert.match(route, /Service records are part of Full Access/);
+  // Same auth and suspension as the document route it is modelled on.
+  assert.match(route, /emailsMatch\(user\.email, ownerEmail\)/);
+  assert.match(route, /lifecycle_status === "dormant"/);
+  // A record id from another vessel cannot be read through one you own.
+  assert.match(route, /\.eq\("id", recordId\)\s*\n\s*\.eq\("vessel_id", vessel\.id\)/);
+  // Never cached at the HTTP layer, same as documents.
+  assert.match(route, /"Cache-Control": "no-store"/);
+});
+
+test("a post-transfer row offers a note, never a broken link", () => {
+  // file_path null + file_was_attached true is exactly what
+  // complete_ownership_transfer leaves the buyer.
+  const src = readFileSync(new URL("../app/dashboard/[mxeId]/service/ServiceAttachment.tsx", import.meta.url), "utf8");
+  assert.match(src, /if \(!record\.file_path\) \{/, "no path means no link is built");
+  assert.match(src, /if \(!record\.file_was_attached\) return null;/, "an entry that never had one shows nothing");
+  assert.match(src, /held by the previous owner/i, "and one that did explains where it went");
+  // The route agrees: nothing to serve.
+  const route = readFileSync(
+    new URL("../app/api/vessels/[mxeId]/service-records/[recordId]/route.ts", import.meta.url),
+    "utf8",
+  );
+  assert.match(route, /No attachment on this entry/);
+});
+
+test("the attachment URL is cache-busted the same way document URLs are", () => {
+  const url = readFileSync(new URL("./document-url.ts", import.meta.url), "utf8");
+  assert.match(url, /export function serviceRecordFileUrl/);
+  assert.match(url, /documentVersionToken\(updatedAt\)/, "same token helper as the documents");
+});

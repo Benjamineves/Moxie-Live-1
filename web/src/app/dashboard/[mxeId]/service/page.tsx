@@ -8,6 +8,7 @@ import { loadServiceRecords } from "@/lib/service-records-store";
 import { tierAllowsServiceRecords } from "@/lib/service-records";
 import { AttachmentPolicyNote, ServiceHistory } from "@/components/service/ServiceHistory";
 import { ServiceRecordEditor } from "./ServiceRecordEditor";
+import { ServiceAttachment } from "./ServiceAttachment";
 
 export const metadata: Metadata = { title: "Service history · Moxie" };
 
@@ -73,7 +74,16 @@ export default async function ServiceHistoryPage({ params }: Props) {
               <ServiceRecordEditor mxeId={mxeId.toUpperCase()} records={records} />
             </div>
             <div className="mt-10">
-              <ServiceHistory records={records} now={new Date()} />
+              {/*
+                The owner's own view, and the only place a file path goes
+                anywhere near the UI. ServiceHistory still takes no path —
+                it calls this back per entry, and it is this component that
+                knows how to open one. The shared and post-transfer views
+                pass no children and so render exactly as before.
+              */}
+              <ServiceHistory records={records} now={new Date()}>
+                {(record) => <ServiceAttachment mxeId={mxeId.toUpperCase()} record={record} />}
+              </ServiceHistory>
             </div>
             {/*
               A buyer's view of a history they inherited. Entries whose file
