@@ -22,8 +22,12 @@ type Props = {
    * this vessel's owner; every other case (no session, session that
    * doesn't match) is "public", silently — a public scanner with no
    * session is the primary case, not an error state.
+   *
+   * "marina" when a signed-in marina user's marina has access to this
+   * vessel (lib/marina-access.ts). The page re-derives that on arrival —
+   * ?role=marina is where the scan lands, never what authorizes the view.
    */
-  destinationRole: "owner" | "public";
+  destinationRole: "owner" | "marina" | "public";
   /**
    * Also resolved server-side, same reasoning — the pending/decommissioned
    * states below don't auto-redirect (there's nowhere useful to send an

@@ -130,7 +130,12 @@ test("an empty emergency contact is null — the row says so, it isn't dropped",
 });
 
 test("each document is one of three stated states", () => {
-  assert.deepEqual(buildMarinaView(VESSEL, BOTH).registration, { state: "on_file", ownerEnteredExpiry: "2027-03-15" });
+  assert.deepEqual(buildMarinaView(VESSEL, BOTH).registration, { state: "on_file", format: "image", ownerEnteredExpiry: "2027-03-15" });
+  assert.deepEqual(buildMarinaView({ ...VESSEL, doc_insurance_url: "o/MXE-09001/insurance.PDF" }, BOTH).insurance, {
+    state: "on_file",
+    format: "pdf",
+    ownerEnteredExpiry: "2026-01-01",
+  });
   assert.deepEqual(buildMarinaView({ ...VESSEL, doc_insurance_url: null }, BOTH).insurance, { state: "missing" });
   // Not shared wins over on file: the owner's choice, not what exists.
   assert.deepEqual(buildMarinaView(VESSEL, NEITHER).registration, { state: "not_shared" });
@@ -328,4 +333,15 @@ test("nothing builds a marina view except buildMarinaView", () => {
   const source = readFileSync(join(SRC, "lib/vessel-service.ts"), "utf8");
   assert.match(source, /role: Exclude<ProfileRole, "marina">/);
   assert.match(source, /throw new Error\("filterVesselForRole does not build the marina view/);
+});
+
+test("the URL never authorizes the marina view; the documents route asks the helper", () => {
+  // ?role=marina is where a scan lands. If the page ever branched on it,
+  // anyone could append it to a URL. Access is re-derived from the session.
+  const page = readFileSync(join(SRC, "app/[mxeId]/page.tsx"), "utf8");
+  assert.doesNotMatch(page, /roleParam\s*===\s*["']marina["']|sp\.role[^;\n]*marina/);
+  assert.match(page, /resolveMarinaViewer\(/);
+
+  const route = readFileSync(join(SRC, "app/api/vessels/[mxeId]/documents/[docType]/route.ts"), "utf8");
+  assert.match(route, /decideMarinaDocument\(/);
 });

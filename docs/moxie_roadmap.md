@@ -211,8 +211,11 @@ marketing bullets were rewritten to v1 on 2026-09-18 (they had promised
 today, which it never could). **Build in progress, in five stages;**
 stage 1 (copy) done; stage 2 (schema and core logic) done —
 migration `20261007_marina_access.sql` **is run** (confirmed live
-2026-09-18). `20261008_marina_join_code_generator.sql` (the code generator,
-and codes for the three marinas) is written, not run. Copy stays future tense until the marina side
+2026-09-18). `20261008_marina_join_code_generator.sql` **is run** (codes on all
+four marinas, including the fixture "Moxie Test Marina"). Stage 3 (the
+scan: marina view, not-shared banner, dormant emergency contact, marina
+access on the documents route) done. No grant can be made from the app
+until stage 4. Copy stays future tense until the marina side
 is live.
 
 ### App copy promises email reminders that nothing sends

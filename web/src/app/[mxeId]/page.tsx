@@ -20,6 +20,9 @@ import { notifyOwnerDormancyResult } from "@/lib/dormancy-notify";
 // Shared with not-found.tsx, which decides between the vessel wording and
 // the generic one by asking this same question of the path.
 import { looksLikeMxeId } from "@/lib/mxe-id";
+import { resolveMarinaViewer } from "@/lib/marina-access";
+import { buildMarinaView, buildMarinaDormantView } from "@/lib/marina-view";
+import { MarinaEmergencyContact, MarinaNotSharedBanner, MarinaVesselProfile } from "@/components/marina/MarinaVesselProfile";
 
 type Props = {
   params: Promise<{ mxeId: string }>;
@@ -130,7 +133,7 @@ export default async function VesselPage({ params, searchParams }: Props) {
     // failure) silently falls back to ?role=public. Same
     // getOwnerEmailByUserId/emailsMatch check the role=owner branch
     // below uses — deliberately not a second implementation of it.
-    let destinationRole: "owner" | "public" = "public";
+    let destinationRole: "owner" | "marina" | "public" = "public";
     // Same session-aware exit as the public header (moxie_digital_pwa_spec.md's
     // "No back button" section) — pending/decommissioned are terminal
     // states in ScanSuccess with no auto-redirect, so they need their own
@@ -146,6 +149,16 @@ export default async function VesselPage({ params, searchParams }: Props) {
       const scanOwnerEmail = await getOwnerEmailByUserId(vessel.owner_id);
       if (scanOwnerEmail && emailsMatch(scanUser.email, scanOwnerEmail)) {
         destinationRole = "owner";
+      } else {
+        // A marina whose owner shared with them lands on the marina view.
+        // Owner wins if one account is both. The landing page re-derives
+        // this; the URL only says where to go.
+        const scanViewer = await resolveMarinaViewer(
+          requireSupabaseServiceClient("app/[mxeId]/page scan marina"),
+          scanUser.email,
+          vessel,
+        );
+        if (scanViewer.kind === "access") destinationRole = "marina";
       }
     }
     return <ScanSuccess mxeId={vessel.mxe_id} destinationRole={destinationRole} exitHref={exitHref} />;
@@ -265,6 +278,18 @@ export default async function VesselPage({ params, searchParams }: Props) {
     );
   }
 
+  // Who is looking, resolved once for everything below: the dormant
+  // screen, the marina view and the public header. A signed-out visitor —
+  // the common case on a badge scan — costs no marina query at all.
+  // ?role=marina is not read: access is re-derived here on every render.
+  const viewerSupabase = await requireSupabaseServerClient("app/[mxeId]/page viewer");
+  const {
+    data: { user: viewerUser },
+  } = await viewerSupabase.auth.getUser();
+  const marinaViewer = viewerUser?.email
+    ? await resolveMarinaViewer(requireSupabaseServiceClient("app/[mxeId]/page marina"), viewerUser.email, vessel)
+    : ({ kind: "none" } as const);
+
   // Dormant Vessel Identity: one shared dispatch for all three causes
   // (lapsed, locked, decommissioned) — getDormantInfo() is the single
   // place that turns lifecycle_status/dormant_cause into one answer.
@@ -316,6 +341,25 @@ export default async function VesselPage({ params, searchParams }: Props) {
             </Link>
           )}
         </div>
+        {/* A marina with access keeps the emergency contact while the
+            vessel is lapsed or locked, and nothing else (spec §4.2): the
+            need to reach someone is highest when the owner has
+            disengaged. Decommissioned vessels never reach here with
+            access — decideMarinaViewer excludes them. */}
+        {marinaViewer.kind === "access" ? (
+          <div className="w-full max-w-sm text-left">
+            <MarinaEmergencyContact emergency={buildMarinaDormantView(vessel).emergency} />
+          </div>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (marinaViewer.kind === "access") {
+    return (
+      <div className="min-h-screen bg-[var(--cream)]">
+        <AppHeader role="Marina" wordmarkHref="/dashboard" />
+        <MarinaVesselProfile view={buildMarinaView(vessel, marinaViewer.access)} marinaName={marinaViewer.marina.name} />
       </div>
     );
   }
@@ -324,24 +368,18 @@ export default async function VesselPage({ params, searchParams }: Props) {
 
   // Session-aware header destination (moxie_digital_pwa_spec.md's "No
   // back button" section) — the standalone PWA has no browser chrome to
-  // fall back on, so the wordmark must go somewhere real. Same
-  // createSupabaseServerClient/auth.getUser() pattern the scan branch
-  // above already uses; this is a plain read, not a redirect, so it's
-  // safe even for the very common case of an unauthenticated visitor
-  // (a stranger who scanned a dock badge has no dashboard to bounce to
-  // — sending them to the marketing origin instead turns the end of the
-  // path into a discovery surface rather than a dead end).
-  const headerSupabase = await requireSupabaseServerClient("app/[mxeId]/page header");
-  let publicHeaderAuthenticated = false;
-  const {
-    data: { user: headerUser },
-  } = await headerSupabase.auth.getUser();
-  publicHeaderAuthenticated = !!headerUser;
-  const wordmarkHref = publicHeaderAuthenticated ? "/dashboard" : MARKETING_ORIGIN;
+  // fall back on, so the wordmark must go somewhere real. It reuses the
+  // session read made for the marina decision above — a plain read, not a
+  // redirect, so it's safe for the very common case of an unauthenticated
+  // visitor (a stranger who scanned a dock badge has no dashboard to
+  // bounce to — sending them to the marketing origin instead turns the
+  // end of the path into a discovery surface rather than a dead end).
+  const wordmarkHref = viewerUser ? "/dashboard" : MARKETING_ORIGIN;
 
   return (
     <div className="min-h-screen bg-[var(--cream)]">
       <AppHeader role="Public" wordmarkHref={wordmarkHref} />
+      {marinaViewer.kind === "no_access" ? <MarinaNotSharedBanner marinaName={marinaViewer.marina.name} /> : null}
       <VesselPublicProfile {...tier} />
     </div>
   );

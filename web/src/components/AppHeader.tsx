@@ -20,7 +20,7 @@ export function AppHeader({
   wordmarkHref,
   children,
 }: {
-  role: "Public" | "Owner";
+  role: "Public" | "Owner" | "Marina";
   wordmarkHref: string;
   children?: React.ReactNode;
 }) {

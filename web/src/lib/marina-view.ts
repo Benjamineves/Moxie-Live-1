@@ -24,7 +24,7 @@
  */
 
 export type MarinaDocumentState =
-  | { state: "on_file"; ownerEnteredExpiry: string | null }
+  | { state: "on_file"; format: "pdf" | "image"; ownerEnteredExpiry: string | null }
   | { state: "missing" }
   | { state: "not_shared" };
 
@@ -89,10 +89,20 @@ export function emergencyContactOf(v: Pick<MarinaViewSource, "emg_name" | "emg_p
   return contact.name || contact.phone || contact.relationship ? contact : null;
 }
 
+/**
+ * The viewer needs to know whether to frame a PDF or show an image. That
+ * is derived here from the stored path's extension so the path itself
+ * never has to leave this module.
+ */
+function formatOf(path: string): "pdf" | "image" {
+  return path.toLowerCase().endsWith(".pdf") ? "pdf" : "image";
+}
+
 function documentState(shared: boolean, path: string | null, expiry: string | null): MarinaDocumentState {
   if (!shared) return { state: "not_shared" };
-  if (!present(path)) return { state: "missing" };
-  return { state: "on_file", ownerEnteredExpiry: present(expiry) };
+  const stored = present(path);
+  if (!stored) return { state: "missing" };
+  return { state: "on_file", format: formatOf(stored), ownerEnteredExpiry: present(expiry) };
 }
 
 export function buildMarinaView(v: MarinaViewSource, grant: MarinaGrant): MarinaView {

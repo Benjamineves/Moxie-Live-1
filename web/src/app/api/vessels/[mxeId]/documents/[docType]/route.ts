@@ -4,6 +4,7 @@ import { createSupabaseServiceClient } from "@/lib/supabase/service";
 import { emailsMatch, getOwnerEmailByUserId } from "@/lib/owner-verify";
 import { isDocumentLocked, type DocumentSlot } from "@/lib/vessel-transfer";
 import { getOwnerBillingSummary } from "@/lib/billing-service";
+import { decideMarinaDocument, resolveMarinaViewer } from "@/lib/marina-access";
 
 const SIGNED_URL_TTL_SECONDS = 60;
 
@@ -33,6 +34,13 @@ function contentTypeFor(path: string) {
  * URL would work once, then go stale as a cache key's underlying auth
  * the moment its signature expired, even though the cached bytes
  * themselves would still be perfectly readable offline.
+ *
+ * TWO AUDIENCES. The owner, for any of the four documents; and a marina
+ * the owner shared with (docs/moxie_digital_marina_access_spec.md §5.4),
+ * for registration or insurance only, only as the owner chose. Whether a
+ * marina may is decided by lib/marina-access.ts, not here. The dormant
+ * suspension and the tier lock below apply to both — they are facts about
+ * the vessel and its owner's plan, not about who is asking.
  */
 export async function GET(request: Request, context: { params: Promise<{ mxeId: string; docType: string }> }) {
   const { mxeId, docType } = await context.params;
@@ -57,7 +65,7 @@ export async function GET(request: Request, context: { params: Promise<{ mxeId: 
   const { data: vesselRow } = await service
     .from("vessels")
     .select(
-      "id, owner_id, doc_registration_url, doc_insurance_url, doc_boater_card_url, doc_fishing_license_url, lifecycle_status, dormant_cause",
+      "id, owner_id, doc_registration_url, doc_insurance_url, doc_boater_card_url, doc_fishing_license_url, qr_status, lifecycle_status, dormant_cause",
     )
     .eq("mxe_id", mxeId.toUpperCase())
     .maybeSingle();
@@ -69,6 +77,7 @@ export async function GET(request: Request, context: { params: Promise<{ mxeId: 
     doc_insurance_url: string | null;
     doc_boater_card_url: string | null;
     doc_fishing_license_url: string | null;
+    qr_status: string | null;
     lifecycle_status: string | null;
     dormant_cause: string | null;
   } | null;
@@ -77,8 +86,20 @@ export async function GET(request: Request, context: { params: Promise<{ mxeId: 
   }
 
   const ownerEmail = await getOwnerEmailByUserId(vessel.owner_id);
-  if (!ownerEmail || !emailsMatch(user.email, ownerEmail)) {
-    return NextResponse.json({ error: "Forbidden — sign in as the vessel owner." }, { status: 403 });
+  const isOwner = !!ownerEmail && emailsMatch(user.email, ownerEmail);
+  if (!isOwner) {
+    const marinaViewer = await resolveMarinaViewer(service, user.email, vessel);
+    if (!decideMarinaDocument(marinaViewer, docType)) {
+      return NextResponse.json(
+        {
+          error:
+            marinaViewer.kind === "none"
+              ? "Forbidden — sign in as the vessel owner."
+              : "This document isn't shared with your marina.",
+        },
+        { status: 403 },
+      );
+    }
   }
 
   // Dormant Vessel Identity (docs/moxie_digital_dormant_identity_spec.md
