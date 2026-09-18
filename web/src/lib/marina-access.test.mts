@@ -4,6 +4,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { buildMarinaDormantView, buildMarinaView, type MarinaViewSource } from "./marina-view.ts";
+import { marinaNameChanged, marinaSharingSummary } from "./marina-copy.ts";
 import {
   JOIN_CODE_ALPHABET,
   decideMarinaDocument,
@@ -11,7 +12,10 @@ import {
   formatJoinCode,
   grantMarinaAccess,
   loadActiveAccess,
+  loadMarinaByJoinCode,
+  loadVesselMarinaAccess,
   normalizeJoinCode,
+  updateMarinaAccessDocuments,
   resolveMarinaViewer,
   revokeMarinaAccess,
   type ActiveAccess,
@@ -236,7 +240,10 @@ function fakeService(tables: Record<string, Result>, rpc: Record<string, Result>
           select: () => builder,
           eq: (col: string, val: unknown) => (entry.filters.push(["eq", col, val]), builder),
           is: (col: string, val: unknown) => (entry.filters.push(["is", col, val]), builder),
+          in: (col: string, val: unknown) => (entry.filters.push(["in", col, val]), builder),
+          order: () => builder,
           maybeSingle: async () => tables[table] ?? { data: null, error: null },
+          then: (resolve: (r: Result) => unknown) => resolve(tables[table] ?? { data: [], error: null }),
         };
         return builder;
       },
@@ -344,4 +351,89 @@ test("the URL never authorizes the marina view; the documents route asks the hel
 
   const route = readFileSync(join(SRC, "app/api/vessels/[mxeId]/documents/[docType]/route.ts"), "utf8");
   assert.match(route, /decideMarinaDocument\(/);
+});
+
+// ─── Stage 4: the join page and the owner's controls ─────────────────────
+
+test("a join code resolves to one marina; a malformed one never queries; a missing column is 'no marina'", async () => {
+  const found = fakeService({ marinas: { data: { id: "m-1", name: "Emery Cove Marina", city: "Emeryville" }, error: null } });
+  assert.deepEqual(await loadMarinaByJoinCode(found.client, "7tjy-kftk"), { id: "m-1", name: "Emery Cove Marina", city: "Emeryville" });
+  assert.deepEqual(found.seen[0].filters, [["eq", "join_code", "7TJYKFTK"]]);
+
+  const malformed = fakeService({});
+  assert.equal(await loadMarinaByJoinCode(malformed.client, "7TJY-KFT0"), null);
+  assert.equal(malformed.seen.length, 0);
+
+  const beforeMigration = fakeService({ marinas: { data: null, error: { code: "42703", message: "no column" } } });
+  assert.equal(await loadMarinaByJoinCode(beforeMigration.client, "7TJY-KFTK"), null);
+});
+
+test("the owner's list carries each grant's marina and tolerates the table not existing", async () => {
+  const listed = fakeService({
+    marina_vessel_access: { data: [{ ...ACCESS, marinas: { id: "m-1", name: "Emery Cove Marina", city: null } }], error: null },
+  });
+  const grants = await loadVesselMarinaAccess(listed.client, ["v-1"]);
+  assert.equal(grants[0].marina.name, "Emery Cove Marina");
+  assert.ok(!("marinas" in grants[0]));
+  assert.deepEqual(listed.seen[0].filters, [
+    ["in", "vessel_id", ["v-1"]],
+    ["is", "revoked_at", null],
+  ]);
+
+  const missing = fakeService({ marina_vessel_access: { data: null, error: { code: "PGRST205", message: "missing" } } });
+  assert.deepEqual(await loadVesselMarinaAccess(missing.client, ["v-1"]), []);
+  const none = fakeService({});
+  assert.deepEqual(await loadVesselMarinaAccess(none.client, []), []);
+  assert.equal(none.seen.length, 0);
+});
+
+test("changing documents re-grants through the marina's current code, and refuses if it has none", async () => {
+  const withCode = fakeService(
+    { marinas: { data: { join_code: "7TJYKFTK" }, error: null } },
+    { grant_marina_access: { data: [{ access_id: "a-1", marina_id: "m-1", created: false }], error: null } },
+  );
+  assert.deepEqual(
+    await updateMarinaAccessDocuments(withCode.client, { ownerId: "o", vesselId: "v-1", marinaId: "m-1", ...NEITHER }),
+    { ok: true, accessId: "a-1", marinaId: "m-1", created: false },
+  );
+  const noCode = fakeService({ marinas: { data: { join_code: null }, error: null } });
+  assert.deepEqual(
+    await updateMarinaAccessDocuments(noCode.client, { ownerId: "o", vesselId: "v-1", marinaId: "m-1", ...BOTH }),
+    { ok: false, refusal: "unknown_code" },
+  );
+});
+
+test("the confirm sentence promises exactly the marina view: contact always, documents only as chosen", () => {
+  const both = marinaSharingSummary("Emery Cove Marina", "Polaris", true, true);
+  assert.match(both, /contact details and emergency contact, plus your registration and insurance documents/);
+  const none = marinaSharingSummary("Emery Cove Marina", "Polaris", false, false);
+  assert.doesNotMatch(none, /registration|insurance/);
+  assert.match(marinaSharingSummary("M", "V", false, true), /plus your insurance document /);
+  // Nothing the view doesn't show.
+  for (const s of [both, none]) assert.doesNotMatch(s, /slip|lockbox|gate|HIN|address/i);
+});
+
+test("the confirm step says it doesn't expire, can be removed any time, and isn't notified", () => {
+  const form = readFileSync(join(SRC, "app/marina/join/ShareWithMarinaForm.tsx"), "utf8");
+  assert.match(form, /doesn&apos;t expire/);
+  assert.match(form, /remove it at any time/);
+  assert.match(form, /isn&apos;t notified/);
+  // And a grant is only ever sent from the confirm step.
+  assert.equal(form.match(/shareVesselWithMarina\(/g)?.length, 1);
+  assert.match(form, /confirming \?[\s\S]*shareVesselWithMarina\(/);
+});
+
+test("the join page names the marina before anything can be granted", () => {
+  const page = readFileSync(join(SRC, "app/marina/join/page.tsx"), "utf8");
+  const nameAt = page.indexOf("{marina.name}</h1>");
+  const formAt = page.indexOf("<ShareWithMarinaForm");
+  assert.ok(nameAt > 0 && formAt > nameAt, "the marina's name must render above the form");
+  assert.match(page, /marinaName=\{marina\.name\}/);
+});
+
+test("a marina move is a change of name, not of case or spacing; leaving a marina counts", () => {
+  assert.equal(marinaNameChanged("Emery Cove Marina", "emery  cove marina "), false);
+  assert.equal(marinaNameChanged("Emery Cove Marina", "Marina Plaza Harbor"), true);
+  assert.equal(marinaNameChanged("Emery Cove Marina", null), true);
+  assert.equal(marinaNameChanged(null, ""), false);
 });

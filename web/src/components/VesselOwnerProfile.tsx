@@ -19,6 +19,7 @@ import { DeleteUnactivatedVesselButton } from "@/components/vessel-edit/DeleteUn
 import { InsuranceEdit } from "@/components/vessel-edit/InsuranceEdit";
 import { SafetyEdit } from "@/components/vessel-edit/SafetyEdit";
 import { ShareSheet } from "@/components/share/ShareSheet";
+import { MarinaAccessPanel, type OwnerMarinaGrant } from "@/components/marina/MarinaAccessPanel";
 import type { BillingSummary } from "@/lib/billing-service";
 import { DECOMMISSION_REASON_LABELS, type DecommissionReason } from "@/lib/vessel-decommission";
 import { getDormantInfo } from "@/lib/vessel-dormancy";
@@ -104,12 +105,15 @@ export function VesselOwnerProfile({
   justUpgraded = false,
   hasPendingDecommissionRequest = false,
   activeTransfer = null,
+  marinaAccess = [],
 }: {
   tier: OwnerProfileTier;
   billing: BillingSummary;
   justUpgraded?: boolean;
   hasPendingDecommissionRequest?: boolean;
   activeTransfer?: ActiveTransfer | null;
+  /** Marinas that can see this vessel (docs/moxie_digital_marina_access_spec.md). */
+  marinaAccess?: OwnerMarinaGrant[];
 }) {
   const publicProps: PublicProfileProps = {
     mxe_id: tier.mxe_id,
@@ -326,6 +330,8 @@ export function VesselOwnerProfile({
             marina_phone={tier.marina_phone}
             is_liveaboard={tier.is_liveaboard}
             slip_notes={tier.slip_notes}
+            vesselName={tier.vessel_name}
+            marinaAccess={marinaAccess.map((g) => ({ id: g.id, marinaName: g.marinaName }))}
           />
         </div>
         {isMarinaStorage ? (
@@ -336,6 +342,14 @@ export function VesselOwnerProfile({
             <Row label="Slip notes" value={tier.slip_notes} />
           </dl>
         ) : null}
+        {/* Shown whatever the storage type: a grant belongs to the vessel,
+            and a boat moved onto a trailer may still have one to remove. */}
+        <MarinaAccessPanel
+          mxeId={tier.mxe_id}
+          vesselName={tier.vessel_name}
+          grants={marinaAccess}
+          dormant={dormant.isDormant}
+        />
 
         <div className="mt-12 flex items-center justify-between">
           <h2 className="font-[family-name:var(--font-display)] text-2xl font-light text-[var(--navy)]">

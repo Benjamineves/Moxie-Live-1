@@ -20,7 +20,7 @@ import { notifyOwnerDormancyResult } from "@/lib/dormancy-notify";
 // Shared with not-found.tsx, which decides between the vessel wording and
 // the generic one by asking this same question of the path.
 import { looksLikeMxeId } from "@/lib/mxe-id";
-import { resolveMarinaViewer } from "@/lib/marina-access";
+import { loadVesselMarinaAccess, resolveMarinaViewer } from "@/lib/marina-access";
 import { buildMarinaView, buildMarinaDormantView } from "@/lib/marina-view";
 import { MarinaEmergencyContact, MarinaNotSharedBanner, MarinaVesselProfile } from "@/components/marina/MarinaVesselProfile";
 
@@ -242,6 +242,14 @@ export default async function VesselPage({ params, searchParams }: Props) {
       };
     }
 
+    const marinaAccess = (await loadVesselMarinaAccess(service, [vessel.id])).map((g) => ({
+      id: g.id,
+      marinaName: g.marina.name,
+      marinaCity: g.marina.city,
+      share_registration: g.share_registration,
+      share_insurance: g.share_insurance,
+    }));
+
     return (
       <div className="min-h-screen bg-[var(--cream)]">
         <VesselOwnerProfile
@@ -250,6 +258,7 @@ export default async function VesselPage({ params, searchParams }: Props) {
           justUpgraded={sp.upgraded === "1"}
           hasPendingDecommissionRequest={hasPendingDecommissionRequest}
           activeTransfer={activeTransfer}
+          marinaAccess={marinaAccess}
         />
       </div>
     );

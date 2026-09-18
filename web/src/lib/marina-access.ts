@@ -170,6 +170,44 @@ export async function loadActiveAccess(service: ServiceClient, marinaId: string,
   return (data as ActiveAccess | null) ?? null;
 }
 
+export type MarinaSummary = { id: string; name: string; city: string | null };
+
+/**
+ * The join page's lookup: code → one marina, or null. A missing join_code
+ * column (42703) reads as "no such marina" rather than a 500, for the
+ * window between a deploy and 20261007 running.
+ */
+export async function loadMarinaByJoinCode(service: ServiceClient, input: string | null | undefined): Promise<MarinaSummary | null> {
+  const code = normalizeJoinCode(input);
+  if (!code) return null;
+  const { data, error } = await service.from("marinas").select("id, name, city").eq("join_code", code).maybeSingle();
+  if (error) {
+    if (error.code === "42703") return null;
+    throw new Error(`Failed to look up join code: ${error.message}`);
+  }
+  return (data as MarinaSummary | null) ?? null;
+}
+
+export type VesselMarinaAccess = ActiveAccess & { marina: MarinaSummary };
+
+/** Active grants on these vessels, with the marina each is for. For the owner's own pages. */
+export async function loadVesselMarinaAccess(service: ServiceClient, vesselIds: string[]): Promise<VesselMarinaAccess[]> {
+  if (vesselIds.length === 0) return [];
+  const { data, error } = await service
+    .from("marina_vessel_access")
+    .select(`${ACCESS_COLUMNS}, marinas(id, name, city)`)
+    .in("vessel_id", vesselIds)
+    .is("revoked_at", null)
+    .order("granted_at", { ascending: true });
+  if (error) {
+    if (isMissingTable(error)) return [];
+    throw new Error(`Failed to load marina access: ${error.message}`);
+  }
+  return ((data ?? []) as unknown as (ActiveAccess & { marinas: MarinaSummary | null })[])
+    .filter((row) => row.marinas)
+    .map(({ marinas, ...row }) => ({ ...row, marina: marinas! }));
+}
+
 /** The one call the scan page and the documents route make. */
 export async function resolveMarinaViewer(
   service: ServiceClient,
@@ -222,6 +260,30 @@ export async function grantMarinaAccess(
   }
   const row = (Array.isArray(data) ? data[0] : data) as { access_id: string; marina_id: string; created: boolean };
   return { ok: true, accessId: row.access_id, marinaId: row.marina_id, created: row.created };
+}
+
+/**
+ * Changing which documents an existing grant includes. There is no
+ * separate RPC for this: grant_marina_access already updates the active
+ * row's choices in place, and re-verifies ownership and that the vessel is
+ * active. The marina's CURRENT code is looked up by id, so a regenerated
+ * poster doesn't strand the owner's settings.
+ */
+export async function updateMarinaAccessDocuments(
+  service: ServiceClient,
+  input: { ownerId: string; vesselId: string; marinaId: string } & MarinaGrant,
+): Promise<GrantResult> {
+  const { data, error } = await service.from("marinas").select("join_code").eq("id", input.marinaId).maybeSingle();
+  if (error) throw new Error(`Failed to load marina: ${error.message}`);
+  const code = (data as { join_code: string | null } | null)?.join_code;
+  if (!code) return { ok: false, refusal: "unknown_code" };
+  return grantMarinaAccess(service, {
+    ownerId: input.ownerId,
+    vesselId: input.vesselId,
+    joinCode: code,
+    share_registration: input.share_registration,
+    share_insurance: input.share_insurance,
+  });
 }
 
 export type RevokeResult = { ok: true; changed: boolean } | { ok: false; refusal: RevokeRefusal };

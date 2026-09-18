@@ -213,9 +213,24 @@ stage 1 (copy) done; stage 2 (schema and core logic) done —
 migration `20261007_marina_access.sql` **is run** (confirmed live
 2026-09-18). `20261008_marina_join_code_generator.sql` **is run** (codes on all
 four marinas, including the fixture "Moxie Test Marina"). Stage 3 (the
-scan: marina view, not-shared banner, dormant emergency contact, marina
-access on the documents route) done. No grant can be made from the app
-until stage 4. Copy stays future tense until the marina side
+scan) and stage 4 (owner side: `/marina/join`, the grant action, "Marinas
+with access" on the owner's vessel page with change and remove, and the
+marina-change prompt in the storage editor) done. Remaining: stage 5 (the
+`/marina` roster, `/admin/marinas`, poster).
+
+**The poster URL is live from stage 4:** `moxieyacht.com/marina/join?code=XXXX-XXXX`.
+
+Noted during stage 4, not fixed:
+- `/dashboard/[mxeId]/shares` uses 9px labels and stat captions
+  (`text-[9px]`), the same unreadable-size class as the marketing home's
+  six sub-10px sizes.
+- Changing a grant's documents re-grants through the marina's *current*
+  join code (no separate RPC). Nothing clears a code today; if something
+  ever does, the owner can still remove that marina but not change its
+  documents, and the panel says so.
+- The signed-in join flow, the owner panel's writes and the prompt's
+  revoke have not been exercised against a real session — rendered with
+  fixtures and refused when signed out, nothing more. Copy stays future tense until the marina side
 is live.
 
 ### App copy promises email reminders that nothing sends

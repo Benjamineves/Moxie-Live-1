@@ -1,6 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import { useSectionEdit } from "@/lib/useSectionEdit";
+import { marinaNameChanged } from "@/lib/marina-copy";
+import { MarinaChangePrompt } from "@/components/marina/MarinaChangePrompt";
 import { updateVesselOwnerFields } from "@/lib/owner-actions";
 import { StorageTypePicker, isMarinaGroup, type StorageType } from "@/components/StorageTypePicker";
 import { US_STATES } from "@/lib/us-states";
@@ -30,8 +33,13 @@ export function StorageEdit({
   marina_phone,
   is_liveaboard,
   slip_notes,
+  vesselName,
+  marinaAccess = [],
 }: {
   mxeId: string;
+  vesselName: string;
+  /** Marinas that can currently see this vessel — the prompt after a marina change offers to remove them. */
+  marinaAccess?: { id: string; marinaName: string }[];
   storage_type: string | null | undefined;
   storage_description: string | null | undefined;
   storage_state: string | null | undefined;
@@ -58,12 +66,30 @@ export function StorageEdit({
     slip_notes: slip_notes ?? "",
   };
   const { editing, values, setValues, error, pending, open, cancel, save } = useSectionEdit(initial);
+  // Set only by a save that succeeded AND changed the marina, on a vessel
+  // some marina can see (spec §2.4). Lives outside `editing` because the
+  // save closes the form.
+  const [movedTo, setMovedTo] = useState<{ name: string | null } | null>(null);
+
+  const prompt =
+    movedTo && marinaAccess.length > 0 ? (
+      <MarinaChangePrompt
+        mxeId={mxeId}
+        vesselName={vesselName}
+        newMarinaName={movedTo.name}
+        grants={marinaAccess}
+        onClose={() => setMovedTo(null)}
+      />
+    ) : null;
 
   if (!editing) {
     return (
-      <button type="button" onClick={open} className={editTriggerClass}>
-        Edit
-      </button>
+      <>
+        <button type="button" onClick={open} className={editTriggerClass}>
+          Edit
+        </button>
+        {prompt}
+      </>
     );
   }
 
@@ -175,14 +201,15 @@ export function StorageEdit({
         </button>
         <button
           type="button"
-          onClick={() =>
-            save(() =>
-              updateVesselOwnerFields(mxeId, {
+          onClick={() => {
+            const nextMarinaName = marinaGroup ? values.marina_name.trim() || null : null;
+            save(async () => {
+              const result = await updateVesselOwnerFields(mxeId, {
                 storage_type: values.storage_type,
                 storage_description: marinaGroup ? null : values.storage_description.trim() || null,
                 storage_state: values.storage_state || null,
                 storage_city: values.storage_city.trim() || null,
-                marina_name: marinaGroup ? values.marina_name.trim() || null : null,
+                marina_name: nextMarinaName,
                 // Cleared once the structured city/state are set, so a
                 // stale combined "City, ST" string can't outlive an edit
                 // and shadow the new fields in the display fallback.
@@ -191,9 +218,13 @@ export function StorageEdit({
                 marina_phone: marinaGroup ? values.marina_phone.trim() || null : null,
                 is_liveaboard: marinaGroup ? values.is_liveaboard : null,
                 slip_notes: marinaGroup ? values.slip_notes.trim() || null : null,
-              }),
-            )
-          }
+              });
+              if (!result.error && marinaAccess.length > 0 && marinaNameChanged(marina_name, nextMarinaName)) {
+                setMovedTo({ name: nextMarinaName });
+              }
+              return result;
+            });
+          }}
           disabled={pending}
           className={saveButtonClass}
         >
