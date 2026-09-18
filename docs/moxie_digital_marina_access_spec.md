@@ -1,410 +1,390 @@
-# Moxie Digital — Marina operator role-gated access
+# Moxie Digital — Marina operator role-gated access (v1)
 
-**Status: specified, not built (2026-09-17).** Design settled; three items
-inside are proposals awaiting a decision and are marked as such.
+**Status: specified for v1, not built (revised 2026-09-18).** All design
+decisions are settled. Two implementation choices in §9 are proposals and
+are marked.
 
 Related: [`moxie_digital_marina_registry_spec.md`](moxie_digital_marina_registry_spec.md)
-is a *different* feature — marina records as a CRM seed, for internal
-sales use. This spec is the customer-facing role view. They meet at one
-table (`marinas`) and nowhere else.
+is a *different* feature — marina records as a CRM seed for internal
+sales. This spec is the customer-facing role view. They share the
+`marinas` table and nothing else.
+
+### What changed from the 2026-09-17 draft
+
+- **Insurance and registration *status* are gone.** The marina sees the
+  documents themselves, where the owner chose to include them (§2.2).
+- **A marina join code replaces marina matching.** No dependency on
+  `vessels.marina_id` or the free-text `marina_name` (§3).
+- **The three open questions are settled:** unilateral grant; dormant
+  vessels keep the roster row and lose the detail view *except emergency
+  contact*; granting lives with join-code entry, not the share sheet.
+- **There is no "not on Moxie" scan state.** A scanned badge is a
+  registered vessel (§6.3).
+- **Two claims in the draft were wrong.** It said the scan branch "already
+  resolves a role": it resolves owner vs public only — `?role=marina` is
+  never read and falls through to the public profile. It said `marinas`
+  was "seeded with real Bay Area marinas": the live table has **3 rows**.
 
 ---
 
 ## 1. What this is
 
 A marina account accumulates a roster of the vessels berthed there, built
-**entirely from owners opting in**. When a signed-in marina user scans the
+entirely from owners opting in. When a signed-in marina user scans the
 badge of a vessel that has shared with them, the profile renders the
-marina view.
+marina view. Same badge, different view, decided by who is holding the
+phone.
 
-Same badge, different view, decided by who is holding the phone. That is
-the patent claim doing real work rather than being asserted on a marketing
-page, and it is the reason to build this one before other role views.
-
-**The dashboard roster is the by-product, not the product.** It exists
-because access has to be listable and revocable; the moment that matters
-is the scan at the end of a dock.
+The roster is the by-product. The moment that matters is the scan.
 
 ---
 
-## 2. Decisions already made
-
-Recorded with the reasoning, because the reasoning is the part that gets
-lost. Not open for re-litigation during the build.
+## 2. Decisions
 
 ### 2.1 Verification is dissolved, not solved
 
-There is **no credential check and no verified-marina registry**. The
-owner decides who their harbormaster is.
+No credential check, no verified-marina registry. The owner decides who
+their harbormaster is. If they share with the wrong party they have
+exposed one boat — their own. A verified registry that is wrong once
+exposes every vessel at that marina.
 
-Every "verify the marina" design ends in the same place: someone has to
-adjudicate who really runs a marina, on what evidence, with what appeal.
-That is an operations department, not a feature. Dissolving it costs
-almost nothing, because the blast radius of a mistake is bounded: **if an
-owner shares with the wrong party, they have exposed one boat — their
-own.** Compare a verified registry, where being wrong once exposes every
-vessel at that marina.
+### 2.2 Field set: contact, emergency contact, and documents — not status
 
-This is also why the field set is fixed (§2.2). A fixed set is what keeps
-the worst case to "the wrong person learned my phone number and insurance
-expiry", which is roughly what handing over a business card at the dock
-office already does.
+The marina view shows:
 
-### 2.2 Fixed field set, not owner-configurable
+| row | source | if empty |
+|---|---|---|
+| **Owner contact** — name, phone, email | same sources as `filterVesselForRole`'s owner fields | each missing item says "Not provided" |
+| **Emergency contact** — name, phone, relationship | `emg_name`, `emg_phone`, `emg_relationship` | **"No emergency contact on file"** — the row is never hidden |
+| **Registration document** | `doc_registration_url`, if the owner included it | see below |
+| **Insurance document** | `doc_insurance_url`, if the owner included it | see below |
 
-The marina view always shows exactly:
+**Why documents, not status.** A typed expiry date is a self-attested
+claim the harbormaster can't verify; an owner whose cover has lapsed can
+type whatever the marina requires. Harbormasters want the certificate on
+file. Status is a tool for the owner managing their own renewals; evidence
+is what a third party needs.
 
-- **owner contact** — name, phone, email
-- **emergency contact** — name, phone, relationship
-- **insurance status** — carrier and expiry
-- **registration status** — number and expiry
+**Each document row has three states, all stated plainly:**
 
-One decision for the owner ("share with my marina: yes"), one known answer
-for the harbormaster ("this is what a shared boat shows me"). A
-configurable set means the harbormaster never knows whether a missing
-field is absent or withheld, which makes the whole view untrustworthy at
-exactly the moment it is needed.
+- *Included and on file* — "View" opens the document. If the owner entered
+  an expiry (`reg_expiry` / `ins_expiry`) it shows beside it, **labelled
+  "Expiry entered by owner"** — same principle as `logged_at` on service
+  records: we can't verify the claim, but we can be honest about its
+  source.
+- *Included, nothing uploaded* — "No insurance document on file." That is
+  the nudge, delivered by the harbormaster rather than by us.
+- *Not included* — "Not shared with you." Shown rather than hidden, so the
+  harbormaster never has to guess whether a missing row is absent or
+  withheld. (The draft's §2.2 reasoning, kept.)
 
-**The existing marina share preset does not match this. See §3 — this is
-the largest single piece of work in the build, and it is not wiring.**
+**Nothing else.** Not slip notes, not liveaboard status, not the lockbox
+`access_note`, not HIN or USCG numbers, not the structured insurance
+fields. This is **its own projection** (`lib/marina-view.ts`), not the
+share filter and not `filterVesselForRole("marina")`, which is wrong in
+both directions (no emergency contact; leaks `slip_notes`,
+`is_liveaboard`, `ins_carrier`). That branch is reduced to calling the new
+projection so there is one answer to "what does a marina see".
 
 ### 2.3 Account per marina, not per person
 
-Access is granted to a **marina**, and staff attach to that marina
-(§6.2).
-
-Larger marinas have several staff and real turnover. A personal login
-would mean a departing harbormaster walks away with a populated directory
-of every tenant's contact details and insurance dates, and the owners who
-granted it have no way to see that, let alone stop it. Per-marina
-revocation is also what an owner expects the control to mean: they think
-they are sharing with *the marina*.
+Access is granted to a marina; staff attach to it (§5.2). A departing
+harbormaster must not walk away with a tenant directory.
 
 ### 2.4 No expiry — revocation only
 
-Marina access **never expires**. It ends when the owner revokes it, and
-at ownership transfer (§5.1).
+Access ends when the owner revokes it, or when the vessel changes owner
+(§4.1). No expiry: an expiring roster decays invisibly and a wrong
+directory is still trusted.
 
-An expiring roster decays invisibly. The harbormaster cannot tell which
-boats dropped off — absence looks identical to "never shared" — and the
-owner has nothing prompting them to re-share, because nothing happened to
-them. The directory becomes quietly wrong, which is worse than not having
-one: a wrong directory is still trusted.
+**Marina-change prompt.** When an owner edits `marina_name` on a vessel
+with active marina access, the save offers: *"You've changed Polaris's
+marina. Remove Emery Cove Marina's access?"* A prompt, not an automatic
+revocation — a typo fix must not silently cut access.
 
-**Instead, prompt at the moment the relationship actually ends.** When an
-owner changes the vessel's `marina_name` (or its `marina_id`) and marina
-access is active, ask whether to revoke the old marina's access. That is
-the real signal — a boat that moved berth — and it arrives exactly when
-the owner is already thinking about it.
+### 2.5 Unilateral grant, silent revocation
 
-### 2.5 Revocation is silent
-
-No notification to the marina. The roster simply refreshes and the vessel
-is gone.
-
-The marina is not a paying customer and did not ask for the row. Per-tenant
-churn notifications would be noise arriving weekly at a busy marina, and
-the only action they could prompt — "ask the owner why" — is a
-conversation the marina can have at the dock without our help. The owner
-is not informing a counterparty; they are withdrawing their own data.
+No accept step and no notification either way. The owner's confirmation
+copy carries the honesty: **"Emery Cove Marina will see these details when
+their staff scan your badge. They are not notified."** Revocation simply
+removes the vessel from the roster.
 
 ---
 
-## 3. The field set does not exist yet
+## 3. The join code
 
-**Checked against the code, 2026-09-17.** Neither existing definition
-matches §2.2, and the gaps are not cosmetic.
+Each marina account gets a code. Ben creates the account when he signs a
+marina up and leaves a poster for the office; a tenant enters the code to
+grant access. **The code resolves directly to one `marinas` row**, so there
+is nothing to match, and vessels whose `marina_id` is null (nearly all of
+them) are not blocked.
 
-### 3.1 `PRESET_FLAGS.marina` in `lib/share-filter.ts`
+### 3.1 Shape
 
-```
-marina: { location: true, contact: true, docs: false, ownership: false, access: true, service: false }
-```
+- `marinas.join_code` — 8 characters from an alphabet without look-alikes
+  (no `0 O 1 I L`), shown as `XXXX-XXXX`, case-insensitive on entry,
+  unique, **stored in plain text**.
+- Plain text, unlike the transfer link's `token_hash`, because the
+  property is different. A transfer token is a secret that moves a boat;
+  a join code is printed on a poster in a public office. Hashing it would
+  only stop us re-printing the poster. What protects the owner is §3.3.
+- Regenerating a code (a poster went somewhere odd) changes the code only.
+  Existing grants are keyed on `marina_id` and are unaffected.
 
-Resolved through `filterVesselForShare`, that yields: marina name/city,
-storage type and description, slip number, marina phone, **owner name and
-phone**, and the share's `access_note`.
+### 3.2 Flow — following the transfer-link pattern
 
-| §2.2 requires | preset gives | gap |
-|---|---|---|
-| owner contact | name, phone | **no email** |
-| emergency contact | — | **no flag exposes `emg_*` at all** |
-| insurance status | — | **no flag exposes `ins_carrier` / `ins_expiry` at all** |
-| registration status | — | needs `ownership: true`, which also discloses HIN, USCG doc number and official number |
+`/transfer/accept?token=` is the model: resolve server-side, preview
+before any write, round-trip through sign-in, confirm with a button, and
+let the RPC re-verify everything.
 
-It also *adds* `access_note` — the lockbox or gate code — which is not in
-the fixed set and should not be.
+1. **Entry.** `/marina/join` — a code field. The poster also carries a QR
+   to `/marina/join?code=XXXX-XXXX`, which pre-fills it.
+2. **Resolve and preview.** An unknown code gets a plain terminal message
+   ("That code doesn't match a marina on Moxie. Check the poster, or ask
+   the marina office."). A known one shows **the marina's name and city
+   before anything else**.
+3. **Sign in** if needed, returning to the same URL (`next=`), as the
+   transfer page does.
+4. **Choose.** The owner's active vessels, and for each chosen vessel two
+   checkboxes: *Include registration document*, *Include insurance
+   document* — each noting whether a document is actually on file, so the
+   owner sees the harbormaster's "No insurance document on file" before
+   the harbormaster does. Contact and emergency contact are always
+   included; that is what the grant is.
+5. **Confirm** with the §2.5 copy. Server action → `grant_marina_access`
+   RPC, which re-verifies ownership, that the vessel is active, and that
+   the code still resolves.
 
-The insurance gap is structural, not an oversight. `filterVesselForShare`
-deliberately excludes the structured insurance fields under every flag:
-`docs` releases the uploaded *files*, and a comment in that function
-records that `ins_carrier`/`ins_policy` "stay excluded regardless of this
-flag". Marina access needs insurance **status** — carrier and expiry, not
-the policy document. That is a field group share links have never had.
+Re-entering a code for a vessel that already has active access **updates
+the two document choices** rather than creating a second row (the
+partial unique index enforces one active row per marina–vessel pair).
 
-### 3.2 `filterVesselForRole("marina")` in `lib/vessel-service.ts`
+### 3.3 What a wrong or guessed code can do
 
-Closer, and the roadmap has been treating it as the definition of the
-marina view. It gives owner name/phone/email, `ins_carrier`, `ins_expiry`,
-`reg_number`, `reg_expiry`, plus slip number, marina phone, `is_liveaboard`
-and `slip_notes`.
-
-Still wrong in both directions: **no emergency contact**, and it adds
-`slip_notes` and `is_liveaboard`, which are the owner's private notes
-about their own berth.
-
-### 3.3 What the build must do
-
-Introduce the marina field set as **its own definition**, not a preset on
-the share flags. Recommended: a `MARINA_VIEW_FIELDS` projection beside
-`filterVesselForRole`, with `filterVesselForRole("marina")` reduced to
-calling it, so there is exactly one answer to "what does a marina see".
-
-Then update the marketing copy's planned bullets, which currently promise
-what `filterVesselForRole` shows — they will be right about insurance and
-registration and silent about emergency contact.
+Grant one owner's own data to a marina they didn't intend. Step 2's name
+preview is what stops that; it is the whole defence and it is enough,
+because the blast radius is the owner's own boat (§2.1). A guessed code
+reveals a marina's name and city — public facts about a business.
 
 ---
 
-## 4. What exists, and what is new
+## 4. Interactions
 
-Asked directly, so: **most of the auth and data scaffolding exists; the
-relationship object does not.**
+### 4.1 A change of owner revokes marina access — required
 
-### 4.1 Already in place
+Marina access carries the **previous owner's** contact, emergency contact
+and documents. It must not survive a transfer.
 
-| | |
-|---|---|
-| `marinas` table | id, name, city, state, region, phone — seeded with real Bay Area marinas |
-| `user_role` enum | already includes `marina_operator` |
-| `users.marina_id` | FK to `marinas`, commented "set if marina_operator" |
-| a demo operator | `demo-marina@moxieyachting.com`, role `marina_operator`, attached to Emery Cove |
-| `vessels.marina_id` | the join `filterVesselForRole` already reads for marina name |
-| `ProfileRole` | `"public" \| "owner" \| "marina" \| "coastguard"`, accepted by `/api/vessels/[mxeId]` |
-| the scan branch | `[mxeId]/page.tsx` already resolves a role at scan time and renders accordingly |
+`complete_ownership_transfer` is one path that changes `vessels.owner_id`;
+the admin reversal is another. See §9.1 for how this is enforced.
 
-So the plumbing for "signed-in user with a role sees a different view" is
-built and unused. Not vapour — but also never exercised, so expect it to
-be wrong in small ways on first contact.
+### 4.2 Dormant vessels (lapsed, locked)
 
-### 4.2 What is new
+The roster row stays, shown as **"Access paused"**. The detail view is
+withheld **except emergency contact**, which stays visible. A marina's
+need to reach someone is highest when the owner has disengaged; gating a
+phone number behind billing is wrong for a safety-adjacent product.
 
-**Today a share is an anonymous token.** `vessel_shares` holds a
-`token_hash`, field flags, an optional expiry and `revoked_at`. There is
-no account on the other end — whoever holds the link is the audience, and
-the row cannot answer "who is this shared with" beyond a free-text label.
+Owner contact and documents are withheld while dormant — documents
+already are for the owner too (dormant identity spec §3, enforced in the
+documents route).
 
-A marina roster needs the opposite: a **named, persistent relationship
-between two accounts**, with no token and no link.
+On scan, a marina user with access sees the existing dormant screen plus
+an emergency-contact block. Everyone else sees the dormant screen as now.
 
-Proposed new table:
+### 4.3 Decommissioned vessels
+
+Excluded from the roster and the marina view by reading
+`lifecycle_status`. **No revocation write** — this avoids touching the
+decommission function, and a decommissioned vessel cannot come back to a
+berth.
+
+### 4.4 Pending activation
+
+Unchanged: the existing "Not yet active" screen. A grant can't exist —
+`grant_marina_access` refuses vessels whose `qr_status` isn't active.
+
+### 4.5 The existing `marina` share preset
+
+Left alone. It is a share-link preset producing a URL, not this feature,
+and it is not a route to marina access. Its name will confuse; renaming it
+is out of scope for v1.
+
+---
+
+## 5. The marina side
+
+### 5.1 Creating a marina account
+
+By Ben, by hand, on request. No self-serve signup. An admin page
+(`/admin/marinas`) lists marinas, creates one, and generates or
+regenerates its join code, with a printable poster (code, QR, one line of
+instruction).
+
+### 5.2 Attaching staff
+
+A staff member signs up for an ordinary Moxie account; an admin attaches
+it to the marina by setting `users.marina_id`. All staff see the same
+roster; no per-staff permissions. A leaver is detached by clearing
+`marina_id`. **No Supabase Auth writes** — accounts are created by the
+people who use them. Staff-managed invitations are not in v1.
+
+### 5.3 The roster (`/marina`)
+
+- Search by vessel name, MXE ID or owner name.
+- One row per vessel: name, MXE ID, owner name, and three plain markers —
+  emergency contact, registration, insurance — each *on file*, *missing*
+  or *not shared*. "Access paused" for dormant vessels.
+- Default sort: rows with something missing first, then alphabetical.
+- Filter by marker ("every vessel with no insurance document").
+- Paginated past 100.
+- No map, no occupancy. The marina's slip system is theirs, not ours.
+
+### 5.4 Document viewing
+
+The owner's documents route, `/api/vessels/[mxeId]/documents/[docType]`,
+gains a **second audience**: a signed-in user whose `marina_id` has an
+active `marina_vessel_access` row for the vessel, with that document
+included, for `registration` or `insurance` only. The owner path is
+unchanged. The dormant suspension and the tier lock apply to both
+audiences in the same place. The decision lives in a shared helper
+(`lib/marina-access.ts`), not in the route. Viewed in the existing
+`DocumentViewerModal`.
+
+---
+
+## 6. The scan
+
+### 6.1 Resolving the viewer
+
+The scan branch in `[mxeId]/page.tsx` today resolves `owner` or `public`.
+It gains `marina`: a signed-in user with a `marina_id` whose marina has
+active access to this vessel. `ScanSuccess` then lands on `?role=marina`.
+
+`?role=marina` is **not authorization** — the page re-derives it on every
+render, exactly as `?role=owner` does. Without active access it renders
+the public profile.
+
+### 6.2 What renders
+
+| scanned vessel | marina user with access | marina user without access | anyone else |
+|---|---|---|---|
+| pending activation | "Not yet active" | "Not yet active" | "Not yet active" |
+| dormant (lapsed / locked) | dormant screen **+ emergency contact** | dormant screen | dormant screen |
+| decommissioned | decommissioned screen | decommissioned screen | decommissioned screen |
+| active | **marina view** | **public profile + banner** | public profile |
+
+### 6.3 Not shared with this marina
+
+There is no "not on Moxie" state: if a badge was scanned, the vessel is
+registered. The only distinction is shared with this marina or not. The
+banner, shown only to a signed-in marina user:
+
+> **Not shared with Emery Cove Marina.** The owner hasn't shared their
+> contact details with you. Ask them to enter your marina's code.
+
+It discloses one fact the public profile doesn't: that *this* marina has
+no access — a fact about the marina's own relationships. It says "not
+you", never anything about other marinas.
+
+---
+
+## 7. Data
 
 ```
+marinas.join_code         TEXT UNIQUE          -- null until generated
+
 marina_vessel_access
-  id           UUID PK
-  marina_id    UUID NOT NULL REFERENCES marinas(id)
-  vessel_id    UUID NOT NULL REFERENCES vessels(id) ON DELETE CASCADE
-  granted_by   UUID NOT NULL REFERENCES users(id)   -- the owner at grant time
-  granted_at   TIMESTAMPTZ NOT NULL DEFAULT now()
-  revoked_at   TIMESTAMPTZ                          -- NULL = active
-  revoked_by   UUID REFERENCES users(id)
-  revoked_reason TEXT                               -- 'owner' | 'transfer' | 'marina_changed'
-  UNIQUE (marina_id, vessel_id) WHERE revoked_at IS NULL
+  id                 UUID PK
+  marina_id          UUID NOT NULL REFERENCES marinas(id)
+  vessel_id          UUID NOT NULL REFERENCES vessels(id) ON DELETE CASCADE
+  granted_by         UUID NOT NULL REFERENCES users(id)
+  share_registration BOOLEAN NOT NULL
+  share_insurance    BOOLEAN NOT NULL
+  granted_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+  updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
+  revoked_at         TIMESTAMPTZ               -- NULL = active
+  revoked_reason     TEXT CHECK (revoked_reason IN ('owner', 'owner_changed'))
+
+UNIQUE INDEX (marina_id, vessel_id) WHERE revoked_at IS NULL
 ```
 
-This is deliberately **not** a `vessel_shares` row with a marina column
-bolted on. The two objects differ in every property that matters: no
-secret, no expiry, no view counting, revocation semantics that differ
-(§2.4, §2.5), and a field set that is fixed rather than per-share.
-Overloading `vessel_shares` would mean every existing share code path
-grows a "but not if it's a marina" branch.
+RLS on, no policies: every read and write goes through the service role
+behind the checks in §5.4 and the RPCs. Revoked rows are kept, not
+deleted — they are the history of who had access.
 
-**How much of this is wiring?** The scan path, the role resolution and the
-marina user account are wiring. The field set (§3), this table, the
-dashboard (§6.3) and the transfer interaction (§5.1) are new.
+Functions (new, each with the revoke-from-`PUBLIC`/grant-to-`service_role`
+pattern and a guard block, per CLAUDE.md):
 
-### 4.3 Is there an "accept" step? — **decision needed**
-
-The prompt frames this as the marina *accepting* a share. Two shapes:
-
-- **Unilateral grant (recommended).** The owner shares; the row is
-  created active; the vessel appears in the marina's roster. There is
-  nothing for the marina to decide — they cannot meaningfully decline a
-  tenant's contact details, and an unaccepted queue is just a second
-  inbox for a party who is not a customer.
-- **Grant then accept.** The row starts `pending`; the marina confirms.
-  Buys one thing: proof the marina actually uses Moxie before the owner
-  believes they are covered. Costs a state, a queue and a way for an
-  owner's share to sit unnoticed forever.
-
-Recommendation: unilateral, with the owner's confirmation copy carrying
-the honesty instead — "This marina will see your details next time they
-scan your badge. They are not notified."
+- `grant_marina_access(p_owner_id, p_vessel_id, p_join_code, p_share_registration, p_share_insurance)`
+  — refuses with distinct `MX0xx` codes for: unknown code, not the owner,
+  vessel not active. Inserts or updates the active row.
+- `revoke_marina_access(p_owner_id, p_access_id)` — refuses if not the
+  owner; guarded on `revoked_at IS NULL`, so only the changing call
+  reports a change.
 
 ---
 
-## 5. Interactions with things that already exist
+## 8. Build order
 
-### 5.1 Ownership transfer must revoke marina access — **required**
-
-`complete_ownership_transfer` clears the seller's insurance, boater card,
-fishing licence, contact details and mailing address, and revokes every
-`vessel_shares` row. Marina access is exactly the same class of data: the
-**previous owner's** contact and emergency details.
-
-It must revoke `marina_vessel_access` for the vessel in the same
-statement, with `revoked_reason = 'transfer'`. The buyer re-grants if they
-want to, which is correct — the buyer may not even berth there.
-
-⚠️ **Build note.** That function's body must be taken from
-`pg_get_functiondef` against the live database, never from a migration
-file or from memory. Rebuilding it from a file is how `20261005` shipped a
-body that silently dropped the webhook-idempotency guard and the whole
-`ownership_history` block. See CLAUDE.md, "Replacing a function body".
-
-### 5.2 Dormant and lapsed vessels — **decision needed**
-
-A vessel goes dormant when the owner's subscription lapses or their vessel
-count exceeds the plan. Two defensible answers:
-
-- **Suspend the marina view**, matching how document access is suspended
-  for dormant vessels (dormant identity spec §3). Consistent, and keeps
-  a lapsed account from continuing to deliver value.
-- **Keep it**, on the grounds that a marina's need to reach an owner is
-  *highest* when that owner has stopped paying attention — an unpaid slip
-  and an unpaid subscription tend to be the same boat.
-
-Recommendation: **suspend the detail view, keep the roster row**, shown as
-"Access paused". The marina learns there is something to chase without
-being handed data from a lapsed account, and the owner has a reason to
-come back. Flagged rather than settled because it trades a real safety
-argument against a consistency one.
-
-### 5.3 Decommissioned vessels
-
-Drop out of the roster entirely. A decommissioned vessel is retired, its
-identity preserved but its berth gone; leaving it in a slip directory is
-simply wrong. Revoke with `revoked_reason = 'decommissioned'` so the
-history is legible.
-
-### 5.4 The marina-change prompt (§2.4)
-
-Where `marina_name` / `marina_id` is edited on a vessel with active marina
-access, the save path offers: *"You've moved Polaris to Marina Plaza
-Harbor. Revoke Emery Cove Marina's access?"* Default is **revoke**; the
-owner can decline.
-
-This is a prompt, not an automatic revocation — a marina name can be
-corrected for a typo, and silently cutting access on a spelling fix is the
-invisible-decay failure §2.4 exists to avoid, pointed the other way.
+1. Migration file (not executed): `join_code`, table, index, two RPCs, the
+   §9.1 revocation.
+2. `lib/marina-view.ts` projection and `lib/marina-access.ts` helper, with
+   tests. The app tolerates the table not existing yet (`PGRST205` /
+   `42P01`) as "no marina access" — a missing table must not 500 a public
+   scan.
+3. Documents route second audience.
+4. Scan resolution, `?role=marina` branch, banner, dormant emergency
+   contact.
+5. `/marina/join` and the grant action.
+6. Owner's vessel page: marinas with access, change documents, revoke;
+   marina-change prompt.
+7. `/marina` roster.
+8. `/admin/marinas` and the poster.
 
 ---
 
-## 6. The marina side
+## 9. Proposals for review
 
-### 6.1 Creating a marina account
+### 9.1 Enforce the transfer revocation with a trigger, not by editing `complete_ownership_transfer`
 
-**By us, by hand, on request.** No self-serve marina signup.
+A trigger on `vessels` — `AFTER UPDATE OF owner_id`, when the value
+actually changes — revokes the vessel's active marina access with
+`revoked_reason = 'owner_changed'`.
 
-There is no verification step (§2.1), so a self-serve flow would let
-anyone create "Emery Cove Marina" and wait for a tenant to mis-click. Us
-creating the account is not verification either — but it puts a person in
-the loop at the only moment where a mistake is cheap to catch, and the
-volume is low enough for a long time that this is not a bottleneck.
+It covers every path that changes an owner: `complete_ownership_transfer`,
+the admin reversal, and anything added later. Adding a statement to
+`complete_ownership_transfer` covers one. It also means **no function body
+is replaced**, which removes the risk CLAUDE.md records from `20261005`.
 
-Concretely: an admin creates the `marinas` row (many already exist) and a
-`users` row with `role = 'marina_operator'` and `marina_id` set. That is
-two inserts and no new mechanism.
+If you'd rather it live in the function: I'd need its `pg_get_functiondef`
+**after `20261006` has run**, because that migration replaces the body and
+this one must be built from whatever is live when it runs.
 
-### 6.2 Attaching staff
+### 9.2 Staff membership is `users.marina_id`, not `role = 'marina_operator'`
 
-Additional staff are additional `users` rows with the same `marina_id`.
-They all see the same roster; there are no per-staff permissions.
-
-Removing a leaver is deleting or demoting their user row, which is exactly
-the behaviour §2.3 is protecting: access belongs to the marina, so it
-survives the person and ends with the account.
-
-**Not in v1:** marina-managed staff invitations. Adding a colleague means
-asking us. This will be the first thing a real marina asks for, and it is
-the right thing to defer until one has actually used the roster.
-
-### 6.3 The dashboard at 100+ vessels
-
-A roster is a list, and the failure mode is a wall of boats. At 100+:
-
-- **Search first**, by vessel name, MXE ID or owner name. The harbormaster
-  almost always arrives knowing which boat they mean.
-- **One row per vessel**: name, MXE ID, slip number, owner name, and two
-  status chips — insurance and registration — each *current*, *expiring*,
-  or *expired*. The chips are the reason to open the page at all rather
-  than the phone book.
-- **Default sort: attention first** — expired, then expiring, then the
-  rest alphabetically. A flat alphabetical list at 300 boats tells a
-  harbormaster nothing.
-- **Filter by status**, so "show me every expired insurance" is one click.
-  That is the marina's actual recurring job.
-- **Pagination or virtualisation past ~100 rows.**
-- **No map, no occupancy view.** Slip occupancy was cut from the marketing
-  copy for being in no spec and no code; it stays cut here. The marina
-  knows who is in which slip — that is their system of record, not ours.
-
-### 6.4 What a marina user sees scanning a vessel that has not shared
-
-Four outcomes, and the point is that **three and four are distinguishable**
-so every scan becomes a prompt to ask the tenant.
-
-| scan | what renders |
-|---|---|
-| not a Moxie badge / unknown token | the existing badge-not-recognised 404 |
-| Moxie badge, vessel not yet activated or decommissioned | the existing pending / no-longer-active states |
-| **Moxie badge, active, not shared with this marina** | **the public profile, plus a marina-only banner** |
-| Moxie badge, active, shared with this marina | the marina view |
-
-The banner, shown only to a signed-in marina user:
-
-> **Not shared with Emery Cove Marina.** This vessel is registered with
-> Moxie, but its owner hasn't shared their contact and insurance details
-> with you. Ask them to add you from their dashboard.
-
-**Leak analysis.** It discloses two things. First, that the vessel is
-registered with Moxie — which the badge physically on the hull already
-tells anyone who looks, and which the public profile already confirms.
-Second, that this owner has not shared with *this marina* — a fact about
-the marina's own relationships, not about the owner's data. Nothing in the
-banner is unavailable to an anonymous scanner except the second fact,
-which is the marina's own.
-
-What it deliberately does **not** do is tell the marina anything about
-*other* marinas the vessel has shared with, or that the vessel's owner
-exists as a named person. It says "not you", never "not anyone".
+`users.role` is a single value. A harbormaster who also owns a boat —
+likely common — can't be both `owner` and `marina_operator`. Deciding
+membership by `marina_id IS NOT NULL` lets one account be both, and leaves
+`role` meaning what it means now. The live demo account
+(`demo-marina@moxieyachting.com`) has both set, so it works either way.
 
 ---
 
-## 7. Open questions for the build
+## 10. Noticed, out of scope
 
-1. **Accept step or unilateral grant** (§4.3). Recommendation: unilateral.
-2. **Dormant vessels: suspend or keep** (§5.2). Recommendation: suspend
-   the detail view, keep the roster row as "Access paused".
-3. **Where the owner grants it.** The share sheet is the obvious home, but
-   marina access is not a share link — no token, no expiry, different
-   revocation. It may belong as its own control on the vessel page
-   ("Share with your marina") rather than a fifth preset in a sheet whose
-   every other option produces a URL.
-4. **Which marina.** Granting requires picking a `marinas` row. Vessels
-   today mostly carry free-text `marina_name` with `marina_id` null — the
-   marina registry spec §5 flags the same migration problem. If an owner's
-   marina has no account, the control should say so plainly rather than
-   offering a grant that goes nowhere.
-
----
-
-## 8. Noticed, out of scope
-
-- **`coastguard` is still in `ProfileRole` and `user_role`.** The audience
-  was removed from the marketing home 2026-09-17. Harmless, but nothing in
-  the code will now tell you it is unused.
-- **`demo-marina@moxieyachting.com` has a placeholder `users.id`** (the
-  owner-id mismatch noted in the project memory). It is the natural first
-  test account for this feature and will need checking before it is used
-  as one.
+- `coastguard` is still in `ProfileRole` and `user_role`; the audience left
+  the marketing home 2026-09-17.
+- `demo-marina@moxieyachting.com` has a placeholder `users.id`
+  (`…0010`) — the owner-id mismatch in project memory. Check before using
+  it as the test account.
+- Granting could fill `vessels.marina_id` as a side effect, gradually
+  fixing the free-text `marina_name` problem. Not in v1: it changes what
+  the public profile shows.
+- **The live marketing home now plans something this spec dropped.**
+  `MoxieMarketingHome.tsx:242–243` says marina staff will see "insurance
+  and registration status" and lists "Planned: insurance and registration
+  status". Its "today, an owner can share those details with their marina
+  through a Trusted Contact link" was already an overclaim: no share flag
+  exposes insurance status (`filterVesselForShare` excludes it under every
+  flag). Needs a copy decision; not changed here.

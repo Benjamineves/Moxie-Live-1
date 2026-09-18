@@ -3,7 +3,7 @@
 Open items and what depends on what. Update as items close; add what
 turns up. Where this disagrees with the code, the code wins.
 
-_Last updated 17 September 2026_
+_Last updated 18 September 2026_
 
 ---
 
@@ -202,14 +202,14 @@ management" was dropped: it was in no spec and no code.
 `coastguard`. Fine for a paused feature, but nothing in the code will flag
 the copy if it drifts back.
 
-**Spec written 2026-09-17:
+**Spec revised for v1 2026-09-18:
 [`moxie_digital_marina_access_spec.md`](moxie_digital_marina_access_spec.md).**
-Not built. It changes the sentence above: the planned bullets should match
-the spec's fixed field set (§2.2), not `filterVesselForRole`'s `marina`
-branch, which is wrong in both directions — no emergency contact, and it
-leaks `slip_notes` and `is_liveaboard`. Three items in the spec await a
-decision before building (accept step, dormant vessels, where the owner
-grants it).
+Not built. Documents at the owner's option replace insurance/registration
+status; a per-marina join code replaces marina matching. The planned
+marketing bullets (`MoxieMarketingHome.tsx:242–243`) still promise
+"insurance and registration status", which is no longer the plan, and
+their "available now" line overclaims what a share link carries — needs a
+copy decision.
 
 ### App copy promises email reminders that nothing sends
 The Full plan list and badge checkout both mention email reminders. The
