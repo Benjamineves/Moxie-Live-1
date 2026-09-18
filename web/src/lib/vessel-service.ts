@@ -60,7 +60,7 @@ export function toPreview(v: VesselRecord): VesselPreview {
 }
 
 /** Field visibility per technical handoff v1 (subset implemented for P0). */
-export function filterVesselForRole(v: VesselRecord, role: ProfileRole): Record<string, unknown> {
+export function filterVesselForRole(v: VesselRecord, role: Exclude<ProfileRole, "marina">): Record<string, unknown> {
   // Prefer the vessel's own free-text marina_name/marina_city (self-serve
   // intake, build spec §3 addendum). Fall back to the marina_id join only
   // for vessels seeded before that column existed (MXE-00001/MXE-00002),
@@ -148,21 +148,15 @@ export function filterVesselForRole(v: VesselRecord, role: ProfileRole): Record<
     };
   }
 
-  if (role === "marina") {
-    return {
-      ...basePublic,
-      slip_number: v.slip_number,
-      marina_phone: v.marina_phone,
-      is_liveaboard: v.is_liveaboard,
-      slip_notes: v.slip_notes,
-      owner_name: v.owner_name,
-      owner_phone: v.owner_phone,
-      owner_email: v.owner_email,
-      ins_carrier: v.ins_carrier,
-      ins_expiry: v.ins_expiry,
-      reg_number: v.reg_number,
-      reg_expiry: v.reg_expiry,
-    };
+  if ((role as ProfileRole) === "marina") {
+    // Not a role this function can answer. What a marina sees depends on
+    // what the owner granted (which documents), so it is built by
+    // buildMarinaView(vessel, grant) in lib/marina-view.ts — the one
+    // definition (docs/moxie_digital_marina_access_spec.md §2.2). The old
+    // shape here was wrong in both directions: no emergency contact, and it
+    // leaked slip_notes, is_liveaboard and ins_carrier. Excluded from the
+    // parameter type too; this throw is for anything that gets past it.
+    throw new Error("filterVesselForRole does not build the marina view; use buildMarinaView with the grant.");
   }
 
   // coastguard
