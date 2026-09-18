@@ -3,7 +3,15 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { buildMarinaDormantView, buildMarinaView, type MarinaViewSource } from "./marina-view.ts";
+import {
+  buildMarinaDormantView,
+  buildMarinaView,
+  buildRosterRow,
+  matchesRosterQuery,
+  rankRoster,
+  type MarinaViewSource,
+  type RosterRow,
+} from "./marina-view.ts";
 import { marinaNameChanged, marinaSharingSummary } from "./marina-copy.ts";
 import {
   JOIN_CODE_ALPHABET,
@@ -13,6 +21,7 @@ import {
   grantMarinaAccess,
   loadActiveAccess,
   loadMarinaByJoinCode,
+  loadMarinaRoster,
   loadVesselMarinaAccess,
   normalizeJoinCode,
   updateMarinaAccessDocuments,
@@ -49,6 +58,7 @@ const VESSEL = {
   year: 1998,
   vessel_type: "Sailboat",
   photo_url: null,
+  slip_number: "B12",
   owner_name: "Owner Fixture",
   owner_phone: "555-0100",
   owner_email: "owner@example.test",
@@ -99,6 +109,7 @@ test("the marina view is exactly the spec's field set", () => {
     "owner",
     "photo_url",
     "registration",
+    "slip",
     "vessel_name",
     "vessel_type",
     "year",
@@ -327,7 +338,7 @@ test("RPC refusals map to typed results; anything else throws", async () => {
 // ─── One path ─────────────────────────────────────────────────────────────
 
 test("only lib/marina-access.ts touches marina_vessel_access or its RPCs", () => {
-  const pattern = /from\(\s*["']marina_vessel_access["']|rpc\(\s*["'](grant|revoke)_marina_access["']/;
+  const pattern = /from\(\s*["']marina_vessel_access["']|rpc\(\s*["']((grant|revoke)_marina_access|generate_marina_join_code)["']/;
   const callers = sourceFiles(SRC)
     .filter((file) => pattern.test(readFileSync(file, "utf8")))
     .map((file) => relative(SRC, file));
@@ -405,12 +416,12 @@ test("changing documents re-grants through the marina's current code, and refuse
 
 test("the confirm sentence promises exactly the marina view: contact always, documents only as chosen", () => {
   const both = marinaSharingSummary("Emery Cove Marina", "Polaris", true, true);
-  assert.match(both, /contact details and emergency contact, plus your registration and insurance documents/);
+  assert.match(both, /contact details, emergency contact and slip number, plus your registration and insurance documents/);
   const none = marinaSharingSummary("Emery Cove Marina", "Polaris", false, false);
   assert.doesNotMatch(none, /registration|insurance/);
   assert.match(marinaSharingSummary("M", "V", false, true), /plus your insurance document /);
   // Nothing the view doesn't show.
-  for (const s of [both, none]) assert.doesNotMatch(s, /slip|lockbox|gate|HIN|address/i);
+  for (const s of [both, none]) assert.doesNotMatch(s, /slip notes|lockbox|gate|HIN|address/i);
 });
 
 test("the confirm step says it doesn't expire, can be removed any time, and isn't notified", () => {
@@ -436,4 +447,79 @@ test("a marina move is a change of name, not of case or spacing; leaving a marin
   assert.equal(marinaNameChanged("Emery Cove Marina", "Marina Plaza Harbor"), true);
   assert.equal(marinaNameChanged("Emery Cove Marina", null), true);
   assert.equal(marinaNameChanged(null, ""), false);
+});
+
+// ─── Stage 5: the roster ──────────────────────────────────────────────────
+
+test("a roster row marks a missing emergency contact and no viewable documents", () => {
+  const full = buildRosterRow(VESSEL, BOTH, false);
+  assert.deepEqual(full, {
+    mxe_id: "MXE-09001",
+    vessel_name: "Fixture",
+    slip: "B12",
+    owner_name: "Owner Fixture",
+    paused: false,
+    hasEmergencyContact: true,
+    noDocuments: false,
+  });
+  // A name with no phone can't be called: still flagged.
+  assert.equal(buildRosterRow({ ...VESSEL, emg_phone: null }, BOTH, false).hasEmergencyContact, false);
+  // None included, or included but none uploaded: both are "no documents".
+  assert.equal(buildRosterRow(VESSEL, NEITHER, false).noDocuments, true);
+  assert.equal(buildRosterRow({ ...VESSEL, doc_registration_url: null, doc_insurance_url: null }, BOTH, false).noDocuments, true);
+  assert.equal(buildRosterRow({ ...VESSEL, doc_insurance_url: null }, BOTH, false).noDocuments, false);
+});
+
+test("a paused row keeps what finds the boat and the emergency marker, nothing else", () => {
+  const paused = buildRosterRow(VESSEL, BOTH, true);
+  assert.equal(paused.paused, true);
+  assert.equal(paused.owner_name, null);
+  assert.equal(paused.noDocuments, null);
+  assert.equal(paused.slip, "B12");
+  assert.equal(paused.hasEmergencyContact, true);
+});
+
+test("search finds a boat the way it's typed at the dock", () => {
+  const rows: RosterRow[] = [
+    { ...buildRosterRow(VESSEL, BOTH, false), vessel_name: "Polaris", slip: "B12", mxe_id: "MXE-01016" },
+    { ...buildRosterRow(VESSEL, BOTH, false), vessel_name: "Blue Moon", slip: "A3", mxe_id: "MXE-01020" },
+    { ...buildRosterRow(VESSEL, BOTH, false), vessel_name: "Bravo", slip: "B120", mxe_id: "MXE-01021" },
+  ];
+  for (const q of ["b12", "B-12", "b 12"]) assert.ok(matchesRosterQuery(rows[0], q), q);
+  assert.ok(matchesRosterQuery(rows[0], "pola"));
+  assert.ok(matchesRosterQuery(rows[0], "01016"));
+  assert.equal(matchesRosterQuery(rows[1], "b12"), false);
+  // "B12" puts slip B12 above B120, and the empty query lists everyone alphabetically.
+  assert.deepEqual(rankRoster(rows, "b12").map((r) => r.slip), ["B12", "B120"]);
+  assert.deepEqual(rankRoster(rows, "").map((r) => r.vessel_name), ["Blue Moon", "Bravo", "Polaris"]);
+  const numbered = ["Tern 10", "Tern 2", "tern 1"].map((vessel_name) => ({ ...rows[0], vessel_name }));
+  assert.deepEqual(rankRoster(numbered, "").map((r) => r.vessel_name), ["tern 1", "Tern 2", "Tern 10"]);
+});
+
+test("the roster lists only what a scan would show this marina", async () => {
+  const vessel = (overrides: Record<string, unknown>) => ({
+    ...VESSEL,
+    id: "v-1",
+    qr_status: "active",
+    lifecycle_status: "active",
+    dormant_cause: null,
+    ...overrides,
+  });
+  const { client, seen } = fakeService({
+    marina_vessel_access: {
+      data: [
+        { ...ACCESS, id: "a-1", vessel_id: "v-1", vessels: vessel({ id: "v-1", vessel_name: "Zed" }) },
+        { ...ACCESS, id: "a-2", vessel_id: "v-2", vessels: vessel({ id: "v-2", vessel_name: "Gone", lifecycle_status: "decommissioned" }) },
+        { ...ACCESS, id: "a-3", vessel_id: "v-3", vessels: vessel({ id: "v-3", vessel_name: "Asleep", lifecycle_status: "dormant", dormant_cause: "lapsed" }) },
+        { ...ACCESS, id: "a-4", vessel_id: "v-4", marina_id: "m-2", vessels: vessel({ id: "v-4", vessel_name: "Other marina" }) },
+      ],
+      error: null,
+    },
+  });
+  const roster = await loadMarinaRoster(client, MARINA);
+  assert.deepEqual(roster.map((r) => [r.vessel_name, r.paused]), [["Asleep", true], ["Zed", false]]);
+  assert.deepEqual(seen[0].filters, [["eq", "marina_id", "m-1"], ["is", "revoked_at", null]]);
+
+  const missing = fakeService({ marina_vessel_access: { data: null, error: { code: "PGRST205", message: "missing" } } });
+  assert.deepEqual(await loadMarinaRoster(missing.client, MARINA), []);
 });

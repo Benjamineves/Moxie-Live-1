@@ -367,7 +367,7 @@ export default async function VesselPage({ params, searchParams }: Props) {
   if (marinaViewer.kind === "access") {
     return (
       <div className="min-h-screen bg-[var(--cream)]">
-        <AppHeader role="Marina" wordmarkHref="/dashboard" />
+        <AppHeader role="Marina" wordmarkHref="/marina" />
         <MarinaVesselProfile view={buildMarinaView(vessel, marinaViewer.access)} marinaName={marinaViewer.marina.name} />
       </div>
     );

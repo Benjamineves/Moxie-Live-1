@@ -41,6 +41,31 @@ export function buildQrSvg(text: string, { width, margin }: { width: number; mar
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${dim} ${dim}" width="${width}" height="${width}" shape-rendering="crispEdges">${markup}</svg>`;
 }
 
+/**
+ * The same QR as buildQrSvg — same modules, colorway and signal pixel — as
+ * one filled path per colour instead of a rect per module. For print files
+ * viewed or printed from a PDF, where adjacent rects anti-alias into
+ * hairline seams across the whole code (seen on the marina poster).
+ */
+export function buildQrPathSvg(text: string, { width, margin }: { width: number; margin: number }): string {
+  const { size, isDark, signalRow, signalCol } = getQrModules(text);
+  const { darkModule, lightModule } = ACTIVE_QR_COLORWAY;
+  const dim = size + margin * 2;
+  let d = "";
+  for (let row = 0; row < size; row++) {
+    for (let col = 0; col < size; col++) {
+      if (isDark(row, col) && !(row === signalRow && col === signalCol)) d += `M${col + margin} ${row + margin}h1v1h-1z`;
+    }
+  }
+  return (
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${dim} ${dim}" width="${width}" height="${width}">` +
+    `<rect width="${dim}" height="${dim}" fill="${lightModule}"/>` +
+    `<path d="${d}" fill="${darkModule}"/>` +
+    `<rect x="${signalCol + margin}" y="${signalRow + margin}" width="1" height="1" fill="${QR_SIGNAL_PIXEL_COLOR}"/>` +
+    `</svg>`
+  );
+}
+
 const QR_QUIET_MARGIN = 2; // module-units — same value used everywhere the QR block is embedded
 
 /**

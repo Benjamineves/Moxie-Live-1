@@ -89,7 +89,7 @@ function GrantRow({ mxeId, grant, dormant }: { mxeId: string; grant: OwnerMarina
       <p className="font-[family-name:var(--font-dm)] text-sm font-semibold text-[var(--navy)]">{grant.marinaName}</p>
       {grant.marinaCity ? <p className="font-[family-name:var(--font-dm)] text-xs text-[var(--text3)]">{grant.marinaCity}</p> : null}
       <p className="mt-1 font-[family-name:var(--font-dm)] text-xs text-[var(--text2)]">
-        Sees your contact details and emergency contact. Doesn&apos;t expire.
+        Sees your contact details, emergency contact and slip number. Doesn&apos;t expire.
       </p>
 
       <div className="mt-2 space-y-1.5">

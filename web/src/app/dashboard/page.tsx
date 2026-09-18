@@ -4,6 +4,7 @@ import { PixelMMark, INVERTED_MARK_COLOR } from "@/components/brand/PixelMMark";
 import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { requireAdmin } from "@/lib/admin-verify";
+import { loadMarinaMembership } from "@/lib/marina-access";
 import { DeleteUnactivatedVesselButton } from "@/components/vessel-edit/DeleteUnactivatedVesselButton";
 import { notifyOwnerDormancyResult } from "@/lib/dormancy-notify";
 import { NotificationBanner } from "@/components/NotificationBanner";
@@ -43,6 +44,8 @@ export default async function DashboardPage({ searchParams }: Props) {
   }
 
   const service = requireSupabaseServiceClient("app/dashboard/page");
+  // Marina staff sign in like anyone else and land here; the roster is one tap away.
+  const marinaMembership = await loadMarinaMembership(service, user.email);
   const ownerIds = [user.id];
   const normalizedEmail = user.email?.trim().toLowerCase();
   if (normalizedEmail) {
@@ -140,6 +143,14 @@ export default async function DashboardPage({ searchParams }: Props) {
             <span className="hidden font-[family-name:var(--font-dm)] text-xs text-[rgba(255,255,255,.75)] sm:block">
               {user.email}
             </span>
+            {marinaMembership ? (
+              <Link
+                href="/marina"
+                className="font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--gold)] hover:underline"
+              >
+                Roster
+              </Link>
+            ) : null}
             {admin ? (
               <Link
                 href="/admin"

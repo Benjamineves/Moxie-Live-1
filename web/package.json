@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "node --test \"src/**/*.test.mts\"",
-    "email:build": "node --experimental-strip-types scripts/generate-email-templates.mjs"
+    "email:build": "node --experimental-strip-types scripts/generate-email-templates.mjs",
+    "marina-poster": "node --env-file=.env.local scripts/marina-poster.mts"
   },
   "dependencies": {
     "@stripe/react-stripe-js": "^6.8.2",

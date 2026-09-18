@@ -1,8 +1,10 @@
 # Moxie Digital — Marina operator role-gated access (v1)
 
-**Status: specified for v1, not built (revised 2026-09-18).** All design
-decisions are settled. Two implementation choices in §9 are proposals and
-are marked.
+**Status: built (v1, 2026-09-18), in five stages.** Migrations `20261007`
+and `20261008` are run. §9's two proposals were approved (trigger on
+`vessels.owner_id`; membership by `users.marina_id`). Slip number joined
+the field set during stage 5 (§2.2). The marketing card is still future
+tense — that flip is an open copy decision.
 
 Related: [`moxie_digital_marina_registry_spec.md`](moxie_digital_marina_registry_spec.md)
 is a *different* feature — marina records as a CRM seed for internal
@@ -56,6 +58,7 @@ The marina view shows:
 |---|---|---|
 | **Owner contact** — name, phone, email | same sources as `filterVesselForRole`'s owner fields | each missing item says "Not provided" |
 | **Emergency contact** — name, phone, relationship | `emg_name`, `emg_phone`, `emg_relationship` | **"No emergency contact on file"** — the row is never hidden |
+| **Slip number** | `slip_number`, as the owner entered it | "No slip number given" |
 | **Registration document** | `doc_registration_url`, if the owner included it | see below |
 | **Insurance document** | `doc_insurance_url`, if the owner included it | see below |
 
@@ -77,6 +80,12 @@ is what a third party needs.
 - *Not included* — "Not shared with you." Shown rather than hidden, so the
   harbormaster never has to guess whether a missing row is absent or
   withheld. (The draft's §2.2 reasoning, kept.)
+
+**Slip number added 2026-09-18**, for the roster's first job — finding one
+boat on a dock by name or slip. It is the marina's own assignment, entered
+by the owner. No grant existed when it was added, so no owner agreed to a
+set without it; every "what they'll see" line (join page, owner panel,
+poster) says slip number.
 
 **Nothing else.** Not slip notes, not liveaboard status, not the lockbox
 `access_note`, not HIN or USCG numbers, not the structured insurance
@@ -214,7 +223,14 @@ is out of scope for v1.
 
 ## 5. The marina side
 
-### 5.1 Creating a marina account
+### 5.1 Creating a marina account — `/admin/marinas`, built 2026-09-18
+
+Create + issue code in one form; reissue with a confirm; attach staff by
+email (if they have no `users` row yet — signing up doesn't make one — the
+Auth account is looked up, a read, and the row created). Poster:
+`npm run marina-poster -- <CODE>` (or `--all`) in `web/`, a US Letter
+vector PDF, refused unless it is one page, the brand fonts are embedded
+and the QR decoded from the rendered page is the join URL.
 
 By Ben, by hand, on request. No self-serve signup. An admin page
 (`/admin/marinas`) lists marinas, creates one, and generates or
@@ -229,7 +245,17 @@ roster; no per-staff permissions. A leaver is detached by clearing
 `marina_id`. **No Supabase Auth writes** — accounts are created by the
 people who use them. Staff-managed invitations are not in v1.
 
-### 5.3 The roster (`/marina`)
+### 5.3 The roster (`/marina`) — built 2026-09-18
+
+As built: search first (vessel name or slip, forgiving "B-12"/"b12"), two
+flag filters — **no emergency contact** (no phone on file) and **no
+documents** (none the marina can open) — alphabetical with numbers in
+order, paused rows kept. The empty state is the day-one screen: how boats
+arrive, the code to hand out, what the marina will have. No pagination:
+the whole list filters client-side, which is what makes search instant
+on a weak dock signal; revisit past ~500 rows.
+
+The original plan below is kept for the reasoning.
 
 - Search by vessel name, MXE ID or owner name.
 - One row per vessel: name, MXE ID, owner name, and three plain markers —

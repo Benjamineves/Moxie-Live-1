@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import type { PermissiveDatabase } from "./supabase/schema-stub.ts";
 import { getDormantInfo } from "./vessel-dormancy.ts";
-import type { MarinaGrant } from "./marina-view.ts";
+import { buildRosterRow, byName, type MarinaGrant, type RosterRow, type RosterSource } from "./marina-view.ts";
 
 /**
  * Who a marina is, and whether it may see a vessel.
@@ -206,6 +206,69 @@ export async function loadVesselMarinaAccess(service: ServiceClient, vesselIds: 
   return ((data ?? []) as unknown as (ActiveAccess & { marinas: MarinaSummary | null })[])
     .filter((row) => row.marinas)
     .map(({ marinas, ...row }) => ({ ...row, marina: marinas! }));
+}
+
+const ROSTER_VESSEL_COLUMNS =
+  "id, mxe_id, vessel_name, slip_number, owner_name, emg_name, emg_phone, emg_relationship, doc_registration_url, doc_insurance_url, qr_status, lifecycle_status, dormant_cause";
+
+/**
+ * Every vessel shared with this marina, as roster rows (/marina).
+ * Decommissioned vessels drop out without a revocation write (spec §4.3);
+ * dormant ones stay, paused. The same decideMarinaViewer rules as a scan,
+ * so the roster can never list a boat whose page would refuse the marina.
+ */
+export async function loadMarinaRoster(service: ServiceClient, membership: MarinaMembership): Promise<RosterRow[]> {
+  const { data, error } = await service
+    .from("marina_vessel_access")
+    .select(`${ACCESS_COLUMNS}, vessels(${ROSTER_VESSEL_COLUMNS})`)
+    .eq("marina_id", membership.marinaId)
+    .is("revoked_at", null);
+  if (error) {
+    if (isMissingTable(error)) return [];
+    throw new Error(`Failed to load marina roster: ${error.message}`);
+  }
+  const rows: RosterRow[] = [];
+  for (const raw of (data ?? []) as unknown as (ActiveAccess & { vessels: (RosterSource & VesselGate) | null })[]) {
+    const { vessels: vessel, ...access } = raw;
+    if (!vessel) continue;
+    const viewer = decideMarinaViewer(membership, access, vessel);
+    if (viewer.kind !== "access") continue;
+    rows.push(buildRosterRow(vessel, access, viewer.dormant));
+  }
+  return rows.sort(byName);
+}
+
+/** The marina's own code, for its empty roster ("give tenants this"). */
+export async function loadMarinaJoinCode(service: ServiceClient, marinaId: string): Promise<string | null> {
+  const { data, error } = await service.from("marinas").select("join_code").eq("id", marinaId).maybeSingle();
+  if (error) {
+    if (error.code === "42703") return null;
+    throw new Error(`Failed to load join code: ${error.message}`);
+  }
+  return (data as { join_code: string | null } | null)?.join_code ?? null;
+}
+
+/** Active grant count per marina, for /admin/marinas. */
+export async function countActiveGrantsByMarina(service: ServiceClient): Promise<Map<string, number>> {
+  const { data, error } = await service.from("marina_vessel_access").select("marina_id").is("revoked_at", null);
+  if (error) {
+    if (isMissingTable(error)) return new Map();
+    throw new Error(`Failed to count marina access: ${error.message}`);
+  }
+  const counts = new Map<string, number>();
+  for (const row of (data ?? []) as { marina_id: string }[]) counts.set(row.marina_id, (counts.get(row.marina_id) ?? 0) + 1);
+  return counts;
+}
+
+/**
+ * Sets a marina's code through generate_marina_join_code (20261008), which
+ * retries collisions where the unique index can see them. replace=false
+ * returns an existing code untouched, so a printed poster stays valid.
+ */
+export async function generateMarinaJoinCode(service: ServiceClient, marinaId: string, replace: boolean): Promise<string> {
+  const { data, error } = await service.rpc("generate_marina_join_code", { p_marina_id: marinaId, p_replace: replace });
+  if (error) throw new Error(`generate_marina_join_code failed: ${error.message}`);
+  return data as string;
 }
 
 /** The one call the scan page and the documents route make. */

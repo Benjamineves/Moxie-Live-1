@@ -1,7 +1,7 @@
 /**
  * What the owner is told a marina will see. One sentence, used on the
  * join page's confirm step, kept here so a test can hold it to the real
- * field set in marina-view.ts: contact and emergency contact always, the
+ * field set in marina-view.ts: contact, emergency contact and slip always, the
  * two documents only as chosen. If the view ever gains a field, the copy
  * that promised less is the thing that has to change.
  */
@@ -14,7 +14,7 @@ export function marinaSharingSummary(marinaName: string, vesselName: string, reg
         : insurance
           ? ", plus your insurance document"
           : "";
-  return `${marinaName} will see your contact details and emergency contact${docs} when their staff scan ${vesselName}'s badge.`;
+  return `${marinaName} will see your contact details, emergency contact and slip number${docs} when their staff scan ${vesselName}'s badge.`;
 }
 
 /**

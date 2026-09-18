@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
 import type { EmergencyContact, MarinaDocumentState, MarinaView } from "@/lib/marina-view";
 import { getExpiryStatus } from "@/lib/document-expiry";
 import { MarinaDocument } from "./MarinaDocument";
@@ -119,6 +120,9 @@ function DocumentRow({
 export function MarinaVesselProfile({ view, marinaName }: { view: MarinaView; marinaName: string }) {
   return (
     <main className="mx-auto w-full max-w-lg space-y-4 px-4 py-6">
+      <Link href="/marina" className="inline-block font-[family-name:var(--font-dm)] text-sm font-medium text-[var(--gold-deep)] underline underline-offset-2">
+        ← {marinaName} roster
+      </Link>
       <header className="flex items-center gap-4">
         {view.photo_url?.startsWith("http") ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -133,6 +137,9 @@ export function MarinaVesselProfile({ view, marinaName }: { view: MarinaView; ma
           </h1>
           <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
             {[view.year, view.make, view.model].filter(Boolean).join(" ")}
+          </p>
+          <p className="mt-0.5 font-[family-name:var(--font-dm)] text-sm font-semibold text-[var(--navy)]">
+            {view.slip ? `Slip ${view.slip}` : <span className="font-normal italic text-[var(--text2)]">No slip number given</span>}
           </p>
         </div>
       </header>

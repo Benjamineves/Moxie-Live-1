@@ -215,10 +215,22 @@ migration `20261007_marina_access.sql` **is run** (confirmed live
 four marinas, including the fixture "Moxie Test Marina"). Stage 3 (the
 scan) and stage 4 (owner side: `/marina/join`, the grant action, "Marinas
 with access" on the owner's vessel page with change and remove, and the
-marina-change prompt in the storage editor) done. Remaining: stage 5 (the
-`/marina` roster, `/admin/marinas`, poster).
+marina-change prompt in the storage editor) done. Stage 5 (the `/marina` roster, `/admin/marinas`, the print poster) done
+2026-09-18 — **the feature is built.** Slip number was added to what a
+marina sees (spec §2.2). **Open decision:** the marketing home's Marina
+Operator card is still future tense ("planned", "isn't available yet");
+flipping it is a copy decision, not made here.
 
 **The poster URL is live from stage 4:** `moxieyacht.com/marina/join?code=XXXX-XXXX`.
+
+Noted during stage 5, not fixed:
+- `--gray-fg` on `--gray-bg` measures **3.13:1** — fails AA for small
+  text. Used by the marketing home's "General Public" badge,
+  `ActiveSharesIndicator` (admin) and the previously-owned transfer page.
+  The roster's "Access paused" pill was moved to navy (14.4:1) instead.
+- A signed-up account has no `public.users` row until it registers a
+  vessel or accepts a transfer. Staff attachment works around it; anything
+  else keyed on `users` by email will meet the same gap.
 
 Noted during stage 4, not fixed:
 - `/dashboard/[mxeId]/shares` uses 9px labels and stat captions
