@@ -188,68 +188,21 @@ Currently `p=none`. Moving to `quarantine` makes spoofing harder.
 
 ## Correctness — open
 
-### Marina role view: copy says "planned", the build is paused
-Resolved 2026-09-17 for Coast Guard — that audience is replaced by Trusted
-Contact, which ships today. **Marina Operator stays as an audience with
-future-tense copy** ("A marina view, planned", "It isn't available yet"),
-so the page no longer claims it works. The claim to watch is that it stays
-*planned* rather than quietly becoming "coming soon" — and that the
-planned bullets keep matching `filterVesselForRole`'s `marina` branch,
-which is the only definition of what that view would show. "Slip occupancy
-management" was dropped: it was in no spec and no code.
+### `--gray-fg` on `--gray-bg` fails AA (3.13:1)
+Found building the marina roster (2026-09-18). Used by the marketing
+home's "General Public" badge, `ActiveSharesIndicator` (admin) and the
+previously-owned transfer page. The roster's "Access paused" pill moved to
+navy (14.4:1) instead; the token pair itself is unchanged.
 
-`ProfileRole` and `/api/vessels/[mxeId]` still accept `marina` and
-`coastguard`. Fine for a paused feature, but nothing in the code will flag
-the copy if it drifts back.
+### Signing up creates no `public.users` row
+Only registering a vessel or accepting a transfer does. Marina staff
+attachment (`/admin/marinas`) works around it by reading the Auth account
+and creating the row; anything else keyed on `users` by email will meet
+the same gap.
 
-**Spec revised for v1 2026-09-18:
-[`moxie_digital_marina_access_spec.md`](moxie_digital_marina_access_spec.md).**
-Not built. Documents at the owner's option replace insurance/registration
-status; a per-marina join code replaces marina matching. The planned
-marketing bullets were rewritten to v1 on 2026-09-18 (they had promised
-"insurance and registration status" and claimed a share link carried it
-today, which it never could). **Build in progress, in five stages;**
-stage 1 (copy) done; stage 2 (schema and core logic) done —
-migration `20261007_marina_access.sql` **is run** (confirmed live
-2026-09-18). `20261008_marina_join_code_generator.sql` **is run** (codes on all
-four marinas, including the fixture "Moxie Test Marina"). Stage 3 (the
-scan) and stage 4 (owner side: `/marina/join`, the grant action, "Marinas
-with access" on the owner's vessel page with change and remove, and the
-marina-change prompt in the storage editor) done. Stage 5 (the `/marina` roster, `/admin/marinas`, the print poster) done
-2026-09-18 — **the feature is built.** Slip number was added to what a
-marina sees (spec §2.2). **Open decision:** the marketing home's Marina
-Operator card is still future tense ("planned", "isn't available yet");
-flipping it is a copy decision, not made here.
-
-**The poster URL is live from stage 4:** `moxieyacht.com/marina/join?code=XXXX-XXXX`.
-
-**Fixed 2026-09-18 (post-build testing):** the marina-change prompt decided
-from values the page was rendered with, so a page that lagged the database
-could silently skip it. The save action now reads the stored name before
-writing and returns the grants to ask about. The storage field is called
-"Home marina" everywhere, with the slip number marked as what marinas see.
-
-Noted during stage 5, not fixed:
-- `--gray-fg` on `--gray-bg` measures **3.13:1** — fails AA for small
-  text. Used by the marketing home's "General Public" badge,
-  `ActiveSharesIndicator` (admin) and the previously-owned transfer page.
-  The roster's "Access paused" pill was moved to navy (14.4:1) instead.
-- A signed-up account has no `public.users` row until it registers a
-  vessel or accepts a transfer. Staff attachment works around it; anything
-  else keyed on `users` by email will meet the same gap.
-
-Noted during stage 4, not fixed:
-- `/dashboard/[mxeId]/shares` uses 9px labels and stat captions
-  (`text-[9px]`), the same unreadable-size class as the marketing home's
-  six sub-10px sizes.
-- Changing a grant's documents re-grants through the marina's *current*
-  join code (no separate RPC). Nothing clears a code today; if something
-  ever does, the owner can still remove that marina but not change its
-  documents, and the panel says so.
-- The signed-in join flow, the owner panel's writes and the prompt's
-  revoke have not been exercised against a real session — rendered with
-  fixtures and refused when signed out, nothing more. Copy stays future tense until the marina side
-is live.
+### Active Shares page uses 9px text
+`/dashboard/[mxeId]/shares` labels and stat captions are `text-[9px]` —
+the same unreadable-size class as the marketing home's sub-10px sizes.
 
 ### App copy promises email reminders that nothing sends
 The Full plan list and badge checkout both mention email reminders. The
@@ -450,6 +403,19 @@ outright. Offering the saved card removes re-entry friction on the upgrade
 path; the edit button adds no capability the portal doesn't already give.
 
 ## Done
+
+**Marina operator role-gated access** (2026-09-18, spec
+[`moxie_digital_marina_access_spec.md`](moxie_digital_marina_access_spec.md)):
+built in five stages and tested end to end. Owners grant a marina with its
+join code (`/marina/join`); a marina scanning a shared vessel sees owner
+contact, emergency contact, slip number and the documents the owner chose;
+`/marina` roster with search and flags; `/admin/marinas`; print poster via
+`npm run marina-poster`. Migrations `20261007` and `20261008` run. A change
+of owner revokes access (trigger on `vessels.owner_id`). The marketing
+home's Marina Operator card moved to present tense the same day. Changing
+a grant's documents re-grants through the marina's current join code; if a
+code is ever cleared, the owner can still remove that marina but not
+change its documents. ·
 
 Email stages 1–3 (Resend, `notifyOwner`, transfers) · scan-success on the
 badge · PWA dead ends · document viewing, metadata, expiry badges · photo

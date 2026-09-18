@@ -229,24 +229,17 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
                 ],
               },
               {
-                // PLANNED, NOT BUILT. There is no way to sign in as a marina
-                // operator today; filterVesselForRole has a "marina" data shape
-                // and nothing reaches it. Every line here is future tense on
-                // purpose. "Slip occupancy management" was dropped: it is in no
-                // spec and no code, so it was a promise with nothing behind it.
-                // What IS live is the "Marina / Dock Staff" share preset, which
-                // shares the owner's name and phone and nothing on this list —
-                // so "Available now" claims only that. The body describes v1 as
-                // specified (docs/moxie_digital_marina_access_spec.md): documents
-                // at the owner's option, not insurance/registration "status".
-                // An earlier version said owners could share "those details"
-                // today; no share flag exposes insurance status, so it never
-                // could.
+                // BUILT 2026-09-18 (docs/moxie_digital_marina_access_spec.md).
+                // Describes one direction only: tenants choose to share, and a
+                // marina sees those boats. It must never read as a registry of
+                // everyone in the slips — a marina sees nothing an owner hasn't
+                // shared. The bullets are the built field set: owner contact,
+                // emergency contact, slip number, documents as the owner chose.
                 badge: "Marina Operator",
                 badgeClass: "bg-[var(--blue-bg)] text-[var(--blue-fg)]",
-                title: "A marina view, planned",
-                body: "We plan to let marina staff scan a boat in their slips and see the owner’s contact details and emergency contact, plus the registration and insurance documents the owner chooses to share. Owners will add their marina with a code from the marina office. It isn’t available yet.",
-                items: ["Planned: owner and emergency contact on a scan", "Planned: registration and insurance documents, if the owner shares them", "Available now: a Trusted Contact link with your contact details"],
+                title: "The boats tenants share",
+                body: "Tenants share their boat with your marina using your marina’s code. When your staff scan a shared boat’s badge, they see the owner’s contact details, an emergency contact and the slip number — plus any registration or insurance documents the owner chose to share. Boats that aren’t shared show only their public profile.",
+                items: ["Owner and emergency contact on a scan", "Slip number, and the documents the owner shares", "A roster of every boat shared with you"],
               },
               {
                 badge: "General Public",
@@ -327,8 +320,8 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
                   tone: "bg-[var(--purple-bg)] text-[var(--purple-fg)]",
                 },
                 {
-                  t: "Marina — planned",
-                  d: "A view for marina staff is planned. Until then, owners share with their marina through a Trusted Contact link.",
+                  t: "Marina — what you share with it",
+                  d: "Staff at a marina you’ve shared with see your contact details, emergency contact and slip number, and any documents you chose. Remove it any time.",
                   tone: "bg-[var(--blue-bg)] text-[var(--blue-fg)]",
                 },
               ].map((x) => (
