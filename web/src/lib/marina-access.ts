@@ -49,22 +49,8 @@ export function formatJoinCode(code: string): string {
   return `${code.slice(0, 4)}-${code.slice(4)}`;
 }
 
-/**
- * Rejection sampling, so every character is equally likely (a plain
- * `byte % 31` would favour the first few).
- */
-export function generateJoinCode(random: (n: number) => Uint8Array = (n) => crypto.getRandomValues(new Uint8Array(n))): string {
-  const limit = 256 - (256 % JOIN_CODE_ALPHABET.length);
-  let out = "";
-  while (out.length < JOIN_CODE_LENGTH) {
-    for (const b of random(JOIN_CODE_LENGTH * 2)) {
-      if (b >= limit) continue;
-      out += JOIN_CODE_ALPHABET[b % JOIN_CODE_ALPHABET.length];
-      if (out.length === JOIN_CODE_LENGTH) break;
-    }
-  }
-  return out;
-}
+// Codes are generated in SQL, by generate_marina_join_code (20261008),
+// where the unique index can see a collision. There is no generator here.
 
 // ─── The decision ─────────────────────────────────────────────────────────
 

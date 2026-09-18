@@ -9,7 +9,6 @@ import {
   decideMarinaDocument,
   decideMarinaViewer,
   formatJoinCode,
-  generateJoinCode,
   grantMarinaAccess,
   loadActiveAccess,
   normalizeJoinCode,
@@ -22,6 +21,7 @@ import {
 
 const SRC = fileURLToPath(new URL("..", import.meta.url));
 const MIGRATION = fileURLToPath(new URL("../../../supabase/migrations/20261007_marina_access.sql", import.meta.url));
+const GENERATOR = fileURLToPath(new URL("../../../supabase/migrations/20261008_marina_join_code_generator.sql", import.meta.url));
 
 function sourceFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -160,22 +160,9 @@ test("join codes forgive case, spaces and the hyphen, and nothing else", () => {
   assert.equal(formatJoinCode("EMRY7K4Q"), "EMRY-7K4Q");
 });
 
-test("generated codes use the alphabet and discard biased bytes", () => {
-  for (let i = 0; i < 200; i++) {
-    const code = generateJoinCode();
-    assert.equal(normalizeJoinCode(code), code);
-  }
-  // 248..255 would skew towards the first eight characters; they must be skipped.
-  let calls = 0;
-  const code = generateJoinCode((n) => {
-    calls++;
-    return calls === 1 ? new Uint8Array(n).fill(250) : new Uint8Array(n).fill(0);
-  });
-  assert.equal(code, JOIN_CODE_ALPHABET[0].repeat(8));
-  assert.equal(calls, 2);
-});
-
-test("the app's alphabet is exactly what the migration's CHECK accepts", () => {
+test("the app's alphabet is exactly what the CHECK accepts and the SQL generator draws from", () => {
+  const generator = readFileSync(GENERATOR, "utf8");
+  assert.match(generator, new RegExp(`alphabet CONSTANT TEXT := '${JOIN_CODE_ALPHABET}'`));
   const sql = readFileSync(MIGRATION, "utf8");
   const match = /join_code ~ '\^\[([^\]]+)\]\{8\}\$'/.exec(sql);
   assert.ok(match, "CHECK constraint not found in 20261007");

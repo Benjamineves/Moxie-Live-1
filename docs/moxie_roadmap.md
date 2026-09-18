@@ -210,8 +210,9 @@ marketing bullets were rewritten to v1 on 2026-09-18 (they had promised
 "insurance and registration status" and claimed a share link carried it
 today, which it never could). **Build in progress, in five stages;**
 stage 1 (copy) done; stage 2 (schema and core logic) done —
-**migration `20261007_marina_access.sql` is written, not run**. It can run
-before or after any deploy. Copy stays future tense until the marina side
+migration `20261007_marina_access.sql` **is run** (confirmed live
+2026-09-18). `20261008_marina_join_code_generator.sql` (the code generator,
+and codes for the three marinas) is written, not run. Copy stays future tense until the marina side
 is live.
 
 ### App copy promises email reminders that nothing sends
