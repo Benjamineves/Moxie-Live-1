@@ -234,13 +234,19 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
                 // and nothing reaches it. Every line here is future tense on
                 // purpose. "Slip occupancy management" was dropped: it is in no
                 // spec and no code, so it was a promise with nothing behind it.
-                // What IS live is the "Marina / Dock Staff" share preset, so the
-                // body says an owner can already share with their marina.
+                // What IS live is the "Marina / Dock Staff" share preset, which
+                // shares the owner's name and phone and nothing on this list —
+                // so "Available now" claims only that. The body describes v1 as
+                // specified (docs/moxie_digital_marina_access_spec.md): documents
+                // at the owner's option, not insurance/registration "status".
+                // An earlier version said owners could share "those details"
+                // today; no share flag exposes insurance status, so it never
+                // could.
                 badge: "Marina Operator",
                 badgeClass: "bg-[var(--blue-bg)] text-[var(--blue-fg)]",
                 title: "A marina view, planned",
-                body: "We plan to let marina staff scan a boat in their slips and see its owner’s contact details, with insurance and registration status alongside. It isn’t available yet — today, an owner can share those details with their marina through a Trusted Contact link.",
-                items: ["Planned: owner contact details on a scan", "Planned: insurance and registration status", "Available now: owners share with their marina"],
+                body: "We plan to let marina staff scan a boat in their slips and see the owner’s contact details and emergency contact, plus the registration and insurance documents the owner chooses to share. Owners will add their marina with a code from the marina office. It isn’t available yet.",
+                items: ["Planned: owner and emergency contact on a scan", "Planned: registration and insurance documents, if the owner shares them", "Available now: a Trusted Contact link with your contact details"],
               },
               {
                 badge: "General Public",

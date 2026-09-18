@@ -206,10 +206,10 @@ the copy if it drifts back.
 [`moxie_digital_marina_access_spec.md`](moxie_digital_marina_access_spec.md).**
 Not built. Documents at the owner's option replace insurance/registration
 status; a per-marina join code replaces marina matching. The planned
-marketing bullets (`MoxieMarketingHome.tsx:242–243`) still promise
-"insurance and registration status", which is no longer the plan, and
-their "available now" line overclaims what a share link carries — needs a
-copy decision.
+marketing bullets were rewritten to v1 on 2026-09-18 (they had promised
+"insurance and registration status" and claimed a share link carried it
+today, which it never could). **Build in progress, in five stages;**
+stage 1 (copy) done. Copy stays future tense until the marina side is live.
 
 ### App copy promises email reminders that nothing sends
 The Full plan list and badge checkout both mention email reminders. The
