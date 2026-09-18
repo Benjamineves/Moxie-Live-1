@@ -11,6 +11,8 @@ import { createTransferAndNotifyBuyer } from "@/lib/transfer-initiate";
 import { deleteUnpaidVessel } from "@/lib/unpaid-vessel-delete";
 import { FULL_STORAGE_CAP_BYTES } from "@/lib/tier-config";
 import { getAccountStorageUsageBytes } from "@/lib/storage-usage";
+import { loadVesselMarinaAccess } from "@/lib/marina-access";
+import { marinaAccessToReview, type MarinaGrantToReview } from "@/lib/marina-copy";
 
 /**
  * Updates photo_url on an already-existing vessel — the counterpart to
@@ -177,7 +179,10 @@ export async function updateVesselIntrinsicFields(mxeId: string, patch: Intrinsi
  * public notes, insurance, propulsion & safety. No confirm step; the UI
  * saves these directly.
  */
-export async function updateVesselOwnerFields(mxeId: string, patch: OwnerPatch): Promise<{ error?: string }> {
+export async function updateVesselOwnerFields(
+  mxeId: string,
+  patch: OwnerPatch,
+): Promise<{ error?: string; marinaAccessToReview?: MarinaGrantToReview[] }> {
   const authClient = await requireSupabaseServerClient("lib/owner-actions");
 
   const { user, ownerIds } = await resolveOwnerIds(authClient);
@@ -204,8 +209,25 @@ export async function updateVesselOwnerFields(mxeId: string, patch: OwnerPatch):
     }
   }
 
+  // A change of home marina is when to ask about marinas that can still see
+  // this vessel (marina access spec §2.4). Decided against the name as
+  // STORED before this write, not one the page rendered with — see
+  // marinaAccessToReview for the failure a lagging client value caused.
+  let previousMarinaName: string | null = null;
+  if ("marina_name" in update) {
+    const { data: before, error: readError } = await service.from("vessels").select("marina_name").eq("id", vessel.id).maybeSingle();
+    if (readError) return { error: readError.message };
+    previousMarinaName = (before as { marina_name: string | null } | null)?.marina_name ?? null;
+  }
+
   const { error } = await service.from("vessels").update(update).eq("id", vessel.id);
   if (error) return { error: error.message };
+
+  if ("marina_name" in update) {
+    const grants = (await loadVesselMarinaAccess(service, [vessel.id])).map((g) => ({ id: g.id, marinaName: g.marina.name }));
+    const toReview = marinaAccessToReview(previousMarinaName, update.marina_name, grants);
+    if (toReview.length > 0) return { marinaAccessToReview: toReview };
+  }
   return {};
 }
 

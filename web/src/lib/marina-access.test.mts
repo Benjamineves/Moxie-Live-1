@@ -12,7 +12,7 @@ import {
   type MarinaViewSource,
   type RosterRow,
 } from "./marina-view.ts";
-import { marinaNameChanged, marinaSharingSummary } from "./marina-copy.ts";
+import { marinaAccessToReview, marinaNameChanged, marinaSharingSummary } from "./marina-copy.ts";
 import {
   JOIN_CODE_ALPHABET,
   decideMarinaDocument,
@@ -522,4 +522,42 @@ test("the roster lists only what a scan would show this marina", async () => {
 
   const missing = fakeService({ marina_vessel_access: { data: null, error: { code: "PGRST205", message: "missing" } } });
   assert.deepEqual(await loadMarinaRoster(missing.client, MARINA), []);
+});
+
+// ─── The marina-change prompt decides against the STORED name ─────────────
+
+const TO_REVIEW = [{ id: "a-1", marinaName: "Emery Cove Marina" }];
+
+test("a move is judged against what was stored, so a lagging page can't suppress the prompt", () => {
+  // Stored: Marina Plaza Harbor. The page still says Clipper Yacht Harbor
+  // (it rendered before the last save's refresh landed). The owner saves
+  // Clipper Yacht Harbor: that IS a move, and the old marina must be asked
+  // about. Judged against the page's value it looked like no change at all.
+  const stored = "Marina Plaza Harbor";
+  const pageSaid = "Clipper Yacht Harbor";
+  const saving = "Clipper Yacht Harbor";
+  assert.equal(marinaNameChanged(pageSaid, saving), false, "the old comparison saw no move");
+  assert.deepEqual(marinaAccessToReview(stored, saving, TO_REVIEW), TO_REVIEW);
+
+  // Every save in a session, not just the first.
+  assert.deepEqual(marinaAccessToReview("Emery Cove Marina", "Marina Plaza Harbor", TO_REVIEW), TO_REVIEW);
+  assert.deepEqual(marinaAccessToReview("Marina Plaza Harbor", "Clipper Yacht Harbor", TO_REVIEW), TO_REVIEW);
+  // Not a move, or nobody to ask about: no prompt.
+  assert.deepEqual(marinaAccessToReview("Emery Cove Marina", " emery cove marina", TO_REVIEW), []);
+  assert.deepEqual(marinaAccessToReview("Emery Cove Marina", "Clipper Yacht Harbor", []), []);
+});
+
+test("the save action reads the stored name before writing, and the form never decides from its props", () => {
+  const action = readFileSync(join(SRC, "lib/owner-actions.ts"), "utf8");
+  const body = action.slice(action.indexOf("export async function updateVesselOwnerFields"));
+  const readAt = body.search(/\.select\("marina_name"\)/);
+  const writeAt = body.search(/\.from\("vessels"\)\.update\(update\)/);
+  assert.ok(readAt > 0 && writeAt > readAt, "stored marina_name must be read before the update");
+  assert.match(body, /marinaAccessToReview\(previousMarinaName, update\.marina_name,/);
+  assert.match(body, /loadVesselMarinaAccess\(/, "grants come from the database at save time, not a prop");
+
+  const form = readFileSync(join(SRC, "components/vessel-edit/StorageEdit.tsx"), "utf8");
+  assert.doesNotMatch(form, /marinaNameChanged\(/, "the form must not compare against the name it was rendered with");
+  assert.doesNotMatch(form, /marinaAccess\??:/, "the form must not decide from a grants prop");
+  assert.match(form, /result\.marinaAccessToReview/);
 });

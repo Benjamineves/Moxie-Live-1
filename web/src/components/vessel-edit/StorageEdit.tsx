@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { useSectionEdit } from "@/lib/useSectionEdit";
-import { marinaNameChanged } from "@/lib/marina-copy";
 import { MarinaChangePrompt } from "@/components/marina/MarinaChangePrompt";
 import { updateVesselOwnerFields } from "@/lib/owner-actions";
 import { StorageTypePicker, isMarinaGroup, type StorageType } from "@/components/StorageTypePicker";
@@ -34,12 +33,9 @@ export function StorageEdit({
   is_liveaboard,
   slip_notes,
   vesselName,
-  marinaAccess = [],
 }: {
   mxeId: string;
   vesselName: string;
-  /** Marinas that can currently see this vessel — the prompt after a marina change offers to remove them. */
-  marinaAccess?: { id: string; marinaName: string }[];
   storage_type: string | null | undefined;
   storage_description: string | null | undefined;
   storage_state: string | null | undefined;
@@ -66,21 +62,23 @@ export function StorageEdit({
     slip_notes: slip_notes ?? "",
   };
   const { editing, values, setValues, error, pending, open, cancel, save } = useSectionEdit(initial);
-  // Set only by a save that succeeded AND changed the marina, on a vessel
-  // some marina can see (spec §2.4). Lives outside `editing` because the
-  // save closes the form.
-  const [movedTo, setMovedTo] = useState<{ name: string | null } | null>(null);
+  // Set only when the save action reports marinas to ask about: the home
+  // marina changed and some marina can still see this vessel (spec §2.4).
+  // The server decides, against the stored name and the current grants —
+  // this component's props lag the database and once made the prompt
+  // silently not appear. Lives outside `editing` because the save closes
+  // the form.
+  const [movedTo, setMovedTo] = useState<{ name: string | null; grants: { id: string; marinaName: string }[] } | null>(null);
 
-  const prompt =
-    movedTo && marinaAccess.length > 0 ? (
-      <MarinaChangePrompt
-        mxeId={mxeId}
-        vesselName={vesselName}
-        newMarinaName={movedTo.name}
-        grants={marinaAccess}
-        onClose={() => setMovedTo(null)}
-      />
-    ) : null;
+  const prompt = movedTo ? (
+    <MarinaChangePrompt
+      mxeId={mxeId}
+      vesselName={vesselName}
+      newMarinaName={movedTo.name}
+      grants={movedTo.grants}
+      onClose={() => setMovedTo(null)}
+    />
+  ) : null;
 
   if (!editing) {
     return (
@@ -135,13 +133,21 @@ export function StorageEdit({
 
       {marinaGroup ? (
         <>
+          {/* "Home marina" is what the public profile calls this value, so the
+              form uses the same words. It is display only: a marina sees an
+              owner's details through its join code, never through this name
+              — which is exactly what an owner might otherwise assume. */}
           <label className={labelClass}>
-            Marina name
+            Home marina
             <input
               className={inputClass}
               value={values.marina_name}
               onChange={(e) => setValues((p) => ({ ...p, marina_name: e.target.value }))}
             />
+            <span className="mt-1 block font-[family-name:var(--font-dm)] text-xs font-normal normal-case tracking-normal text-[var(--text2)]">
+              Shown on your public profile. It doesn&apos;t let the marina see anything — that only happens if you enter
+              its code.
+            </span>
           </label>
           <div className="grid grid-cols-2 gap-3">
             <label className={labelClass}>
@@ -151,6 +157,7 @@ export function StorageEdit({
                 value={values.slip_number}
                 onChange={(e) => setValues((p) => ({ ...p, slip_number: e.target.value }))}
               />
+              <span className="mt-1 block font-[family-name:var(--font-dm)] text-xs font-normal normal-case tracking-normal text-[var(--text2)]">Marinas you share with see this.</span>
             </label>
             <label className={labelClass}>
               Marina phone
@@ -219,8 +226,8 @@ export function StorageEdit({
                 is_liveaboard: marinaGroup ? values.is_liveaboard : null,
                 slip_notes: marinaGroup ? values.slip_notes.trim() || null : null,
               });
-              if (!result.error && marinaAccess.length > 0 && marinaNameChanged(marina_name, nextMarinaName)) {
-                setMovedTo({ name: nextMarinaName });
+              if (!result.error && result.marinaAccessToReview?.length) {
+                setMovedTo({ name: nextMarinaName, grants: result.marinaAccessToReview });
               }
               return result;
             });

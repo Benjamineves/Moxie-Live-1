@@ -223,6 +223,12 @@ flipping it is a copy decision, not made here.
 
 **The poster URL is live from stage 4:** `moxieyacht.com/marina/join?code=XXXX-XXXX`.
 
+**Fixed 2026-09-18 (post-build testing):** the marina-change prompt decided
+from values the page was rendered with, so a page that lagged the database
+could silently skip it. The save action now reads the stored name before
+writing and returns the grants to ask about. The storage field is called
+"Home marina" everywhere, with the slip number marked as what marinas see.
+
 Noted during stage 5, not fixed:
 - `--gray-fg` on `--gray-bg` measures **3.13:1** — fails AA for small
   text. Used by the marketing home's "General Public" badge,

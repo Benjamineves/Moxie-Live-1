@@ -331,16 +331,24 @@ export function VesselOwnerProfile({
             is_liveaboard={tier.is_liveaboard}
             slip_notes={tier.slip_notes}
             vesselName={tier.vessel_name}
-            marinaAccess={marinaAccess.map((g) => ({ id: g.id, marinaName: g.marinaName }))}
           />
         </div>
         {isMarinaStorage ? (
           <dl className="mt-4 rounded-xl border border-[var(--divider)] bg-[var(--white)] p-5 shadow-sm">
-            <Row label="Slip" value={tier.slip_number} />
+            {/* Same name as under the photo, and the one row a marina you
+                share with reads from this section is labelled as such. */}
+            <Row label="Home marina" value={tier.marina_name} />
+            <Row label="Slip number" value={tier.slip_number} />
             <Row label="Marina phone" value={tier.marina_phone} />
             <Row label="Liveaboard" value={tier.is_liveaboard ?? null} />
             <Row label="Slip notes" value={tier.slip_notes} />
           </dl>
+        ) : null}
+        {isMarinaStorage ? (
+          <p className="mt-2 px-1 font-[family-name:var(--font-dm)] text-xs text-[var(--text2)]">
+            Of these, marinas you share with see only your slip number. Your home marina is shown on your public profile
+            and doesn&apos;t give that marina access.
+          </p>
         ) : null}
         {/* Shown whatever the storage type: a grant belongs to the vessel,
             and a boat moved onto a trailer may still have one to remove. */}

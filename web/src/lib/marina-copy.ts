@@ -27,3 +27,21 @@ export function marinaNameChanged(before: string | null | undefined, after: stri
   const norm = (v: string | null | undefined) => (v ?? "").trim().replace(/\s+/g, " ").toLowerCase();
   return norm(before) !== norm(after);
 }
+
+export type MarinaGrantToReview = { id: string; marinaName: string };
+
+/**
+ * Which marinas to ask the owner about after a storage save. `previous` is
+ * the marina name as STORED at the moment of the save, read by the save
+ * action — never a value the page was rendered with. A client prop lags the
+ * database (a save before the last refresh landed, a second tab), and a
+ * lagging prop made the prompt silently not appear: the one mechanism that
+ * stops an old marina keeping access when a boat moves, failing quietly.
+ */
+export function marinaAccessToReview(
+  previous: string | null | undefined,
+  next: string | null | undefined,
+  grants: MarinaGrantToReview[],
+): MarinaGrantToReview[] {
+  return marinaNameChanged(previous, next) ? grants : [];
+}
