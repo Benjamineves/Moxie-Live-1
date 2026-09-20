@@ -188,11 +188,45 @@ Currently `p=none`. Moving to `quarantine` makes spoofing harder.
 
 ## Correctness — open
 
-### Signing up creates no `public.users` row
-Only registering a vessel or accepting a transfer does. Marina staff
-attachment (`/admin/marinas`) works around it by reading the Auth account
-and creating the row; anything else keyed on `users` by email will meet
-the same gap.
+### Account rows are created on first meaningful action, not at signup
+**Decided 2026-09-20 after a survey — don't redo it.** Signing up creates
+an Auth account and nothing else. `public.users` gains a row when someone
+registers a vessel (`dashboard/new/actions.ts`), accepts a transfer
+(`transfer/accept/actions.ts`), is attached to a marina
+(`admin/marinas/actions.ts`), or buys a plan (`lib/owner-account.ts`,
+added with this decision).
+
+**Creating it at signup instead was considered and rejected**, because four
+things currently read meaning into the row's presence:
+
+1. **`users.email` is UNIQUE, and at least one row's id deliberately differs
+   from its Auth id** (`ben@moxieyachting.com`: auth `7f004b27…`, row
+   `00000000…`). A signup insert keyed on the Auth id collides on email and
+   fails the signup. This is the one that bites; `ensureOwnerAccount` looks
+   up **by email first** for exactly this reason, and a test pins it.
+2. **Vessel intake prefers an existing row's `full_name`** over the name
+   typed on the intake form, so a signup-derived name would override what
+   the owner types.
+3. **`/admin` counts `users` with `role = 'owner'`** as "total owners",
+   split Basic/Full. Every signup that never registered a boat would
+   inflate it.
+4. **`subscription_tier` defaults to `'basic'`**, so billing would report
+   "Basic" for an account with no subscription instead of nulls.
+
+Not affected either way: the scheduler (its `inScope` filter drops accounts
+with no vessel, no Stripe customer and no grace clock), `requireAdmin`,
+marina membership.
+
+**Fixed at the same time:** the plan picker dead-ended on "Owner account
+not found." for a rowless account — it now creates the row. `notifyOwner`
+logged a failed insert and returned success; it throws now, because the
+in-app row is the record. The Basic→Full upgrade still refuses without a
+row, correctly: it needs an active subscription, which implies one.
+
+**Today:** 7 Auth accounts, 7 rows. One Auth account has no row
+(`matteves@me.com`, never signed in). One row has no Auth account
+(`demo-marina@moxieyachting.com`) and therefore cannot sign in — worth
+knowing before using it to test marina staff.
 
 ### Convert the provisional by **26 June 2027**, or take "patent pending" down
 **Provisional filed 26 June 2026. It expires 26 June 2027** if it is not

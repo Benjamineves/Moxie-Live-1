@@ -57,13 +57,26 @@ export async function notifyOwner(
     .maybeSingle();
 
   if (error) {
+    // THROW, don't log. The in-app row is the record (see the header), and
+    // logging a failed insert while returning success reported a
+    // notification that does not exist — to the webhook that would have
+    // retried, to the action that would have surfaced it, to everyone.
+    //
+    // The reachable cause is an owner with no public.users row:
+    // owner_notifications.owner_id is NOT NULL REFERENCES users(id), so the
+    // insert fails with 23503. Rows are created on first meaningful action
+    // (lib/owner-account.ts), and every caller here addresses a vessel's
+    // owner, who has one by definition — so this should not fire. If it
+    // does, that is a fact about our data, not about the person reading the
+    // page, and it belongs in the open rather than in a log line.
     console.error(`[notify] Failed to record notification (type=${type}, owner=${ownerId}):`, error);
+    throw new Error(`Failed to record ${type} notification for owner ${ownerId}: ${error.message}`);
   }
 
-  // Whether the record exists. Existing callers ignore it; a caller for whom
-  // a lost notification is itself the failure (a paid upgrade that couldn't
-  // be applied) throws on false so its event is retried.
-  const recorded = !error;
+  // Always true now — kept because callers destructure it, and because a
+  // caller for whom a lost notification is itself the failure (a paid
+  // upgrade that couldn't be applied) still reads it.
+  const recorded = true;
 
   if (!isEmailableNotification(type)) return { recorded };
 

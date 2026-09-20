@@ -4,6 +4,7 @@ import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import type Stripe from "stripe";
 import { getStripe } from "@/lib/stripe/server";
+import { ensureOwnerAccount } from "@/lib/owner-account";
 import { IMMEDIATE_SETTLEMENT_PAYMENT_METHOD_TYPES } from "@/lib/stripe/payment-methods";
 import { releaseAbandonedSubscription } from "@/lib/stripe/abandoned-subscription";
 import { quoteTierUpgrade, TIER_UPGRADE_PAYMENT_TYPE, UPGRADE_FORM_SETUP_FUTURE_USAGE } from "@/lib/stripe/tier-upgrade";
@@ -46,35 +47,13 @@ export async function createPlanSubscriptionIntent(tier: SubscriptionTier): Prom
   if (!user) return { error: "You must be signed in." };
 
   const service = requireSupabaseServiceClient("/app/dashboard/upgrade/actions");
-  type OwnerRow = {
-    id: string;
-    email: string;
-    stripe_customer_id: string | null;
-    subscription_status: string | null;
-    stripe_subscription_id: string | null;
-  };
 
-  const normalizedEmail = user.email?.trim().toLowerCase();
-  let owner: OwnerRow | null = null;
-
-  if (normalizedEmail) {
-    const { data: ownerRow } = await service
-      .from("users")
-      .select("id, email, stripe_customer_id, subscription_status, stripe_subscription_id")
-      .eq("email", normalizedEmail)
-      .maybeSingle();
-    owner = ownerRow as OwnerRow | null;
-  }
-
-  if (!owner) {
-    const { data: ownerRow } = await service
-      .from("users")
-      .select("id, email, stripe_customer_id, subscription_status, stripe_subscription_id")
-      .eq("id", user.id)
-      .maybeSingle();
-    owner = ownerRow as OwnerRow | null;
-  }
-
+  // Buying a plan is a first meaningful action, so it creates the account
+  // row if signing up hasn't yet (signing up creates an Auth account and
+  // nothing else). Before this, choosing a plan before registering a boat
+  // dead-ended on "Owner account not found." — a true statement about our
+  // schema, offered to someone who had done nothing wrong.
+  const owner = await ensureOwnerAccount(service, user);
   if (!owner) return { error: "Owner account not found." };
 
   if (owner.subscription_status === "active") {
