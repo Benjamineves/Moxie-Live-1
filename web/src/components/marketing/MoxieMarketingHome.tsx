@@ -170,7 +170,7 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
                 n: "03",
                 title: "Anyone can scan it",
                 body: "A stranger sees the boat — make, model, year, photo — and nothing about you. You see everything, and can edit it. The people you let in — a captain, a cleaner, family — see only what you share, through a link you can revoke.",
-                note: "One badge resolving to a different view for each person is the part of Moxie we\u2019ve applied for a patent on.",
+                note: "The role-aware scan is patent pending.",
               },
             ].map((c) => (
               <div

@@ -194,22 +194,27 @@ attachment (`/admin/marinas`) works around it by reading the Auth account
 and creating the row; anything else keyed on `users` by email will meet
 the same gap.
 
-### "Patent pending" is a regulated claim — keep it true
-Added to the site 2026-09-20: one line in How it Works step 03, one
-standing line in the marketing footer, and the printed badge (which has
-carried it all along). In the US, false marking is penalised — 35 U.S.C.
-§292 — and the claim is accurate **only while an application is genuinely
-on file**. So:
+### Convert the provisional by **26 June 2027**, or take "patent pending" down
+**Provisional filed 26 June 2026. It expires 26 June 2027** if it is not
+converted to a non-provisional. That date is an action with consequences,
+not a note: the day it lapses, every "patent pending" claim on the site
+becomes inaccurate and must come down the same day.
 
-- **If the application is provisional, record the filing date here.** That
-  is a twelve-month clock: convert to a non-provisional or the claim lapses
-  and every line above has to come down. **Filing date: not recorded — Ben
-  to supply.**
-- If the application is abandoned or lapses, remove the lines the same day.
-- If it grants, the claim changes from "pending" to the patent number.
+Where the claim appears today (added 2026-09-20):
+- How it Works step 03 — "The role-aware scan is patent pending."
+- The marketing footer's standing line, on every marketing page.
+- The printed badge (`lib/badge-layout.ts`), which has carried it all along
+  — and which is on physical product, so a lapse means stock to scrap or
+  over-label, not just a deploy.
+- `docs/design/moxie_digital_homepage.html`, the design reference.
+
+In the US, false marking is penalised (35 U.S.C. §292), and the claim is
+accurate only while an application is genuinely on file. So: convert
+before 26 June 2027, or remove all four. If it grants, "pending" becomes
+the patent number.
 
 Same discipline as the email-reminder and unlimited-documents copy: the
-site may not say a thing the product (or the filing) doesn't support.
+site may not say a thing the product — or the filing — doesn't support.
 
 ### App copy promises email reminders that nothing sends
 The Full plan list and badge checkout both mention email reminders. The
