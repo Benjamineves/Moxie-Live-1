@@ -292,15 +292,15 @@ export default async function DashboardPage({ searchParams }: Props) {
                   </div>
                   <div className="p-4">
                     <div className="flex flex-wrap items-center gap-2">
-                      <p className="inline-flex rounded-full bg-[var(--gold-dim)] px-2.5 py-1 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--navy)]">
+                      <p className="inline-flex rounded-full bg-[var(--gold-dim)] px-2.5 py-1 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--navy)]">
                         {vessel.mxe_id}
                       </p>
                       {needsActivation ? (
-                        <p className="inline-flex rounded-full bg-[var(--red-bg)] px-2.5 py-1 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--red-fg)]">
+                        <p className="inline-flex rounded-full bg-[var(--red-bg)] px-2.5 py-1 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--red-fg)]">
                           Needs activation
                         </p>
                       ) : dormant.isDormant ? (
-                        <p className="inline-flex rounded-full bg-[var(--red-bg)] px-2.5 py-1 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--red-fg)]">
+                        <p className="inline-flex rounded-full bg-[var(--red-bg)] px-2.5 py-1 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--red-fg)]">
                           Dormant — {dormant.cause === "lapsed" ? "subscription lapsed" : "beyond plan limit"}
                         </p>
                       ) : null}

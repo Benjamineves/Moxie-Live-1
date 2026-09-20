@@ -63,7 +63,7 @@ export function AddPhotoNudge({ mxeId, vesselName }: { mxeId: string; vesselName
             Takes 30 seconds — replaces the default background on your public profile
           </p>
         </div>
-        <label className="shrink-0 cursor-pointer rounded-md bg-[var(--navy)] px-4 py-2.5 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--gold)]">
+        <label className="shrink-0 cursor-pointer rounded-md bg-[var(--navy)] px-4 py-2.5 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--gold)]">
           {uploading ? "Uploading…" : "Add"}
           <input
             type="file"

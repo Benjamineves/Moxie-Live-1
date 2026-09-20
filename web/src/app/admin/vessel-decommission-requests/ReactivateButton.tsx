@@ -32,7 +32,7 @@ export function ReactivateButton({ vesselId, mxeId }: { vesselId: string; mxeId:
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="rounded-md border border-[var(--gold-line)] px-3 py-1.5 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--navy)] transition hover:bg-[var(--gold-dim)]"
+        className="rounded-md border border-[var(--gold-line)] px-3 py-1.5 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--navy)] transition hover:bg-[var(--gold-dim)]"
       >
         Reactivate
       </button>

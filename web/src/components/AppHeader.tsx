@@ -38,7 +38,7 @@ export function AppHeader({
               implementations — not obviously deliberate, but "keep the
               role label as-is" means as-is, not "pick one." */}
           <span
-            className={`font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.2em] ${
+            className={`font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.2em] ${
               role === "Owner" ? "text-[rgba(255,255,255,.55)]" : "text-[rgba(255,255,255,.45)]"
             }`}
           >

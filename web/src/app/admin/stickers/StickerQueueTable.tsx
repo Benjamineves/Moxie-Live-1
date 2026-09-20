@@ -38,7 +38,7 @@ function ShipTo({ vessel }: { vessel: StickerRow }) {
 
   if (street.length === 0 && !region) {
     return (
-      <span className="inline-flex rounded-lg bg-[var(--amber-bg)] px-2 py-0.5 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.06em] text-[var(--amber-fg)]">
+      <span className="inline-flex rounded-lg bg-[var(--amber-bg)] px-2 py-0.5 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--amber-fg)]">
         No address on file
       </span>
     );
@@ -74,7 +74,7 @@ function PrintIndividually({ vessel, stockSince }: { vessel: StickerRow; stockSi
   return (
     <span
       title="No pre-minted badge was assigned — the pool was empty at signup. This badge has to be printed on its own."
-      className="inline-flex items-center rounded-full bg-[var(--amber-bg)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--amber-fg)]"
+      className="inline-flex items-center rounded-full bg-[var(--amber-bg)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--amber-fg)]"
     >
       Print individually
     </span>
@@ -146,7 +146,7 @@ export function StickerQueueTable({
               {COLUMNS.map((h) => (
                 <th
                   key={h}
-                  className="px-4 py-3 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text3)]"
+                  className="px-4 py-3 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text3)]"
                 >
                   {h}
                 </th>
@@ -159,13 +159,13 @@ export function StickerQueueTable({
               return (
                 <tr
                   key={v.mxe_id}
-                  className={`border-b border-[var(--divider)] last:border-0 ${shipped ? "opacity-50" : ""}`}
+                  className={`border-b border-[var(--divider)] last:border-0 ${shipped ? "bg-[var(--cream)]" : ""}`}
                 >
                   <td className="px-4 py-3 font-[family-name:var(--font-dm)] text-sm font-semibold text-[var(--navy)]">
-                    <span className="inline-flex items-center gap-2">
-                      {v.mxe_id}
+                    <span className="inline-flex flex-wrap items-center gap-2">
+                      <span className="whitespace-nowrap">{v.mxe_id}</span>
                       {shipped ? (
-                        <span className="inline-flex items-center rounded-full bg-[var(--green-bg)] px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--green-fg)]">
+                        <span className="inline-flex items-center rounded-full bg-[var(--green-bg)] px-2 py-0.5 text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--green-fg)]">
                           Shipped
                         </span>
                       ) : null}

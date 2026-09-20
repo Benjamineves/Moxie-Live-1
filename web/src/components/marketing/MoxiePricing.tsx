@@ -67,7 +67,7 @@ export function MoxiePricing({ isAuthenticated }: { isAuthenticated: boolean }) 
 
       <section className="bg-[var(--cream)] px-6 py-[100px] md:px-12">
         <div className="mx-auto max-w-[760px] text-center">
-          <p className="mb-4 flex items-center justify-center gap-3 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--gold-deep)]">
+          <p className="mb-4 flex items-center justify-center gap-3 text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--gold-deep)]">
             <span className="h-px w-6 bg-[var(--gold)]" />
             What Moxie is
             <span className="h-px w-6 bg-[var(--gold)]" />
@@ -93,7 +93,7 @@ export function MoxiePricing({ isAuthenticated }: { isAuthenticated: boolean }) 
       <section className="relative overflow-hidden bg-[var(--navy)] px-6 py-[100px] md:px-12">
         <div className="absolute -right-[100px] -top-[100px] h-[500px] w-[500px] rounded-full bg-[radial-gradient(circle,rgba(201,168,76,0.06)_0%,transparent_70%)]" />
         <div className="relative z-[2] mx-auto max-w-[1160px]">
-          <p className="mb-4 flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--gold)]">
+          <p className="mb-4 flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--gold)]">
             <span className="h-px w-6 bg-[var(--gold)]" />
             What&apos;s included
           </p>
@@ -120,7 +120,7 @@ export function MoxiePricing({ isAuthenticated }: { isAuthenticated: boolean }) 
 
       <section id="plans" className="bg-[var(--cream)] px-6 py-[100px] md:px-12">
         <div className="mx-auto max-w-[1160px]">
-          <p className="mb-4 flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--gold-deep)]">
+          <p className="mb-4 flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--gold-deep)]">
             <span className="h-px w-6 bg-[var(--gold)]" />
             Plans
           </p>
@@ -162,7 +162,7 @@ export function MoxiePricing({ isAuthenticated }: { isAuthenticated: boolean }) 
                     <p className="font-[family-name:var(--font-display)] text-2xl italic text-[var(--text3)]">
                       Commercial
                     </p>
-                    <p className="mt-1 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text3)]">
+                    <p className="mt-1 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text3)]">
                       Coming soon
                     </p>
                   </th>
@@ -222,7 +222,7 @@ export function MoxiePricing({ isAuthenticated }: { isAuthenticated: boolean }) 
           </p>
 
           <div className="mt-16 max-w-[640px] rounded-xl border border-[var(--divider)] bg-[var(--white)] p-8">
-            <p className="mb-3 inline-flex items-center rounded-full bg-[var(--gray-bg)] px-3 py-1 font-[family-name:var(--font-dm)] text-[9px] font-medium uppercase tracking-[0.16em] text-[var(--gray-fg)]">
+            <p className="mb-3 inline-flex items-center rounded-full bg-[var(--gray-bg)] px-3 py-1 font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--gray-fg)]">
               Coming soon
             </p>
             <h3 className="mb-3 font-[family-name:var(--font-display)] text-2xl font-light italic text-[var(--navy)]">

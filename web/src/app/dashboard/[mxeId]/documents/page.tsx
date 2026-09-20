@@ -97,13 +97,13 @@ export default async function VesselDocumentsPage({ params }: Props) {
       <AppHeader role="Owner" wordmarkHref="/dashboard">
         <Link
           href={`/dashboard/${encodeURIComponent(vessel.mxe_id)}/shares`}
-          className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.2em] text-[rgba(255,255,255,.55)] transition hover:text-[var(--gold)]"
+          className="font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.2em] text-[rgba(255,255,255,.55)] transition hover:text-[var(--gold)]"
         >
           Shares
         </Link>
         <Link
           href={`/dashboard/${encodeURIComponent(vessel.mxe_id)}/documents`}
-          className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.2em] text-[rgba(255,255,255,.55)] transition hover:text-[var(--gold)]"
+          className="font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.2em] text-[rgba(255,255,255,.55)] transition hover:text-[var(--gold)]"
         >
           Documents
         </Link>
@@ -113,7 +113,7 @@ export default async function VesselDocumentsPage({ params }: Props) {
 
       <header className="border-b-[3px] border-[var(--gold)] bg-[var(--navy-deep)] px-5 pb-6 pt-7">
         <div className="mx-auto max-w-lg">
-          <p className="font-[family-name:var(--font-dm)] text-[9px] font-medium uppercase tracking-[0.2em] text-[rgba(255,255,255,.4)]">
+          <p className="font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--text-on-dark)]">
             {vessel.mxe_id}
           </p>
           <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-light text-white">

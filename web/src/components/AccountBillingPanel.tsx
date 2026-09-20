@@ -15,7 +15,7 @@ const STATUS_BADGE: Record<string, { label: string; className: string }> = {
   active: { label: "Active", className: "bg-[rgba(23,195,178,.15)] text-[var(--aqua-bright)] border-[rgba(23,195,178,.3)]" },
   past_due: { label: "Past due", className: "bg-[var(--amber-bg)] text-[var(--amber-fg)] border-transparent" },
   canceled: { label: "Canceled", className: "bg-[var(--red-bg)] text-[var(--red-fg)] border-transparent" },
-  none: { label: "No subscription", className: "bg-[rgba(255,255,255,.08)] text-[rgba(255,255,255,.5)] border-transparent" },
+  none: { label: "No subscription", className: "bg-[rgba(255,255,255,.08)] text-[var(--text-on-dark)] border-transparent" },
 };
 
 /**
@@ -54,7 +54,7 @@ export function AccountBillingPanel({ billing }: { billing: BillingSummary }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.2em] text-[rgba(255,255,255,.55)] transition hover:text-[var(--gold)]"
+        className="font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.2em] text-[rgba(255,255,255,.55)] transition hover:text-[var(--gold)]"
       >
         Account
       </button>
@@ -69,7 +69,7 @@ export function AccountBillingPanel({ billing }: { billing: BillingSummary }) {
             onClick={(e) => e.stopPropagation()}
           >
             <div className="mx-auto mb-5 mt-3 h-1 w-9 rounded-full bg-[rgba(255,255,255,.2)]" />
-            <p className="mb-3.5 px-5 font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.18em] text-[rgba(255,255,255,.4)]">
+            <p className="mb-3.5 px-5 font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.18em] text-[var(--text-on-dark)]">
               Account &amp; Billing
             </p>
 
@@ -80,13 +80,13 @@ export function AccountBillingPanel({ billing }: { billing: BillingSummary }) {
                     {billing.subscriptionTier === "full" ? "Full Access" : "Basic"}
                   </p>
                   {hasManageableSubscription ? (
-                    <p className="mt-0.5 font-[family-name:var(--font-dm)] text-[11px] text-[rgba(255,255,255,.4)]">
+                    <p className="mt-0.5 font-[family-name:var(--font-dm)] text-[11px] text-[var(--text-on-dark)]">
                       Renews annually
                     </p>
                   ) : null}
                 </div>
                 <span
-                  className={`rounded-full border px-2.5 py-1 font-[family-name:var(--font-dm)] text-[8px] font-semibold uppercase tracking-[0.14em] ${badge.className}`}
+                  className={`rounded-full border px-2.5 py-1 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.14em] ${badge.className}`}
                 >
                   {badge.label}
                 </span>
@@ -94,7 +94,7 @@ export function AccountBillingPanel({ billing }: { billing: BillingSummary }) {
 
               {billing.payments.length > 0 ? (
                 <div className="border-b border-[rgba(255,255,255,.08)] py-4">
-                  <p className="mb-2.5 font-[family-name:var(--font-dm)] text-[9px] font-medium uppercase tracking-[0.16em] text-[rgba(255,255,255,.3)]">
+                  <p className="mb-2.5 font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--text-on-dark)]">
                     Payment history
                   </p>
                   {billing.payments.map((p, i) => (

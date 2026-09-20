@@ -89,7 +89,7 @@ export default function OfflineVesselPage() {
           <p className="font-[family-name:var(--font-display)] text-lg font-light italic text-white">
             <span className="text-[var(--gold)]">M</span>oxie
           </p>
-          <span className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.2em] text-[rgba(255,255,255,.55)]">
+          <span className="font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.2em] text-[rgba(255,255,255,.55)]">
             Offline copy
           </span>
         </div>
@@ -123,7 +123,7 @@ export default function OfflineVesselPage() {
                 className="mb-4 h-48 w-full rounded-xl object-cover"
               />
             ) : null}
-            <p className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--text3)]">
+            <p className="font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--text3)]">
               {identity.mxeId} · viewed offline from this device&apos;s saved copy
             </p>
             <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-light italic text-[var(--navy)]">
@@ -164,7 +164,7 @@ export default function OfflineVesselPage() {
                         href={docUrls[doc]}
                         target="_blank"
                         rel="noreferrer"
-                        className="shrink-0 rounded-md border border-[var(--gold-line)] px-3 py-2 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--navy)]"
+                        className="shrink-0 rounded-md border border-[var(--gold-line)] px-3 py-2 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--navy)]"
                       >
                         Open
                       </a>

@@ -132,7 +132,7 @@ export default async function BadgeBatchDetailPage({
             measurements, and an admin who came here to advance a batch
             should not wait on a hundred Storage reads to do it. */}
         <div className="mb-4 rounded-xl border border-[var(--divider)] bg-[var(--white)] p-4">
-          <p className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
+          <p className="font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
             Assignable pool
           </p>
           <p className="mt-1 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
@@ -324,7 +324,7 @@ function BadgeTile({
           <p className="font-[family-name:var(--font-dm)] text-[11px] font-semibold text-[var(--navy)]">
             {identity.mxe_id}
           </p>
-          <p className="font-[family-name:var(--font-dm)] text-[10px] text-[var(--amber-fg)]">
+          <p className="font-[family-name:var(--font-dm)] text-[11px] text-[var(--amber-fg)]">
             {isVoid ? `void · ${identity.void_reason ?? "no reason"}` : "no artwork"}
           </p>
           {isVoid ? null : (
@@ -346,7 +346,7 @@ function BadgeTile({
     <figure
       className={`rounded-xl border p-2 ${
         isVoid
-          ? "border-dashed border-[var(--divider)] bg-[var(--cream)] opacity-60"
+          ? "border-dashed border-[var(--divider)] bg-[var(--cream)]"
           : failed
             ? "border-2 border-[var(--red-fg)] bg-[var(--red-bg)]"
             : "border-[var(--divider)] bg-[var(--white)]"
@@ -388,7 +388,7 @@ function BadgeTile({
           {identity.mxe_id}
         </p>
         <p
-          className={`font-[family-name:var(--font-dm)] text-[10px] ${
+          className={`font-[family-name:var(--font-dm)] text-[11px] ${
             failed ? "font-semibold text-[var(--red-fg)]" : "text-[var(--text3)]"
           }`}
         >
@@ -417,7 +417,7 @@ function Pill({
   } as const;
   return (
     <span
-      className={`rounded-lg px-2 py-0.5 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.06em] ${tones[tone]}`}
+      className={`rounded-lg px-2 py-0.5 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.06em] ${tones[tone]}`}
     >
       {children}
     </span>

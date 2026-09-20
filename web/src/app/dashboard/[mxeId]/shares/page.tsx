@@ -84,7 +84,7 @@ export default async function ActiveSharesPage({ params }: Props) {
     <div className="min-h-screen bg-[var(--cream)] pb-16">
       <header className="border-b-[3px] border-[var(--gold)] bg-[var(--navy-deep)] px-5 pb-6 pt-7">
         <div className="mx-auto max-w-lg">
-          <p className="font-[family-name:var(--font-dm)] text-[9px] font-medium uppercase tracking-[0.2em] text-[rgba(255,255,255,.4)]">
+          <p className="font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--text-on-dark)]">
             {mxeId.toUpperCase()}
           </p>
           <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-light text-white">
@@ -95,7 +95,7 @@ export default async function ActiveSharesPage({ params }: Props) {
               <p className="font-[family-name:var(--font-display)] text-2xl font-light text-[var(--aqua-bright)]">
                 {active.length}
               </p>
-              <p className="font-[family-name:var(--font-dm)] text-[9px] uppercase tracking-[0.1em] text-[rgba(255,255,255,.35)]">
+              <p className="font-[family-name:var(--font-dm)] text-[11px] uppercase tracking-[0.1em] text-[var(--text-on-dark)]">
                 Active links
               </p>
             </div>
@@ -103,15 +103,15 @@ export default async function ActiveSharesPage({ params }: Props) {
               <p className="font-[family-name:var(--font-display)] text-2xl font-light text-[var(--gold)]">
                 {viewedThisMonth}
               </p>
-              <p className="font-[family-name:var(--font-dm)] text-[9px] uppercase tracking-[0.1em] text-[rgba(255,255,255,.35)]">
+              <p className="font-[family-name:var(--font-dm)] text-[11px] uppercase tracking-[0.1em] text-[var(--text-on-dark)]">
                 Views this month
               </p>
             </div>
             <div className="bg-[var(--navy-deep)] p-3.5">
-              <p className="font-[family-name:var(--font-display)] text-2xl font-light text-[rgba(255,255,255,.4)]">
+              <p className="font-[family-name:var(--font-display)] text-2xl font-light text-[var(--text-on-dark)]">
                 {inactive.length}
               </p>
-              <p className="font-[family-name:var(--font-dm)] text-[9px] uppercase tracking-[0.1em] text-[rgba(255,255,255,.35)]">
+              <p className="font-[family-name:var(--font-dm)] text-[11px] uppercase tracking-[0.1em] text-[var(--text-on-dark)]">
                 Expired / revoked
               </p>
             </div>
@@ -127,7 +127,7 @@ export default async function ActiveSharesPage({ params }: Props) {
           Back to profile to share
         </Link>
 
-        <p className="mb-2 mt-8 font-[family-name:var(--font-dm)] text-[9px] font-medium uppercase tracking-[0.2em] text-[var(--text3)]">
+        <p className="mb-2 mt-8 font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--text3)]">
           Active · {active.length} link{active.length === 1 ? "" : "s"}
         </p>
         {active.length === 0 ? (
@@ -153,13 +153,13 @@ export default async function ActiveSharesPage({ params }: Props) {
                     {tagsFor(share.field_flags).map((tag) => (
                       <span
                         key={tag}
-                        className="rounded-lg bg-[var(--blue-bg)] px-2 py-0.5 font-[family-name:var(--font-dm)] text-[9px] font-semibold uppercase tracking-[0.06em] text-[var(--blue-fg)]"
+                        className="rounded-lg bg-[var(--blue-bg)] px-2 py-0.5 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--blue-fg)]"
                       >
                         {tag}
                       </span>
                     ))}
                     {share.one_time ? (
-                      <span className="rounded-lg bg-[var(--amber-bg)] px-2 py-0.5 font-[family-name:var(--font-dm)] text-[9px] font-semibold uppercase tracking-[0.06em] text-[var(--amber-fg)]">
+                      <span className="rounded-lg bg-[var(--amber-bg)] px-2 py-0.5 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--amber-fg)]">
                         One-time
                       </span>
                     ) : null}
@@ -167,7 +167,7 @@ export default async function ActiveSharesPage({ params }: Props) {
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1.5">
                   <RevokeButton mxeId={mxeId.toUpperCase()} shareId={share.id} />
-                  <p className="font-[family-name:var(--font-dm)] text-[10px] text-[var(--text3)]">
+                  <p className="font-[family-name:var(--font-dm)] text-[11px] text-[var(--text3)]">
                     {timeUntil(share.expires_at)}
                   </p>
                 </div>
@@ -178,7 +178,7 @@ export default async function ActiveSharesPage({ params }: Props) {
 
         {inactive.length > 0 ? (
           <>
-            <p className="mb-2 mt-8 font-[family-name:var(--font-dm)] text-[9px] font-medium uppercase tracking-[0.2em] text-[var(--text3)]">
+            <p className="mb-2 mt-8 font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--text3)]">
               Expired / revoked
             </p>
             <div className="overflow-hidden rounded-xl border border-[var(--divider)] bg-[var(--white)] opacity-60">

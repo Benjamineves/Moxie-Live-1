@@ -95,7 +95,7 @@ export function TransferPaymentForm({ transferId, mxeId, buyerEmail, sellerTier,
               <div className="font-[family-name:var(--font-dm)] text-xl font-semibold text-[var(--navy)]">
                 {TRANSFER_FEE_PRICE[sellerTier]}
               </div>
-              <div className="font-[family-name:var(--font-dm)] text-[10px] uppercase tracking-[0.08em] text-[var(--text3)]">
+              <div className="font-[family-name:var(--font-dm)] text-[11px] uppercase tracking-[0.08em] text-[var(--text3)]">
                 one-time
               </div>
             </div>

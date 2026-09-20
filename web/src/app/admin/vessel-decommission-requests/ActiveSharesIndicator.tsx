@@ -16,7 +16,7 @@ export function ActiveSharesIndicator({ count }: { count: number }) {
 
   return (
     <p
-      className={`mt-1.5 inline-block rounded-lg px-2 py-0.5 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.06em] ${tone}`}
+      className={`mt-1.5 inline-block rounded-lg px-2 py-0.5 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.06em] ${tone}`}
     >
       {count === 0
         ? "No active share links"

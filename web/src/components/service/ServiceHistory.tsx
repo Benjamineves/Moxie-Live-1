@@ -89,7 +89,7 @@ export function ServiceHistory({
                     </span>
                     {r.file_was_attached ? (
                       <span
-                        className="rounded-full bg-[var(--gray-bg)] px-2 py-0.5 font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.08em] text-[var(--text3)]"
+                        className="rounded-full bg-[var(--gray-bg)] px-2 py-0.5 font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.08em] text-[var(--text3)]"
                         title="This entry has a supporting document"
                       >
                         Document

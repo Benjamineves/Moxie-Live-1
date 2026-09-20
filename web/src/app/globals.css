@@ -58,9 +58,13 @@
      7.51:1 for the text, and a border alpha chosen to clear the 3:1 a
      control boundary needs (3.28:1). */
   --danger-on-dark: #ff9e80;
+  /* Muted label text on the navy family. 7.4:1 on --navy-deep, 6.9:1 on
+     --navy, 6.4:1 on --navy2. Replaces ad-hoc white alphas of .25-.45,
+     which measured 2.25-4.36:1. Not for light surfaces. §6b */
+  --text-on-dark: rgba(255, 255, 255, 0.62);
   --danger-on-dark-line: rgba(255, 158, 128, 0.55);
   --gray-bg: #f1efe8;
-  --gray-fg: #888780;
+  --gray-fg: #666560;   /* was #888780 = 3.13:1 on --gray-bg. 5.08:1 now; 4.82:1 worst (cream2). §6b */
   --purple-bg: #eeedfe;
   --purple-fg: #3c3489;
 }

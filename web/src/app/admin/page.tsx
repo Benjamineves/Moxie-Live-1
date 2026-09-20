@@ -270,8 +270,8 @@ export default async function AdminOverviewPage() {
               <div className="mt-2 flex gap-3">
                 {months.map((m) => (
                   <div key={m.key} className="flex-1 text-center">
-                    <p className="font-[family-name:var(--font-dm)] text-[10px] text-[var(--text3)]">{m.count}</p>
-                    <p className="font-[family-name:var(--font-dm)] text-[10px] uppercase text-[var(--text3)]">
+                    <p className="font-[family-name:var(--font-dm)] text-[11px] text-[var(--text3)]">{m.count}</p>
+                    <p className="font-[family-name:var(--font-dm)] text-[11px] uppercase text-[var(--text3)]">
                       {m.label}
                     </p>
                   </div>

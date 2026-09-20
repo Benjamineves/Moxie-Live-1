@@ -3,7 +3,7 @@
 Open items and what depends on what. Update as items close; add what
 turns up. Where this disagrees with the code, the code wins.
 
-_Last updated 18 September 2026_
+_Last updated 20 September 2026_
 
 ---
 
@@ -188,21 +188,28 @@ Currently `p=none`. Moving to `quarantine` makes spoofing harder.
 
 ## Correctness — open
 
-### `--gray-fg` on `--gray-bg` fails AA (3.13:1)
-Found building the marina roster (2026-09-18). Used by the marketing
-home's "General Public" badge, `ActiveSharesIndicator` (admin) and the
-previously-owned transfer page. The roster's "Access paused" pill moved to
-navy (14.4:1) instead; the token pair itself is unchanged.
-
 ### Signing up creates no `public.users` row
 Only registering a vessel or accepting a transfer does. Marina staff
 attachment (`/admin/marinas`) works around it by reading the Auth account
 and creating the row; anything else keyed on `users` by email will meet
 the same gap.
 
-### Active Shares page uses 9px text
-`/dashboard/[mxeId]/shares` labels and stat captions are `text-[9px]` —
-the same unreadable-size class as the marketing home's sub-10px sizes.
+### "Patent pending" is a regulated claim — keep it true
+Added to the site 2026-09-20: one line in How it Works step 03, one
+standing line in the marketing footer, and the printed badge (which has
+carried it all along). In the US, false marking is penalised — 35 U.S.C.
+§292 — and the claim is accurate **only while an application is genuinely
+on file**. So:
+
+- **If the application is provisional, record the filing date here.** That
+  is a twelve-month clock: convert to a non-provisional or the claim lapses
+  and every line above has to come down. **Filing date: not recorded — Ben
+  to supply.**
+- If the application is abandoned or lapses, remove the lines the same day.
+- If it grants, the claim changes from "pending" to the patent number.
+
+Same discipline as the email-reminder and unlimited-documents copy: the
+site may not say a thing the product (or the filing) doesn't support.
 
 ### App copy promises email reminders that nothing sends
 The Full plan list and badge checkout both mention email reminders. The
@@ -403,6 +410,16 @@ outright. Offering the saved card removes re-entry friction on the upgrade
 path; the edit button adds no capability the portal doesn't already give.
 
 ## Done
+
+**Small-text and contrast sweep** (2026-09-20): 117 elements below 11px
+across 35 files raised to an 11px floor — the three roadmap items (the grey
+badge pair, the shares page's 9px labels, the marketing home's six) were
+one problem in 117 places. `--gray-fg` `#888780` → `#666560` (3.13:1 →
+5.08:1) fixed all nine uses at every size; ad-hoc white alphas on navy
+replaced by `--text-on-dark` at 62% (2.25–4.36:1 → 6.4–7.4:1); the share
+header's teal gradient takes solid white. Transient status text ("Saving…",
+"Voiding…") no longer dims to 1.25:1; disabled controls keep their alpha.
+Measured and recorded in the brand addendum §6b. ·
 
 **Marina operator role-gated access** (2026-09-18, spec
 [`moxie_digital_marina_access_spec.md`](moxie_digital_marina_access_spec.md)):

@@ -65,7 +65,7 @@ export function VesselPublicProfile(props: PublicProfileProps & { hideFooter?: b
   return (
     <article className="mx-auto max-w-lg px-5 pb-16 pt-10 md:px-8">
       <header className="mb-8 border-b border-[var(--divider)] pb-6">
-        <p className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--text3)]">
+        <p className="font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--text3)]">
           Registered vessel
         </p>
         <h1 className="mt-2 font-[family-name:var(--font-display)] text-4xl font-light italic text-[var(--navy)] md:text-[2.75rem]">
@@ -77,7 +77,7 @@ export function VesselPublicProfile(props: PublicProfileProps & { hideFooter?: b
             ? ` · ${vessel_type.charAt(0).toUpperCase()}${vessel_type.slice(1).toLowerCase()}`
             : ""}
         </p>
-        <p className="mt-4 inline-flex rounded-full bg-[var(--gray-bg)] px-3 py-1 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.14em] text-[var(--gray-fg)]">
+        <p className="mt-4 inline-flex rounded-full bg-[var(--gray-bg)] px-3 py-1 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--gray-fg)]">
           Public view · {mxe_id}
         </p>
       </header>
@@ -92,7 +92,7 @@ export function VesselPublicProfile(props: PublicProfileProps & { hideFooter?: b
               <span className="font-[family-name:var(--font-display)] text-2xl font-light italic text-[var(--gold)]">
                 {make}
               </span>
-              <span className="font-[family-name:var(--font-dm)] text-xs uppercase tracking-[0.2em] text-[rgba(255,255,255,.45)]">
+              <span className="font-[family-name:var(--font-dm)] text-xs uppercase tracking-[0.2em] text-[var(--text-on-dark)]">
                 Photo pending upload
               </span>
             </div>

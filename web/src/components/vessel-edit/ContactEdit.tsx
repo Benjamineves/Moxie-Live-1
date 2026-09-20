@@ -100,7 +100,7 @@ export function ContactEdit({
           placeholder="e.g. phone, email, text"
         />
       </label>
-      <p className="mt-2 border-t border-[var(--divider)] pt-4 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--text3)]">
+      <p className="mt-2 border-t border-[var(--divider)] pt-4 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--text3)]">
         Badge shipping address
       </p>
       <label className={labelClass}>

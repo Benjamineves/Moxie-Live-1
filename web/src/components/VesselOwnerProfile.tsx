@@ -168,13 +168,13 @@ export function VesselOwnerProfile({
       <AppHeader role="Owner" wordmarkHref="/dashboard">
         <Link
           href={`/dashboard/${encodeURIComponent(tier.mxe_id)}/shares`}
-          className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.2em] text-[rgba(255,255,255,.55)] transition hover:text-[var(--gold)]"
+          className="font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.2em] text-[rgba(255,255,255,.55)] transition hover:text-[var(--gold)]"
         >
           Shares
         </Link>
         <Link
           href={`/dashboard/${encodeURIComponent(tier.mxe_id)}/documents`}
-          className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.2em] text-[rgba(255,255,255,.55)] transition hover:text-[var(--gold)]"
+          className="font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.2em] text-[rgba(255,255,255,.55)] transition hover:text-[var(--gold)]"
         >
           Documents
         </Link>
@@ -524,7 +524,7 @@ export function VesselOwnerProfile({
                 <h3 className="font-[family-name:var(--font-display)] text-lg font-light text-white">
                   Transfer ownership
                 </h3>
-                <span className="shrink-0 rounded-md bg-[var(--gold-dim)] px-2.5 py-1 font-[family-name:var(--font-dm)] text-[9px] font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">
+                <span className="shrink-0 rounded-md bg-[var(--gold-dim)] px-2.5 py-1 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--gold)]">
                   Premium
                 </span>
               </div>

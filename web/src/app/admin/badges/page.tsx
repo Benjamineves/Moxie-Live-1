@@ -147,7 +147,7 @@ export default async function BadgeInventoryPage() {
                           {counts.map(({ status, n }) => (
                             <span
                               key={status}
-                              className="rounded-lg bg-[var(--blue-bg)] px-2 py-0.5 font-[family-name:var(--font-dm)] text-[9px] font-semibold uppercase tracking-[0.06em] text-[var(--blue-fg)]"
+                              className="rounded-lg bg-[var(--blue-bg)] px-2 py-0.5 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.06em] text-[var(--blue-fg)]"
                             >
                               {n} {status.replace("_", " ")}
                             </span>
@@ -155,7 +155,7 @@ export default async function BadgeInventoryPage() {
                         </div>
                       </div>
                       <div className="shrink-0 text-right">
-                        <p className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
+                        <p className="font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
                           Artwork
                         </p>
                         {/* Progress is COUNT(*) WHERE artwork_path IS NOT NULL

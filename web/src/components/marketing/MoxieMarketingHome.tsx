@@ -77,7 +77,7 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
             .map((t, i) => (
               <span
                 key={i}
-                className="px-8 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.22em] text-[var(--navy)]"
+                className="px-8 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--navy)]"
               >
                 {t}
                 <span className="px-4 text-[rgba(13,31,53,0.3)]">◆</span>
@@ -90,7 +90,7 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
         <div className="absolute -right-20 -top-20 h-[400px] w-[400px] rounded-full bg-[radial-gradient(circle,rgba(201,168,76,0.08)_0%,transparent_70%)]" />
         <div className="relative z-[1] mx-auto grid max-w-[1160px] items-center gap-12 lg:grid-cols-2 lg:gap-20">
           <div>
-            <p className="mb-4 flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--aqua-bright)]">
+            <p className="mb-4 flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--aqua-bright)]">
               <span className="h-px w-6 bg-[var(--aqua-bright)]" />
               The QR badge
             </p>
@@ -133,13 +133,10 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
                 })}
               </div>
               <div className="my-3 h-px w-full bg-[var(--gold)] opacity-50" />
-              <p className="font-[family-name:var(--font-dm)] text-[8px] font-medium uppercase leading-snug tracking-[0.22em] text-[rgba(255,255,255,0.5)]">
+              <p className="font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase leading-snug tracking-[0.22em] text-[var(--text-on-dark)]">
                 Registered vessel
                 <br />
                 Scan · MXE-00001
-              </p>
-              <p className="mt-2 font-[family-name:var(--font-dm)] text-[6px] font-medium uppercase tracking-[0.14em] text-[rgba(255,255,255,0.25)]">
-                Patent Pending
               </p>
             </div>
           </div>
@@ -148,7 +145,7 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
 
       <section id="how" className="bg-[var(--cream)] px-6 py-[100px] md:px-12">
         <div className="mx-auto max-w-[1160px]">
-          <p className="mb-4 flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--gold-deep)]">
+          <p className="mb-4 flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--gold-deep)]">
             <span className="h-px w-6 bg-[var(--gold)]" />
             How it works
           </p>
@@ -173,6 +170,7 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
                 n: "03",
                 title: "Anyone can scan it",
                 body: "A stranger sees the boat — make, model, year, photo — and nothing about you. You see everything, and can edit it. The people you let in — a captain, a cleaner, family — see only what you share, through a link you can revoke.",
+                note: "One badge resolving to a different view for each person is the part of Moxie we\u2019ve applied for a patent on.",
               },
             ].map((c) => (
               <div
@@ -186,6 +184,11 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
                   {c.title}
                 </h3>
                 <p className="text-[14px] font-light leading-relaxed text-[var(--text2)]">{c.body}</p>
+                {"note" in c && c.note ? (
+                  <p className="mt-4 border-t border-[var(--divider)] pt-4 font-[family-name:var(--font-dm)] text-[11px] leading-relaxed text-[var(--text3)]">
+                    {c.note}
+                  </p>
+                ) : null}
               </div>
             ))}
           </div>
@@ -195,7 +198,7 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
       <section id="who" className="relative overflow-hidden bg-[var(--navy)] px-6 py-[100px] md:px-12">
         <div className="absolute -right-[100px] -top-[100px] h-[500px] w-[500px] rounded-full bg-[radial-gradient(circle,rgba(201,168,76,0.06)_0%,transparent_70%)]" />
         <div className="relative z-[2] mx-auto max-w-[1160px]">
-          <p className="mb-4 flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--gold)]">
+          <p className="mb-4 flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--gold)]">
             <span className="h-px w-6 bg-[var(--gold)]" />
             Who it&apos;s for
           </p>
@@ -264,14 +267,14 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
                 className="relative overflow-hidden bg-[rgba(255,255,255,0.03)] p-10 transition hover:bg-[rgba(255,255,255,0.06)] md:p-12"
               >
                 <span
-                  className={`mb-5 inline-flex items-center rounded-full px-3 py-1 font-[family-name:var(--font-dm)] text-[9px] font-medium uppercase tracking-[0.16em] ${card.badgeClass}`}
+                  className={`mb-5 inline-flex items-center rounded-full px-3 py-1 font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.16em] ${card.badgeClass}`}
                 >
                   {card.badge}
                 </span>
                 <h3 className="mb-4 font-[family-name:var(--font-display)] text-[26px] font-light leading-tight text-white">
                   {card.title}
                 </h3>
-                <p className="mb-7 text-[14px] leading-relaxed text-[rgba(255,255,255,0.5)]">{card.body}</p>
+                <p className="mb-7 text-[14px] leading-relaxed text-[var(--text-on-dark)]">{card.body}</p>
                 <ul className="list-none space-y-2">
                   {card.items.map((li, i) => (
                     <li
@@ -294,7 +297,7 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
           <ScanDemo />
 
           <div>
-            <p className="mb-4 flex items-center gap-3 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--gold-deep)]">
+            <p className="mb-4 flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--gold-deep)]">
               <span className="h-px w-6 bg-[var(--gold)]" />
               The vessel profile
             </p>
@@ -358,7 +361,7 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
 
       <section id="contact" className="bg-[var(--cream)] px-6 py-[100px] md:px-12">
         <div className="mx-auto max-w-[640px] text-center">
-          <p className="mb-4 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--gold-deep)]">Get started</p>
+          <p className="mb-4 text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--gold-deep)]">Get started</p>
           <h2 className="mb-6 font-[family-name:var(--font-display)] text-[clamp(36px,5vw,56px)] font-light leading-tight text-[var(--navy)]">
             Register today.
             <br />
@@ -377,7 +380,7 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
 
           <div className="my-12 h-px bg-[var(--divider)]" />
 
-          <p className="mb-1 text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--text3)]">Not ready yet?</p>
+          <p className="mb-1 text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--text3)]">Not ready yet?</p>
           <p className="mb-6 text-[14px] font-light leading-relaxed text-[var(--text2)]">
             Leave your email and we&apos;ll follow up when the time&apos;s right.
           </p>
@@ -385,7 +388,7 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
           <div className="mb-9 mt-12 h-px bg-[var(--divider)]" />
           <div className="flex flex-wrap justify-center gap-x-10 gap-y-6 text-left">
             <div>
-              <div className="mb-1 text-[9px] font-medium uppercase tracking-[0.14em] text-[var(--text3)]">Email</div>
+              <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--text3)]">Email</div>
               <a
                 className="border-b border-[var(--divider)] text-sm text-[var(--navy)] no-underline transition hover:border-[var(--gold)]"
                 href="mailto:info@moxieyachting.com"
@@ -394,7 +397,7 @@ export function MoxieMarketingHome({ isAuthenticated }: { isAuthenticated: boole
               </a>
             </div>
             <div>
-              <div className="mb-1 text-[9px] font-medium uppercase tracking-[0.14em] text-[var(--text3)]">Based in</div>
+              <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.14em] text-[var(--text3)]">Based in</div>
               <div className="text-sm text-[var(--navy)]">Northern California</div>
             </div>
           </div>

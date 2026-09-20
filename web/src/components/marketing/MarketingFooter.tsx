@@ -13,10 +13,10 @@ export function MarketingFooter({ isAuthenticated }: { isAuthenticated: boolean 
         </span>
         <span className="inline-block h-2 w-2 bg-[var(--aqua-bright)]" aria-hidden />
       </div>
-      <p className="text-[11px] leading-relaxed text-[rgba(255,255,255,0.35)]">
-        © 2026 Moxie Marine Technology · moxieyachting.com
+      <p className="text-[11px] leading-relaxed text-[var(--text-on-dark)]">
+        © 2026 Moxie Marine Technology · moxieyachting.com · Patent pending
       </p>
-      <div className="mt-8 flex flex-wrap justify-center gap-4 font-[family-name:var(--font-dm)] text-[11px] text-[rgba(255,255,255,0.45)]">
+      <div className="mt-8 flex flex-wrap justify-center gap-4 font-[family-name:var(--font-dm)] text-[11px] text-[var(--text-on-dark)]">
         <Link className="text-[var(--gold)] no-underline hover:underline" href="/pricing">
           Pricing
         </Link>

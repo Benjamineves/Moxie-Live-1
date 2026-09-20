@@ -48,12 +48,12 @@ export function SharedVesselProfile({
             <p className="font-[family-name:var(--font-display)] text-base font-light italic text-white">
               <span className="text-[var(--gold)]">M</span>oxie
             </p>
-            <span className="rounded-full border border-[rgba(23,195,178,.3)] bg-[rgba(23,195,178,.2)] px-2.5 py-0.5 font-[family-name:var(--font-dm)] text-[8px] font-medium uppercase tracking-[0.16em] text-[#7fe8dc]">
+            <span className="rounded-full border border-[rgba(23,195,178,.3)] bg-[rgba(23,195,178,.2)] px-2.5 py-0.5 font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.16em] text-white">
               Shared Profile
             </span>
           </div>
           {expiresAt ? (
-            <span className="font-[family-name:var(--font-dm)] text-[10px] uppercase tracking-[0.1em] text-[rgba(255,255,255,.4)]">
+            <span className="font-[family-name:var(--font-dm)] text-[11px] uppercase tracking-[0.1em] text-white">
               Expires {new Date(expiresAt).toLocaleString()}
             </span>
           ) : null}
@@ -74,7 +74,7 @@ export function SharedVesselProfile({
 
       <header className="border-b border-[var(--divider)] bg-[var(--navy-deep)] px-5 pb-6 pt-8">
         <div className="mx-auto max-w-lg">
-          <p className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.22em] text-[rgba(255,255,255,.4)]">
+          <p className="font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--text-on-dark)]">
             {vessel.mxe_id}
           </p>
           <h1 className="mt-1 font-[family-name:var(--font-display)] text-4xl font-light italic text-white">
@@ -96,7 +96,7 @@ export function SharedVesselProfile({
           ].map(([k, v]) =>
             v ? (
               <div key={k} className="border-r border-[var(--divider)] p-4 last:border-r-0">
-                <p className="mb-0.5 font-[family-name:var(--font-dm)] text-[9px] uppercase tracking-[0.12em] text-[var(--text3)]">{k}</p>
+                <p className="mb-0.5 font-[family-name:var(--font-dm)] text-[11px] uppercase tracking-[0.12em] text-[var(--text3)]">{k}</p>
                 <p className="font-[family-name:var(--font-dm)] text-sm font-semibold text-[var(--navy)]">{v}</p>
               </div>
             ) : null,
@@ -105,7 +105,7 @@ export function SharedVesselProfile({
 
         {hasLocation ? (
           <section className="border-b border-[var(--divider)] bg-[var(--white)] px-5 py-5">
-            <p className="mb-3 font-[family-name:var(--font-dm)] text-[9px] font-medium uppercase tracking-[0.2em] text-[var(--text3)]">
+            <p className="mb-3 font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--text3)]">
               Location
             </p>
             {isMarinaStorage ? (
@@ -127,7 +127,7 @@ export function SharedVesselProfile({
 
         {hasContact ? (
           <section className="border-b border-[var(--divider)] bg-[var(--white)] px-5 py-5">
-            <p className="mb-3 font-[family-name:var(--font-dm)] text-[9px] font-medium uppercase tracking-[0.2em] text-[var(--text3)]">
+            <p className="mb-3 font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--text3)]">
               Owner Contact
             </p>
             <dl>
@@ -139,11 +139,11 @@ export function SharedVesselProfile({
 
         {hasAccess && vessel.access_note ? (
           <section className="border-b border-[var(--divider)] bg-[var(--white)] px-5 py-5">
-            <p className="mb-3 font-[family-name:var(--font-dm)] text-[9px] font-medium uppercase tracking-[0.2em] text-[var(--text3)]">
+            <p className="mb-3 font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--text3)]">
               Access &amp; Instructions
             </p>
             <div className="rounded-lg border border-[rgba(23,195,178,.15)] bg-[rgba(23,195,178,.05)] p-3.5">
-              <p className="mb-1 font-[family-name:var(--font-dm)] text-[10px] font-medium text-[var(--text3)]">
+              <p className="mb-1 font-[family-name:var(--font-dm)] text-[11px] font-medium text-[var(--text3)]">
                 {sharedBy ? `Note from ${sharedBy.split(" ")[0]}` : "Note from owner"}
               </p>
               <p className="font-[family-name:var(--font-dm)] text-sm leading-relaxed text-[var(--navy)]">{vessel.access_note}</p>
@@ -153,7 +153,7 @@ export function SharedVesselProfile({
 
         {hasDocs ? (
           <section className="border-b border-[var(--divider)] bg-[var(--white)] px-5 py-5">
-            <p className="mb-3 font-[family-name:var(--font-dm)] text-[9px] font-medium uppercase tracking-[0.2em] text-[var(--text3)]">
+            <p className="mb-3 font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--text3)]">
               Documents
             </p>
             <dl>
@@ -166,7 +166,7 @@ export function SharedVesselProfile({
 
         {hasOwnership ? (
           <section className="border-b border-[var(--divider)] bg-[var(--white)] px-5 py-5">
-            <p className="mb-3 font-[family-name:var(--font-dm)] text-[9px] font-medium uppercase tracking-[0.2em] text-[var(--text3)]">
+            <p className="mb-3 font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--text3)]">
               Ownership Record
             </p>
             <dl>
@@ -204,7 +204,7 @@ export function SharedVesselProfile({
         */}
         {serviceRecords.length > 0 ? (
           <section className="border-b border-[var(--divider)] bg-[var(--cream)] px-5 py-5">
-            <p className="mb-3 font-[family-name:var(--font-dm)] text-[9px] font-medium uppercase tracking-[0.2em] text-[var(--text3)]">
+            <p className="mb-3 font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--text3)]">
               Service history
             </p>
             <ServiceHistory records={serviceRecords} now={new Date()} />
@@ -214,7 +214,7 @@ export function SharedVesselProfile({
 
         <div className="mx-5 mt-2 flex items-center gap-4 rounded-xl bg-[var(--navy)] p-5">
           <div className="flex-1">
-            <p className="font-[family-name:var(--font-dm)] text-[9px] font-medium uppercase tracking-[0.16em] text-[rgba(255,255,255,.4)]">
+            <p className="font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--text-on-dark)]">
               Own a vessel?
             </p>
             <p className="mt-1 font-[family-name:var(--font-display)] text-lg italic text-white">
@@ -223,7 +223,7 @@ export function SharedVesselProfile({
           </div>
           <Link
             href="/"
-            className="shrink-0 bg-[var(--gold)] px-4 py-2.5 font-[family-name:var(--font-dm)] text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--navy)]"
+            className="shrink-0 bg-[var(--gold)] px-4 py-2.5 font-[family-name:var(--font-dm)] text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--navy)]"
           >
             Learn more
           </Link>

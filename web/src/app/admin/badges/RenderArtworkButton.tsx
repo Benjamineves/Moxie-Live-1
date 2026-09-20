@@ -64,7 +64,7 @@ export function RenderArtworkButton({
 
   if (complete && !running && !error) {
     return (
-      <p className="font-[family-name:var(--font-dm)] text-[10px] text-[var(--green-fg)]">
+      <p className="font-[family-name:var(--font-dm)] text-[11px] text-[var(--green-fg)]">
         artwork complete
       </p>
     );
@@ -76,7 +76,7 @@ export function RenderArtworkButton({
         type="button"
         onClick={run}
         disabled={running}
-        className="rounded-md border border-[var(--gold-line)] px-3 py-1.5 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--navy)] transition hover:bg-[var(--gold-dim)] disabled:opacity-40"
+        className={`rounded-md border border-[var(--gold-line)] px-3 py-1.5 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--navy)] transition hover:bg-[var(--gold-dim)] ${running ? "" : "disabled:opacity-40"}`}
       >
         {running
           ? `Rendering… ${done} / ${totalCount}`
@@ -85,7 +85,7 @@ export function RenderArtworkButton({
             : "Render artwork"}
       </button>
       {error ? (
-        <p className="max-w-[260px] text-right font-[family-name:var(--font-dm)] text-[10px] leading-snug text-[var(--red-fg)]">
+        <p className="max-w-[260px] text-right font-[family-name:var(--font-dm)] text-[11px] leading-snug text-[var(--red-fg)]">
           {error}
         </p>
       ) : null}

@@ -59,7 +59,7 @@ function describeDocument(meta: DocumentFileMeta | undefined): string {
 }
 
 const ACTION_CLASS =
-  "shrink-0 rounded-md border border-[var(--gold-line)] px-3 py-2 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--navy)] transition hover:bg-[var(--gold-dim)]";
+  "shrink-0 rounded-md border border-[var(--gold-line)] px-3 py-2 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--navy)] transition hover:bg-[var(--gold-dim)]";
 
 /** Uploads are constrained to image/* or application/pdf at the file input, so the stored extension is one or the other. */
 function isPdf(path: string) {
@@ -88,7 +88,7 @@ function ExpiryBadge({ status }: { status: ExpiryStatus }) {
   };
   return (
     <span
-      className={`mt-1 inline-flex rounded-full border px-2 py-0.5 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.08em] ${tone[status.state]}`}
+      className={`mt-1 inline-flex rounded-full border px-2 py-0.5 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.08em] ${tone[status.state]}`}
     >
       {status.label}
     </span>
@@ -184,14 +184,14 @@ function ExpiryEditor({
           type="button"
           disabled={pending || !value.trim()}
           onClick={() => (isIntrinsic ? setConfirming(true) : void save())}
-          className="rounded-md bg-[var(--navy)] px-3 py-1.5 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--gold)] disabled:opacity-50"
+          className={`rounded-md bg-[var(--navy)] px-3 py-1.5 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--gold)] ${pending ? "" : "disabled:opacity-50"}`}
         >
           {pending ? "Saving…" : "Save date"}
         </button>
         <button
           type="button"
           onClick={onClose}
-          className="font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text2)] underline"
+          className="font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text2)] underline"
         >
           Skip
         </button>
@@ -450,7 +450,7 @@ function DocumentFileRow({
             {url ? describeDocument(meta) : "No file uploaded"}
           </p>
           {url && expiryField && expiryExempt ? (
-            <span className="mt-1 inline-flex rounded-full border border-[var(--green-fg)] bg-[var(--green-bg)] px-2 py-0.5 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--green-fg)]">
+            <span className="mt-1 inline-flex rounded-full border border-[var(--green-fg)] bg-[var(--green-bg)] px-2 py-0.5 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--green-fg)]">
               Lifetime — never expires
             </span>
           ) : null}
@@ -461,7 +461,7 @@ function DocumentFileRow({
                 <button
                   type="button"
                   onClick={() => setEditingExpiry(true)}
-                  className="mt-1 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--navy)] underline"
+                  className="mt-1 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.08em] text-[var(--navy)] underline"
                 >
                   Add date
                 </button>
@@ -478,7 +478,7 @@ function DocumentFileRow({
           {url && !canView ? (
             <span
               aria-disabled="true"
-              className="shrink-0 rounded-md border border-[var(--divider)] px-3 py-2 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text3)]"
+              className="shrink-0 rounded-md border border-[var(--divider)] px-3 py-2 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text3)]"
             >
               View — needs a connection
             </span>
@@ -686,16 +686,16 @@ function FishingLicenseRow({
 /** Locked row — visible, never hidden, never deleted, just not openable. No View: the proxy route 403s a locked document server-side too. */
 function LockedDocumentRow({ label }: { label: string }) {
   return (
-    <div className="flex items-center justify-between gap-4 border-b border-[var(--divider)] py-3 last:border-0 opacity-70">
+    <div className="flex items-center justify-between gap-4 border-b border-[var(--divider)] py-3 last:border-0">
       <div>
-        <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--text)]">{label}</p>
+        <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--text3)]">{label}</p>
         <p className="mt-0.5 font-[family-name:var(--font-dm)] text-xs text-[var(--text3)]">
           On file, locked on Basic
         </p>
       </div>
       <Link
         href="/dashboard/upgrade"
-        className="shrink-0 rounded-md border border-[var(--gold-line)] px-3 py-2 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--gold-deep)] transition hover:bg-[var(--gold-dim)]"
+        className="shrink-0 rounded-md border border-[var(--gold-line)] px-3 py-2 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--gold-deep)] transition hover:bg-[var(--gold-dim)]"
       >
         🔒 Unlock with Full Access
       </Link>

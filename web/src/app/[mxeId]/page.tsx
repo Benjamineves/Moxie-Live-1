@@ -274,7 +274,7 @@ export default async function VesselPage({ params, searchParams }: Props) {
   if (vessel.qr_status !== "active") {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-[var(--cream)] px-6 text-center">
-        <p className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--text3)]">
+        <p className="font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--text3)]">
           {vessel.mxe_id}
         </p>
         <h1 className="font-[family-name:var(--font-display)] text-3xl font-light italic text-[var(--navy)]">
@@ -320,7 +320,7 @@ export default async function VesselPage({ params, searchParams }: Props) {
             className="h-32 w-32 rounded-full object-cover opacity-80 grayscale"
           />
         ) : null}
-        <p className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--text3)]">
+        <p className="font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--text3)]">
           {vessel.mxe_id}
         </p>
         <h1 className="font-[family-name:var(--font-display)] text-3xl font-light italic text-[var(--navy)]">

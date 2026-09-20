@@ -29,7 +29,7 @@ export function ReverseTransferButton({ transferId, mxeId }: { transferId: strin
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="rounded-md border border-[var(--divider)] px-3 py-1.5 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text2)] transition hover:bg-[var(--cream2)]"
+        className="rounded-md border border-[var(--divider)] px-3 py-1.5 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text2)] transition hover:bg-[var(--cream2)]"
       >
         Reverse
       </button>

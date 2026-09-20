@@ -68,7 +68,7 @@ export function PaymentForm({ mxeId, vesselName, vesselTag, publishableKey, amou
               <div className="font-[family-name:var(--font-dm)] text-xl font-semibold text-[var(--navy)]">
                 {BADGE_FEE_COPY.price}
               </div>
-              <div className="font-[family-name:var(--font-dm)] text-[10px] uppercase tracking-[0.08em] text-[var(--text3)]">
+              <div className="font-[family-name:var(--font-dm)] text-[11px] uppercase tracking-[0.08em] text-[var(--text3)]">
                 {BADGE_FEE_COPY.cadence}
               </div>
             </div>

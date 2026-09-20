@@ -27,11 +27,11 @@ export function RevokeButton({ mxeId, shareId }: { mxeId: string; shareId: strin
         type="button"
         onClick={onRevoke}
         disabled={pending}
-        className="rounded-md border border-[var(--divider)] px-3 py-1.5 font-[family-name:var(--font-dm)] text-[9px] font-semibold uppercase tracking-[0.1em] text-[var(--text3)] transition hover:border-[var(--red-fg)] hover:text-[var(--red-fg)] disabled:opacity-50"
+        className={`rounded-md border border-[var(--divider)] px-3 py-1.5 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text3)] transition hover:border-[var(--red-fg)] hover:text-[var(--red-fg)] ${pending ? "" : "disabled:opacity-50"}`}
       >
         {pending ? "Revoking…" : "Revoke"}
       </button>
-      {error ? <span className="font-[family-name:var(--font-dm)] text-[10px] text-[var(--red-fg)]">{error}</span> : null}
+      {error ? <span className="font-[family-name:var(--font-dm)] text-[11px] text-[var(--red-fg)]">{error}</span> : null}
     </div>
   );
 }

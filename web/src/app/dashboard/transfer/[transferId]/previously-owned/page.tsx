@@ -128,7 +128,7 @@ export default async function PreviouslyOwnedPage({ params }: Props) {
         ) : null}
 
         <header className="mt-6 border-b border-[var(--divider)] pb-4">
-          <p className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.22em] text-[var(--text3)]">
+          <p className="font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.22em] text-[var(--text3)]">
             {transfer.mxe_id}
           </p>
           <h1 className="mt-1 font-[family-name:var(--font-display)] text-3xl font-light italic text-[var(--navy)]">

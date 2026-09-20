@@ -93,7 +93,7 @@ export function ExpiryDateNudge({
         </div>
         <a
           href={href}
-          className="shrink-0 rounded-md bg-[var(--navy)] px-4 py-2.5 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--gold)] no-underline"
+          className="shrink-0 rounded-md bg-[var(--navy)] px-4 py-2.5 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--gold)] no-underline"
         >
           Add
         </a>
@@ -101,7 +101,7 @@ export function ExpiryDateNudge({
       <button
         type="button"
         onClick={dismiss}
-        className="mt-3 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text2)] underline"
+        className="mt-3 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text2)] underline"
       >
         Not now
       </button>

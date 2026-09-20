@@ -166,6 +166,8 @@ different surface means changing its tokens, not just its container.**
 | Gold — links, triggers, accents | `--gold` `#c9a84c` | `--gold-deep` `#7d6119` |
 | Danger — errors, destructive controls | `--danger-on-dark` `#ff9e80` | `--red-fg` `#712b13` |
 | Third-level text — labels, eyebrows, metadata | `#6b8299`, unnamed — see below | `--text3` `#566a7b` |
+| Muted labels on the navy family | `--text-on-dark` `rgba(255,255,255,.62)` | `--text3` `#566a7b` |
+| Neutral badge text | — | `--gray-fg` `#666560` on `--gray-bg` |
 
 **`--text3` is a light-surface token.** Swept 2026-09-15. It was `#6b8299`
 and failed AA on every surface it was used on — not just at 12px, as the
@@ -315,6 +317,46 @@ darker one to be safe" is not a rule that works.
    instances it does *not* fix rather than counting them as swept. They
    are also **state-dependent**, so they look fine in the default render
    and only fail once the vessel is dormant or the share revoked.
+
+### The small-text sweep, 2026-09-20
+
+Three roadmap items turned out to be one problem in 117 places: every
+element rendered **below 11px**, app-wide, across 35 files — 78 at 10px,
+35 at 9px, 3 at 8px, 1 at 6px. All are now 11px, the floor the phone-mockup
+rebuild set. Contrast was measured separately, since raising 9px to 11px
+changes no threshold.
+
+**Two new pairings.**
+
+| | was | now | measured |
+|---|---|---|---|
+| `--gray-fg` on `--gray-bg` | `#888780` | `#666560` | 3.13:1 → **5.08:1**; worst light surface (cream2) 4.82:1 |
+| Muted white labels on navy | `.25`–`.45` alpha | `--text-on-dark` `.62` | 2.25–4.36:1 → **6.4:1** (navy2), 6.9 (navy), 7.4 (navy-deep) |
+
+`--text-on-dark` is a dark-surface token and nothing else: at 62% it is
+3.25:1 on the share header's teal gradient, which is why that header uses
+**solid white** (4.85:1 on the badge tint, 11.6:1 on the bar) rather than
+an alpha chosen to survive both.
+
+**Deriving the background mattered more than measuring it.** The first pass
+reported white text on white backgrounds. Two causes, both real: a
+`bg-gradient-to-r` is a background the class walker didn't recognise, and
+an element passed as `children` into `<AppHeader>` inherits a background
+declared in another file. Five "failures" were the header's own links at
+6.2:1. Every row was checked against its call site before it was changed.
+
+**Opacity wrappers: split, not swept.** A `disabled:opacity-50` button
+whose label reads "Saving…" is not an inactive component — the status text
+is the feedback, at 1.25:1, exactly when someone is looking for it. Four
+buttons now drop the dimming while pending and keep it when disabled for
+any other reason. Three more cases were dimmed *content* (a locked
+document row with a live upgrade link, shipped rows in the sticker queue,
+unrendered artwork tiles); each keeps a non-opacity signal instead. The
+dormant block on the owner profile stays dimmed: it is `pointer-events-none`
+and `aria-disabled`, genuinely inactive.
+
+**Still exempt, deliberately:** the giant watermark letter behind the hero
+(`rgba(255,255,255,.03)`, `aria-hidden`) is decoration.
 
 ### The one genuine exemption
 

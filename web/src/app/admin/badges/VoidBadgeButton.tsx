@@ -35,7 +35,7 @@ export function VoidBadgeButton({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="mt-1 font-[family-name:var(--font-dm)] text-[9px] font-medium uppercase tracking-[0.06em] text-[var(--text3)] underline-offset-2 hover:underline"
+        className="mt-1 font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--text3)] underline-offset-2 hover:underline"
       >
         Void
       </button>
@@ -44,7 +44,7 @@ export function VoidBadgeButton({
 
   return (
     <div className="mt-1.5 text-left">
-      <label className="font-[family-name:var(--font-dm)] text-[9px] font-medium uppercase tracking-[0.06em] text-[var(--text3)]">
+      <label className="font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.06em] text-[var(--text3)]">
         Reason for voiding {mxeId}
       </label>
       <input
@@ -52,10 +52,10 @@ export function VoidBadgeButton({
         value={reason}
         onChange={(e) => setReason(e.target.value)}
         placeholder="creased in finishing"
-        className="mt-1 w-full rounded-lg border border-[var(--divider)] px-2 py-1 font-[family-name:var(--font-dm)] text-[10px]"
+        className="mt-1 w-full rounded-lg border border-[var(--divider)] px-2 py-1 font-[family-name:var(--font-dm)] text-[11px]"
       />
       {error ? (
-        <p className="mt-1 font-[family-name:var(--font-dm)] text-[9px] text-[var(--red-fg)]">{error}</p>
+        <p className="mt-1 font-[family-name:var(--font-dm)] text-[11px] text-[var(--red-fg)]">{error}</p>
       ) : null}
       <div className="mt-1 flex gap-1.5">
         <button
@@ -69,7 +69,7 @@ export function VoidBadgeButton({
               else setOpen(false);
             });
           }}
-          className="rounded-lg bg-[var(--red-fg)] px-2 py-1 font-[family-name:var(--font-dm)] text-[9px] font-semibold text-[var(--white)] disabled:opacity-50"
+          className={`rounded-lg bg-[var(--red-fg)] px-2 py-1 font-[family-name:var(--font-dm)] text-[11px] font-semibold text-[var(--white)] ${pending ? "" : "disabled:opacity-50"}`}
         >
           {pending ? "Voiding…" : "Confirm void"}
         </button>
@@ -79,7 +79,7 @@ export function VoidBadgeButton({
             setOpen(false);
             setError(null);
           }}
-          className="rounded-lg px-2 py-1 font-[family-name:var(--font-dm)] text-[9px] text-[var(--text3)]"
+          className="rounded-lg px-2 py-1 font-[family-name:var(--font-dm)] text-[11px] text-[var(--text3)]"
         >
           Cancel
         </button>

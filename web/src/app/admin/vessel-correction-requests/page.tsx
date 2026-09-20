@@ -135,7 +135,7 @@ export default async function VesselCorrectionRequestsPage({ searchParams }: Pro
                         href={r.signedUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="rounded-md border border-[var(--divider)] px-3 py-1.5 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.1em] text-[var(--text)]"
+                        className="rounded-md border border-[var(--divider)] px-3 py-1.5 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.1em] text-[var(--text)]"
                       >
                         View document
                       </a>

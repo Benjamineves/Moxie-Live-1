@@ -157,7 +157,7 @@ export function ShareSheet({
                 <p className="mb-0.5 font-[family-name:var(--font-dm)] text-xs font-semibold text-[var(--navy)]">
                   Trusted Contact
                 </p>
-                <p className="font-[family-name:var(--font-dm)] text-[10px] leading-tight text-[var(--text3)]">
+                <p className="font-[family-name:var(--font-dm)] text-[11px] leading-tight text-[var(--text3)]">
                   Share selected details. Unique link, expiry, revokable.
                 </p>
               </button>
@@ -172,7 +172,7 @@ export function ShareSheet({
                 }`}
               >
                 <p className="mb-0.5 font-[family-name:var(--font-dm)] text-xs font-semibold text-[var(--navy)]">Public Link</p>
-                <p className="font-[family-name:var(--font-dm)] text-[10px] leading-tight text-[var(--text3)]">
+                <p className="font-[family-name:var(--font-dm)] text-[11px] leading-tight text-[var(--text3)]">
                   Copy your public profile URL. No login required.
                 </p>
               </button>
@@ -249,7 +249,7 @@ export function ShareSheet({
                 </div>
 
                 <div className="border-b border-[var(--divider)] px-5 py-4">
-                  <p className="mb-2.5 flex items-center gap-2 font-[family-name:var(--font-dm)] text-[9px] font-medium uppercase tracking-[0.2em] text-[var(--text3)]">
+                  <p className="mb-2.5 flex items-center gap-2 font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.2em] text-[var(--text3)]">
                     What they&apos;ll see
                   </p>
 
@@ -258,7 +258,7 @@ export function ShareSheet({
                       <p className="font-[family-name:var(--font-dm)] text-[13px] font-medium text-[var(--navy)]">Vessel specs</p>
                       <p className="font-[family-name:var(--font-dm)] text-[11px] text-[var(--text3)]">Make, model, year, length, type</p>
                     </div>
-                    <span className="font-[family-name:var(--font-dm)] text-[10px] uppercase tracking-[0.08em] text-[var(--text3)]">Always</span>
+                    <span className="font-[family-name:var(--font-dm)] text-[11px] uppercase tracking-[0.08em] text-[var(--text3)]">Always</span>
                   </div>
 
                   {VIS_ITEMS.map((item) => (
@@ -292,7 +292,7 @@ export function ShareSheet({
                       placeholder="e.g. Lockbox code: 4471 · Dock gate code: #2298 · Boat is second cleat on the left, cover strap is on the bow rail"
                       className="min-h-16 w-full resize-y border border-[var(--divider)] bg-[var(--cream)] px-3.5 py-2.5 font-[family-name:var(--font-dm)] text-[13px] leading-relaxed text-[var(--navy)] outline-none focus:border-[var(--amber-fg)]"
                     />
-                    <p className="mt-1.5 font-[family-name:var(--font-dm)] text-[10px] leading-relaxed text-[var(--text3)]">
+                    <p className="mt-1.5 font-[family-name:var(--font-dm)] text-[11px] leading-relaxed text-[var(--text3)]">
                       Visible only to this contact, only while the link is active. Not stored as part of the vessel&apos;s
                       permanent record.
                     </p>
@@ -308,7 +308,7 @@ export function ShareSheet({
 
                 {generatedUrl ? (
                   <div className="mx-5 mt-4 border border-[rgba(8,80,65,.2)] bg-[var(--green-bg)] p-4">
-                    <p className="mb-2 font-[family-name:var(--font-dm)] text-[9px] font-semibold uppercase tracking-[0.16em] text-[var(--green-fg)]">
+                    <p className="mb-2 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.16em] text-[var(--green-fg)]">
                       Share link ready
                     </p>
                     <p className="mb-2.5 break-all border border-[rgba(8,80,65,.15)] bg-[var(--white)] px-3 py-2.5 font-mono text-xs text-[var(--navy)]">
@@ -317,7 +317,7 @@ export function ShareSheet({
                     <button
                       type="button"
                       onClick={() => copyToClipboard(generatedUrl)}
-                      className="w-full bg-[var(--green-fg)] py-2.5 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.1em] text-white"
+                      className="w-full bg-[var(--green-fg)] py-2.5 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.1em] text-white"
                     >
                       {copied ? "Copied!" : "Copy link"}
                     </button>

@@ -65,7 +65,7 @@ export function BatchStatusControls({
 
   return (
     <div className="rounded-xl border border-[var(--divider)] bg-[var(--white)] p-4">
-      <p className="font-[family-name:var(--font-dm)] text-[10px] font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
+      <p className="font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
         Batch status
       </p>
 
@@ -105,7 +105,7 @@ export function BatchStatusControls({
 function StatusStep({ label, active }: { label: string; active: boolean }) {
   return (
     <span
-      className={`rounded-lg px-2 py-1 font-[family-name:var(--font-dm)] text-[10px] font-semibold uppercase tracking-[0.06em] ${
+      className={`rounded-lg px-2 py-1 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.06em] ${
         active ? "bg-[var(--blue-bg)] text-[var(--blue-fg)]" : "bg-[var(--cream)] text-[var(--text3)]"
       }`}
     >
@@ -147,7 +147,7 @@ function AdvanceButton({
       >
         {label}
       </button>
-      <span className="mt-0.5 font-[family-name:var(--font-dm)] text-[9px] text-[var(--text3)]">
+      <span className="mt-0.5 font-[family-name:var(--font-dm)] text-[11px] text-[var(--text3)]">
         {blocker ?? hint}
       </span>
     </span>
