@@ -275,7 +275,8 @@ export function MoxieFaq({ isAuthenticated }: { isAuthenticated: boolean }) {
                 badge, vessel name, make, model, year, HIN, photo, and the registration document.
               </p>
               <p className={body}>
-                <strong className="font-semibold text-[var(--navy)]">Stays with you:</strong> your insurance, your boater
+                <strong className="font-semibold text-[var(--navy)]">Stays with you:</strong>{" "}
+                your insurance, your boater
                 card, your contact details, and any share links you&rsquo;d created — all revoked at transfer.
               </p>
             </div>
