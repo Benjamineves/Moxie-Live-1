@@ -272,12 +272,14 @@ export function MoxieFaq({ isAuthenticated }: { isAuthenticated: boolean }) {
             <div className="rounded-xl bg-[var(--white)] px-5 py-4 shadow-sm">
               <p className={`mb-2 ${body}`}>
                 <strong className="font-semibold text-[var(--navy)]">Carries to the buyer:</strong> the MXE number,
-                badge, vessel name, make, model, year, HIN, photo, and the registration document.
+                badge, vessel name, make, model, year, HIN, photo, the chain of title, the registration document, and
+                the service history — the entries and their dates, without the attached files.
               </p>
               <p className={body}>
                 <strong className="font-semibold text-[var(--navy)]">Stays with you:</strong>{" "}
-                your insurance, your boater
-                card, your contact details, and any share links you&rsquo;d created — all revoked at transfer.
+                your insurance, your boater card, your fishing licence, your contact and emergency details, and the
+                files attached to your service entries — all cleared from the boat at transfer. Share links you&rsquo;d
+                created and marina access you&rsquo;d granted are revoked.
               </p>
             </div>
             <p className={body}>
