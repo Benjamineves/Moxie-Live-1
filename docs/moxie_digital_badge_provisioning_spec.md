@@ -328,6 +328,18 @@ Both are already built. Stating the intended behaviour explicitly rather than le
 
 One field to document rather than change: `claimed_by_user_id` (§4.2, unbound path) records **who originally claimed the badge**, not who owns the vessel now. After a transfer it is history, not current state, and no query should read it as "the owner."
 
+**Registration splits on purpose: the document carries, the typed fields
+reset.** `complete_ownership_transfer` keeps `doc_registration_url` and its
+filename while nulling `reg_state`, `reg_number` and `reg_expiry`. That
+looks like an oversight and isn't. The typed fields describe the vessel's
+*current* registration, which stops being true the moment it changes hands
+— the buyer re-registers in their own name, and a stale number sitting in
+the record would be worse than a blank one. The document is the *prior*
+registration, which is exactly what a buyer takes to the DMV to transfer
+title. What describes the boat carries; what describes the seller's filing
+resets. (The FAQ's `#selling` callout says the registration document
+carries, and means this.)
+
 **Decommission — the row is also untouched, and never returns to stock.**
 
 `apply_vessel_decommission` sets `lifecycle_status = 'decommissioned'` and revokes shares; the vessel row, its `mxe_id`, and its public page all persist, per the dormant identity spec §3. The badge keeps resolving, to a dormant page. So:

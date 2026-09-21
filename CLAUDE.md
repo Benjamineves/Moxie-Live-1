@@ -132,6 +132,15 @@ database**, or from the migration file *after confirming that file matches
 live* — never from memory. Ask for the live definition if you can't read it
 yourself; it is one query and the user can paste it.
 
+**A migration file that has been confirmed deployed and verified against
+live IS the live definition** — until something changes that function
+again. `20261006` was built from `pg_get_functiondef`, diffed against it
+clause by clause, confirmed run on 2026-09-16, and the drift check that
+day found all seven functions clean. Reading `complete_ownership_transfer`
+from that file is reading live. Don't ask for the query again for a
+function already verified this way; do ask the moment anything replaces
+the body, or when no file claims to match live.
+
 **If you haven't read the source you're copying, say so** rather than
 describing the result as a copy. A false claim of equivalence is worse than
 an acknowledged guess, because it removes the reader's reason to check.

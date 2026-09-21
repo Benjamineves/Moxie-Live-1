@@ -393,15 +393,12 @@ downgraded on the first run. It must also compare against what was paid
   split needs middleware to set the pathname on the request, which means
   editing the Supabase session-refresh dance in `middleware.ts`; not worth
   the risk for copy, but that's the route if it's ever wanted.
-- **Seller filenames persist on the buyer's row after a transfer.**
-  `complete_ownership_transfer` nulls every document URL but not
-  `doc_registration_filename`, `doc_insurance_filename` or
-  `doc_boater_card_filename`, so the buyer's row keeps strings like
-  "Dave Smith insurance 2026.pdf". Harmless on screen — the UI only reads a
-  filename for a slot that has a URL (`20260918`'s note) — but it is the
-  seller's personal data sitting on someone else's record. Found
-  2026-09-16 while checking the fishing-licence question; a one-line
-  addition to the same UPDATE.
+- **Seller filenames no longer persist after a transfer** (fixed by
+  `20261006`, run 2026-09-16): `complete_ownership_transfer` nulls
+  `doc_insurance_filename`, `doc_boater_card_filename` and
+  `doc_fishing_license_filename` alongside their URLs.
+  `doc_registration_filename` is deliberately kept — the registration
+  document carries to the buyer (badge provisioning spec §2.5).
 - **`shipped_at` / `received_at` renames** + per-identity despatch
   timestamp. From the provisioning build; do together.
 - **Confirm `ben@` removed from `ADMIN_EMAILS`** in Vercel.
