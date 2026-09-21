@@ -47,9 +47,21 @@ export function buildQrSvg(text: string, { width, margin }: { width: number; mar
  * viewed or printed from a PDF, where adjacent rects anti-alias into
  * hairline seams across the whole code (seen on the marina poster).
  */
-export function buildQrPathSvg(text: string, { width, margin }: { width: number; margin: number }): string {
+export type QrPath = {
+  /** Modules across, including the quiet margin. */
+  dim: number;
+  /** One path covering every dark module except the signal pixel, in module units. */
+  d: string;
+  signal: { row: number; col: number };
+};
+
+/**
+ * The QR as path data in module units — shared by the SVG builder below
+ * and the PDF poster (lib/marina-poster-pdf.ts), so both draw the same
+ * modules from the same matrix rather than two hand-rolled loops.
+ */
+export function qrPathData(text: string, margin: number): QrPath {
   const { size, isDark, signalRow, signalCol } = getQrModules(text);
-  const { darkModule, lightModule } = ACTIVE_QR_COLORWAY;
   const dim = size + margin * 2;
   let d = "";
   for (let row = 0; row < size; row++) {
@@ -57,6 +69,14 @@ export function buildQrPathSvg(text: string, { width, margin }: { width: number;
       if (isDark(row, col) && !(row === signalRow && col === signalCol)) d += `M${col + margin} ${row + margin}h1v1h-1z`;
     }
   }
+  return { dim, d, signal: { row: signalRow + margin, col: signalCol + margin } };
+}
+
+export function buildQrPathSvg(text: string, { width, margin }: { width: number; margin: number }): string {
+  const { dim, d, signal } = qrPathData(text, margin);
+  const { darkModule, lightModule } = ACTIVE_QR_COLORWAY;
+  const signalRow = signal.row - margin;
+  const signalCol = signal.col - margin;
   return (
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${dim} ${dim}" width="${width}" height="${width}">` +
     `<rect width="${dim}" height="${dim}" fill="${lightModule}"/>` +

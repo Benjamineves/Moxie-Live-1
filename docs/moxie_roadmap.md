@@ -466,7 +466,8 @@ built in five stages and tested end to end. Owners grant a marina with its
 join code (`/marina/join`); a marina scanning a shared vessel sees owner
 contact, emergency contact, slip number and the documents the owner chose;
 `/marina` roster with search and flags; `/admin/marinas`; print poster via
-`npm run marina-poster`. Migrations `20261007` and `20261008` run. A change
+a Download poster button per marina on `/admin/marinas` (and `npm run
+marina-poster` for batches). Migrations `20261007` and `20261008` run. A change
 of owner revokes access (trigger on `vessels.owner_id`). The marketing
 home's Marina Operator card moved to present tense the same day. Changing
 a grant's documents re-grants through the marina's current join code; if a

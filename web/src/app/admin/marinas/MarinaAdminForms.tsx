@@ -135,9 +135,19 @@ export function MarinaAdminCard({ marina }: { marina: AdminMarina }) {
             </div>
           </div>
         ) : (
-          <button type="button" className={secondary} onClick={() => setConfirmReissue(true)}>
-            Issue a new code…
-          </button>
+          <div className="flex flex-wrap gap-2">
+            {/* The thing you leave behind. Same PDF as `npm run marina-poster`. */}
+            <a
+              href={`/admin/marinas/${marina.id}/poster`}
+              className={primary}
+              download
+            >
+              Download poster
+            </a>
+            <button type="button" className={secondary} onClick={() => setConfirmReissue(true)}>
+              Issue a new code…
+            </button>
+          </div>
         )}
       </div>
 

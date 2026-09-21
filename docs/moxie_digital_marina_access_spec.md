@@ -227,10 +227,17 @@ is out of scope for v1.
 
 Create + issue code in one form; reissue with a confirm; attach staff by
 email (if they have no `users` row yet — signing up doesn't make one — the
-Auth account is looked up, a read, and the row created). Poster:
-`npm run marina-poster -- <CODE>` (or `--all`) in `web/`, a US Letter
-vector PDF, refused unless it is one page, the brand fonts are embedded
-and the QR decoded from the rendered page is the join URL.
+Auth account is looked up, a read, and the row created).
+
+**Poster:** a **Download poster** button on each marina (2026-09-21), for
+signing one up in person — a terminal command on a Mac is no use in a
+marina office. `npm run marina-poster -- <CODE>` (or `--all`) remains for
+batches. Both call `lib/marina-poster-pdf.ts`, so both produce the same
+file: a US Letter vector PDF drawn with pdf-lib, brand faces embedded from
+base64 (no browser, which is what let it move to Vercel). The script
+refuses a file unless it is one page at 612x792, DM Sans and Cormorant
+Garamond are embedded, and the QR decoded from a rendering of the PDF is
+the join URL; the tests check the same three.
 
 By Ben, by hand, on request. No self-serve signup. An admin page
 (`/admin/marinas`) lists marinas, creates one, and generates or
