@@ -206,10 +206,10 @@ export function MoxiePricing({ isAuthenticated }: { isAuthenticated: boolean }) 
                   </td>
                   <td className="px-4 pt-6">
                     <a
-                      href="mailto:info@moxieyachting.com"
+                      href="#commercial-interest"
                       className="inline-flex w-full items-center justify-center gap-2 border border-[var(--divider)] px-5 py-3 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--text3)] no-underline transition hover:border-[var(--gold)] hover:text-[var(--gold-deep)]"
                     >
-                      Get in touch →
+                      Get notified →
                     </a>
                   </td>
                 </tr>
@@ -222,7 +222,10 @@ export function MoxiePricing({ isAuthenticated }: { isAuthenticated: boolean }) 
             vessel.
           </p>
 
-          <div className="mt-16 max-w-[640px] rounded-xl border border-[var(--divider)] bg-[var(--white)] p-8">
+          <div
+            id="commercial-interest"
+            className="mt-16 max-w-[640px] scroll-mt-28 rounded-xl border border-[var(--divider)] bg-[var(--white)] p-8"
+          >
             <p className="mb-3 inline-flex items-center rounded-full bg-[var(--gray-bg)] px-3 py-1 font-[family-name:var(--font-dm)] text-[11px] font-medium uppercase tracking-[0.16em] text-[var(--gray-fg)]">
               Coming soon
             </p>
