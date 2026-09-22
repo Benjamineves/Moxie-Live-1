@@ -39,10 +39,20 @@ test("the expiry answer promises no reminder until something sends one", () => {
   assert.doesNotMatch(answer, /remind|notify|alert|we'?ll email|email you/i);
 });
 
-test("nothing on the page claims service records or unlimited documents", () => {
+test("nothing on the page claims unlimited documents", () => {
   const copy = faq.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   assert.doesNotMatch(copy, /unlimited/i, "neither plan has unlimited documents");
-  assert.doesNotMatch(copy, /service record|service history|maintenance log/i, "service records are not built");
+});
+
+test("the transfer answer may name the service history — it ships", () => {
+  // This test used to forbid the words outright, from when service records
+  // were unbuilt. They shipped 2026-09-16 (migration 20261005 is run), and
+  // #selling now describes what the transfer actually carries. What must
+  // stay true is the shape of the promise: entries carry, files don't.
+  const answer = faq.slice(faq.indexOf('id="selling"'), faq.indexOf('id="buying-badged-boat"'));
+  if (/service history/i.test(answer)) {
+    assert.match(answer, /without the attached files|not the attached files/i, "entries carry; the files do not");
+  }
 });
 
 test("links use the light-surface gold, never --gold", () => {
