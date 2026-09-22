@@ -188,6 +188,22 @@ Currently `p=none`. Moving to `quarantine` makes spoofing harder.
 
 ## Correctness — open
 
+### Commercial interest list is collecting; nothing sends to it yet
+`/pricing` now captures email + optional business type instead of opening a
+mail client (2026-09-21). Migration `20261009_commercial_interest.sql` is
+**written, not run** — until it is, a submission reports "something went
+wrong at our end" rather than a false success, and nothing is recorded.
+
+**When commercial launches, this list is the reason it exists:** export the
+CSV from `/admin/commercial-interest` and email it once. Anyone who signed
+up was told exactly that and nothing else, so a newsletter or a second
+unrelated mail would be a promise broken.
+
+**`admin@moxieyachting.com` is unverified.** Each new submission emails it
+through Resend, best-effort. Nobody has confirmed that mailbox exists —
+same gap as `support@moxieyacht.com` below. If it bounces, the row is
+still recorded; the notification is the part that would be lost.
+
 ### Account rows are created on first meaningful action, not at signup
 **Decided 2026-09-20 after a survey — don't redo it.** Signing up creates
 an Auth account and nothing else. `public.users` gains a row when someone

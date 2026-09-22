@@ -7,6 +7,14 @@
 
 ---
 
+**Interest capture is live (2026-09-21), the tier is not.** `/pricing`
+collects an email and an optional business type into `commercial_interest`
+(migration `20261009`), replacing a `mailto:` button that recorded nothing
+when nobody wrote the email. The list is at `/admin/commercial-interest`
+with a CSV export, and everyone on it was told one thing: that they'll hear
+when this tier opens. That is the promise this spec has to keep.
+
+
 ## 1. The central principle
 
 **A vessel record always belongs to the boat's owner. Brokers get delegated access, never ownership.**

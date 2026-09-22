@@ -11,6 +11,7 @@ const LINKS = [
   { href: "/admin/vessel-decommission-requests", label: "Decommission requests" },
   { href: "/admin/ownership-transfers", label: "Ownership transfers" },
   { href: "/admin/marinas", label: "Marinas" },
+  { href: "/admin/commercial-interest", label: "Commercial interest" },
   { href: "/admin/scheduler", label: "Scheduler" },
 ] as const;
 

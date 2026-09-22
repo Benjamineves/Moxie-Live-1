@@ -1,6 +1,7 @@
 import { APP_ORIGIN } from "@/lib/site-domains";
 import { MarketingNav } from "@/components/marketing/MarketingNav";
 import { MarketingFooter } from "@/components/marketing/MarketingFooter";
+import { CommercialInterestForm } from "@/components/marketing/CommercialInterestForm";
 import {
   VESSEL_LIMIT,
   BASIC_DOCUMENT_LIMIT,
@@ -230,15 +231,10 @@ export function MoxiePricing({ isAuthenticated }: { isAuthenticated: boolean }) 
             </h3>
             <p className="mb-6 text-[14px] font-light leading-relaxed text-[var(--text2)]">
               Built for brokers and dealers managing multiple listings — share a vessel&apos;s full document set with
-              a prospective buyer instantly, and manage a fleet of listings from one place. Not yet available — get
-              in touch and we&apos;ll follow up when it opens.
+              a prospective buyer instantly, and manage a fleet of listings from one place. Not yet available — leave
+              your email and we&apos;ll tell you when it opens.
             </p>
-            <a
-              href="mailto:info@moxieyachting.com"
-              className="inline-flex items-center gap-2.5 border border-[var(--navy)] px-6 py-3 font-[family-name:var(--font-dm)] text-[11px] font-semibold uppercase tracking-[0.14em] text-[var(--navy)] no-underline transition hover:bg-[var(--navy)] hover:text-[var(--gold)]"
-            >
-              Get in touch →
-            </a>
+            <CommercialInterestForm sourcePage="/pricing" />
           </div>
         </div>
       </section>
