@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="512" height="512" role="img" aria-label="Moxie">
+  <title>Moxie mark — split (navy body, gold brackets, aqua signal)</title>
+  <g fill="#0d1f35">
+    <rect x="22" y="21" width="10" height="10"/>
+    <rect x="22" y="33" width="10" height="10"/>
+    <rect x="22" y="45" width="10" height="10"/>
+    <rect x="22" y="57" width="10" height="10"/>
+    <rect x="22" y="69" width="10" height="10"/>
+    <rect x="68" y="21" width="10" height="10"/>
+    <rect x="68" y="33" width="10" height="10"/>
+    <rect x="68" y="45" width="10" height="10"/>
+    <rect x="68" y="57" width="10" height="10"/>
+    <rect x="68" y="69" width="10" height="10"/>
+    <rect x="34" y="33" width="10" height="10"/>
+    <rect x="56" y="33" width="10" height="10"/>
+    <rect x="45" y="45" width="10" height="10"/>
+  </g>
+  <g fill="#c9a84c">
+    <rect x="14" y="14" width="10" height="2.5"/>
+    <rect x="14" y="14" width="2.5" height="10"/>
+    <rect x="76" y="14" width="10" height="2.5"/>
+    <rect x="83.5" y="14" width="2.5" height="10"/>
+    <rect x="14" y="83.5" width="10" height="2.5"/>
+    <rect x="14" y="76" width="2.5" height="10"/>
+    <rect x="76" y="83.5" width="10" height="2.5"/>
+    <rect x="83.5" y="76" width="2.5" height="10"/>
+  </g>
+  <rect x="83.5" y="83.5" width="4" height="4" fill="#17c3b2"/>
+</svg>
