@@ -81,5 +81,5 @@ it's done. Status: **done** · **open** (code/work to do) · **needs Ben**
 |---|---|---|
 | `CRON_SECRET` in Vercel Production, first scheduler run (report-only) | needs Ben | — |
 | Uptime monitor on `/api/health/scheduler` after the first run | open | — |
-| Error reporting — nothing alerts on a 500 today (no Sentry or similar) | open | — |
+| Error reporting: Sentry code shipped (server, edge, browser; errors only, scrubbed), inert until `NEXT_PUBLIC_SENTRY_DSN` is set | needs Ben (Sentry project + Vercel env) | — |
 | Badge pool low-water alarm on `/admin` | done | — |

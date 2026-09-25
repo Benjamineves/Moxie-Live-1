@@ -1,4 +1,5 @@
 import type { NextConfig } from "next";
+import { withSentryConfig } from "@sentry/nextjs/config";
 
 const nextConfig: NextConfig = {
   /* config options here */
@@ -26,4 +27,15 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+// Sentry: uploads source maps at build time so browser stack traces are
+// readable — only when SENTRY_AUTH_TOKEN, SENTRY_ORG and SENTRY_PROJECT are
+// set (Vercel). Without them the build is unchanged apart from Sentry's
+// instrumentation, which stays inert without a DSN (lib/sentry-options.ts).
+export default withSentryConfig(nextConfig, {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  authToken: process.env.SENTRY_AUTH_TOKEN,
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  telemetry: false,
+});
