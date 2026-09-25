@@ -327,7 +327,7 @@ classifier never reads `storage_city`, the only city column new vessels fill.
 Being replaced, not patched: required `storage_zip` → county (Census ZCTA
 file, land-area tiebreak) → region config, on a new `/admin/geography`
 page, counting `qr_status = 'active'` minus decommissioned (the overview
-changes to match). Stages: 0.5 security (done 2026-09-24) · 0.6 docs bucket, grants and authz audits (done 2026-09-25) · 1 ZIP + county (`20261014` run 2026-09-25, app code shipped; clears on
+changes to match). Stages: 0.5 security (done 2026-09-24) · 0.6 docs bucket, grants and authz audits (done 2026-09-25) · 1 ZIP + county (**done 2026-09-25**, verified live: MXE-01024 saved 94965 → Marin County; missing and wrong-state ZIPs refused in the Storage editor and on the intake step; ZIP/county absent from the public API and page; clears on
 transfer; migration before the code that writes it; share-link location
 group gains storage city/state) · 2 region config (FL/WA county lists need
 approval) · 3 page · 4 inline backfill.
