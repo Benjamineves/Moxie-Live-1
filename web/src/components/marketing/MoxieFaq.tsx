@@ -356,8 +356,8 @@ export function MoxieFaq({ isAuthenticated }: { isAuthenticated: boolean }) {
             </p>
             <p className={body}>
               For a replacement, email{" "}
-              <a href="mailto:support@moxieyacht.com" className={link}>
-                support@moxieyacht.com
+              <a href="mailto:support@moxieyachting.com" className={link}>
+                support@moxieyachting.com
               </a>{" "}
               with your MXE number. Replacement fees apply. Your MXE number never changes, so the new badge is identical
               to the old one.
@@ -376,8 +376,8 @@ export function MoxieFaq({ isAuthenticated }: { isAuthenticated: boolean }) {
         <div className="mt-16 border-t border-[var(--divider)] pt-7">
           <p className="font-[family-name:var(--font-dm)] text-[14px] text-[var(--text3)]">
             Still stuck? Email{" "}
-            <a href="mailto:support@moxieyacht.com" className={link}>
-              support@moxieyacht.com
+            <a href="mailto:support@moxieyachting.com" className={link}>
+              support@moxieyachting.com
             </a>{" "}
             and a person will answer.
           </p>

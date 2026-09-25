@@ -336,7 +336,7 @@ unrelated mail would be a promise broken.
 
 **`admin@moxieyachting.com` is unverified.** Each new submission emails it
 through Resend, best-effort. Nobody has confirmed that mailbox exists —
-same gap as `support@moxieyacht.com` below. If it bounces, the row is
+same mailbox `support@moxieyachting.com` aliases to. If it bounces, the row is
 still recorded; the notification is the part that would be lost.
 
 ### Account rows are created on first meaningful action, not at signup
@@ -480,11 +480,10 @@ downgraded on the first run. It must also compare against what was paid
 
 ## Smaller, independent
 
-- **`support@moxieyacht.com` does not exist yet.** The FAQ (shipped
-  2026-09-16) tells people to email it twice — for badge replacement and as
-  the general fallback. Only `admin@moxieyachting.com` is set up. Raised in
-  the mockup's own review notes; **create the mailbox before this page gets
-  any traffic**, or the page's one promise of a human fails silently.
+- **Support address is `support@moxieyachting.com`** (2026-09-25): an alias
+  on the admin mailbox. The FAQ used to give a `.com` address on the
+  non-"ing" domain that never existed; every reference was changed and
+  `support-address.test.mts` fails if it returns.
 - **"You choose what it includes" on share links.** The FAQ's
   `#share-documents` answer says a share link's contents are selectable.
   Not verified against what the share sheet actually offers — flagged in

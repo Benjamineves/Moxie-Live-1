@@ -44,8 +44,8 @@ it's done. Status: **done** · **open** (code/work to do) · **needs Ben**
 |---|---|---|
 | Auth email through Resend SMTP | done | — |
 | Raise Auth email rate limit (25/hour today); confirm Resend plan covers auth + app mail | needs Ben | **Yes** |
-| `support@moxieyacht.com` mailbox — the FAQ tells people to use it | needs Ben | **Yes** |
-| `admin@moxieyachting.com` confirmed receiving (commercial-interest and scheduler digest mail) | needs Ben | — |
+| Support address: `support@moxieyachting.com` (alias on the admin mailbox); FAQ updated | done | — |
+| `admin@moxieyachting.com` confirmed receiving (commercial-interest and scheduler digest mail, and now support@) | needs Ben | **Yes** |
 | DMARC `p=none` → `quarantine` after a few weeks of clean sending | open | — |
 
 ## Public copy accuracy
@@ -66,6 +66,7 @@ it's done. Status: **done** · **open** (code/work to do) · **needs Ben**
 |---|---|---|
 | Terms of service and privacy policy — **no pages exist**; needed before taking payments and holding owners' documents | needs Ben | **Yes** |
 | "Patent pending": convert the provisional by **26 Jun 2027** or remove the claim (site, footer, printed badge) | needs Ben | — (date-bound) |
+| Account deletion: none in the app — handled by emailing support (Terms to say so) | done (by policy) | — |
 
 ## Badge operations
 
