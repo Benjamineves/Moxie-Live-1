@@ -188,18 +188,6 @@ Currently `p=none`. Moving to `quarantine` makes spoofing harder.
 
 ## Correctness — open
 
-### Any signed-in account could read and overwrite every owner's documents — code shipped, migration not run
-Found 2026-09-24: the `vessel-docs` bucket's policies were
-`auth.uid() IS NOT NULL` for SELECT/INSERT/UPDATE, so any account could list
-the bucket, download every document and overwrite any of them.
-`20261011_vessel_docs_owner_folder_policies.sql` scopes SELECT/INSERT/UPDATE/
-DELETE to the caller's own folder (option A; rollback in
-`supabase/rollbacks/`). **Written, not run.** No app read depends on the old
-rule (all reads are service-role signed URLs). The previously-owned page's
-"View →" links, which had always 404'd (raw path as href), now go through a
-seller-checked route. Verify with two accounts once run. `vessel-photos`
-INSERT/UPDATE have the same shape — in the full grants audit.
-
 ### Full grants / RLS / storage-policy audit against live — next, before geography Stage 1
 Every table, view, function and bucket, checked live, ranked by severity.
 
@@ -488,6 +476,19 @@ outright. Offering the saved card removes re-entry friction on the upgrade
 path; the edit button adds no capability the portal doesn't already give.
 
 ## Done
+
+**`vessel-docs` limited to the owner's own folder** (2026-09-24): live
+policies were `auth.uid() IS NOT NULL`, so any signed-in account could list,
+read and overwrite every owner's documents. `20261011` run (rollback in
+`supabase/rollbacks/`). Demonstrated with two accounts on the live site:
+before, B listed all 3 owner folders, read A's fixture and **overwrote it**
+(confirmed on the stored object); after, B lists 0 folders, gets 404 on
+read and 403 on overwrite/plant, while B's own folder and A's own folder
+work for upload/replace/list/read/delete, and A's documents through the app
+return the same bytes as before. The previously-owned page's links (always
+404, raw path as href) go through a seller-checked route; verified refusing
+non-sellers, bad ids and bad types — no snapshot on file holds a document,
+so a file actually streaming there is not yet observed. ·
 
 **Public key can no longer read `vessels`** (2026-09-24): anon and
 authenticated had table SELECT with only an `is_public` row rule, so
