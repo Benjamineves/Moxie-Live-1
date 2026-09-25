@@ -107,11 +107,12 @@ test("a missing key never becomes vessel data", () => {
  * can read — straight from /rest/v1, past every allow-list the pages apply.
  * anon had SELECT on every column of `vessels` (mailing_zip was readable);
  * 20261010 revokes it and the scan page reads with the service role. These
- * are the only callers left, and neither touches `vessels`.
+ * are the only callers left, and neither touches `vessels`. The waitlist
+ * route left this list on 2026-09-25: RLS had silently refused every anon
+ * insert, so the homepage list never stored a row.
  */
 const PUBLIC_CLIENT_ALLOWED = new Map<string, string>([
   ["lib/supabase-public.ts", "defines it"],
-  ["app/api/waitlist/route.ts", "anon insert into waitlist"],
   ["lib/owner-verify.ts", "users self-read fallback, not vessels"],
 ]);
 
@@ -124,6 +125,13 @@ test("only the allow-list reads through the anon-key public client", () => {
     if (/\bgetPublicSupabase\s*\(/.test(src)) offenders.push(rel);
   }
   assert.deepEqual(offenders, [], `anon has no SELECT on vessels; read with the service role and filter:\n  ${offenders.join("\n  ")}`);
+});
+
+test("the waitlist never reports success without storing", () => {
+  const src = readFileSync(join(SRC, "app/api/waitlist/route.ts"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.doesNotMatch(src, /Stored locally/, "a missing config must be a 500, not ok: true");
+  assert.match(src, /requireSupabaseServiceClient\(/);
 });
 
 test("the service-role vessel read keeps the is_public row rule the anon policy applied", () => {

@@ -203,6 +203,10 @@ where it could be done read-only. Ranked; none fixed yet.
 3. **Medium (correctness) — homepage waitlist has never stored anyone**:
    RLS on, no INSERT policy, 0 rows ever; every submit returns 500. Missing
    config returns `ok: true` ("stored locally only") — a false success.
+   *Fixed in code 2026-09-25* (service-role write, config failure is a 500,
+   DB errors no longer echoed to visitors); a real submission not yet
+   observed. **Still open:** the homepage says "we'll follow up", but
+   nothing shows the list anywhere — no admin page, unlike commercial interest.
 4. **Medium — no size/type limits on `vessel-docs`**; direct uploads bypass
    the app's storage cap (`checkStorageCapacity` is only called by the client).
    Size/type part in `20261012`. **Per-user quota enforcement deferred**
