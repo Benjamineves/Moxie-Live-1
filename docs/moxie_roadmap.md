@@ -324,16 +324,6 @@ domains; refresh-token reuse interval 10 s. Open:
   the Pro upgrade item in Tier 1.
 
 
-### Geography rebuild on a required storage ZIP (staged)
-The "Vessels by region" card reads 0 in every CA region because the
-classifier never reads `storage_city`, the only city column new vessels fill.
-Being replaced, not patched: required `storage_zip` → county (Census ZCTA
-file, land-area tiebreak) → region config, on a new `/admin/geography`
-page, counting `qr_status = 'active'` minus decommissioned (the overview
-changes to match). Stages: 0.5 security (done 2026-09-24) · 0.6 docs bucket, grants and authz audits (done 2026-09-25) · 1 ZIP + county (**done 2026-09-25**, verified live: MXE-01024 saved 94965 → Marin County; missing and wrong-state ZIPs refused in the Storage editor and on the intake step; ZIP/county absent from the public API and page; clears on
-transfer; migration before the code that writes it; share-link location
-group gains storage city/state) · 2 region config (**done 2026-09-25**: `lib/region-config.ts` — CA incl. Delta, FL 7, WA 5; the old keyword classifier still exists until Stage 3 retires it) · 3 page (**done 2026-09-25**: `/admin/geography`; overview card compact; overview vessel totals now paid & not decommissioned; `lib/vessel-geo.ts` and `AdminGeoMap.tsx` deleted) · 4 inline backfill (**done 2026-09-25**: admin enters a ZIP per Missing ZIP row, same validation/county; fills only an empty ZIP). **All stages shipped; awaiting the admin's own look at /admin/geography.**
-
 ### Commercial interest list is collecting; nothing sends to it yet
 `/pricing` now captures email + optional business type instead of opening a
 mail client (2026-09-21). Migration `20261009_commercial_interest.sql` is
@@ -608,6 +598,17 @@ outright. Offering the saved card removes re-entry friction on the upgrade
 path; the edit button adds no capability the portal doesn't already give.
 
 ## Done
+
+**Geography rebuilt on a required storage ZIP** (2026-09-25): the old
+"Vessels by region" card read 0 in every CA region because its keyword
+classifier never read `storage_city`. Replaced end to end — required
+`storage_zip` with a server-derived `storage_county` (Census 2020
+ZCTA-to-county, `20261014`), one region config (`lib/region-config.ts`: CA
+incl. Delta, FL 7, WA 5), `/admin/geography` with state tabs, out-of-state
+and Missing ZIP, a compact overview card, and admin inline backfill. Admin
+counts are paid & not decommissioned everywhere. Verified: MXE-01024 (owner
+save) and MXE-01016 (admin backfill) both stored 94965 → Marin County; SF
+Bay Area 2, Missing ZIP 8; ZIP/county absent from the public API. ·
 
 **`vessel-docs` limited to the owner's own folder** (2026-09-24): live
 policies were `auth.uid() IS NOT NULL`, so any signed-in account could list,
