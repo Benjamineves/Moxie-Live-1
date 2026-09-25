@@ -47,7 +47,7 @@ test("every vessel lands in exactly one bucket", () => {
     { code: "CT", label: "Connecticut", count: 2 },
     { code: "CO", label: "Colorado", count: 1 },
   ]);
-  assert.deepEqual(geo.missingZip, [{ mxe_id: "H", vessel_name: "V", rawLocation: "Clipper · Sausalito · CA" }]);
+  assert.deepEqual(geo.missingZip, [{ mxe_id: "H", vessel_name: "V", storage_state: "CA", rawLocation: "Clipper · Sausalito · CA" }]);
   const placed = geo.states.reduce((n, s) => n + s.total, 0) + geo.outOfState.reduce((n, s) => n + s.count, 0) + geo.missingZip.length;
   assert.equal(placed, geo.counted, "no vessel dropped or double-counted");
   const top = topRegions(geo, 5);

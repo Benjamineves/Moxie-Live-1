@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AdminNav } from "@/components/AdminNav";
 import { StateRegionMap } from "@/components/admin/StateRegionMap";
+import { MissingZipRow } from "@/components/admin/MissingZipRow";
 import type { Geography } from "@/lib/geography";
 
 /** The /admin/geography page body, given the summary and the chosen tab. */
@@ -88,19 +89,22 @@ export function GeographyView({ geo, stateParam }: { geo: Geography; stateParam?
             <span className="font-[family-name:var(--font-dm)] text-sm font-semibold text-[var(--navy)]">{geo.missingZip.length}</span>
           </div>
           <p className="font-[family-name:var(--font-dm)] text-xs text-[var(--text2)]">
-            Not counted above. Owners add the ZIP the next time they save their Storage section.
+            Not counted above. Owners add it the next time they save their Storage section, or add it here from what they typed.
           </p>
           {geo.missingZip.length > 0 ? (
-            <details className="mt-2">
+            <details className="mt-2" open={geo.missingZip.length <= 25}>
               <summary className="cursor-pointer font-[family-name:var(--font-dm)] text-xs text-[var(--blue-fg)] underline">
-                View raw entries
+                View raw entries and add ZIPs
               </summary>
-              <ul className="mt-2 flex flex-col gap-1 border-l border-[var(--divider)] pl-3">
+              <ul className="mt-2 border-l border-[var(--divider)] pl-3">
                 {geo.missingZip.map((v) => (
-                  <li key={v.mxe_id} className="font-[family-name:var(--font-dm)] text-xs text-[var(--text2)]">
-                    <span className="font-semibold text-[var(--navy)]">{v.mxe_id}</span>
-                    {v.vessel_name ? ` ${v.vessel_name}` : ""}: {v.rawLocation ?? "(no location entered)"}
-                  </li>
+                  <MissingZipRow
+                    key={v.mxe_id}
+                    mxeId={v.mxe_id}
+                    vesselName={v.vessel_name}
+                    storedState={v.storage_state}
+                    rawLocation={v.rawLocation}
+                  />
                 ))}
               </ul>
             </details>

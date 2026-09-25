@@ -65,7 +65,7 @@ export type Geography = {
   counted: number;
   states: StateBreakdown[];
   outOfState: { code: string; label: string; count: number }[];
-  missingZip: (Pick<GeoVessel, "mxe_id" | "vessel_name"> & { rawLocation: string | null })[];
+  missingZip: (Pick<GeoVessel, "mxe_id" | "vessel_name" | "storage_state"> & { rawLocation: string | null })[];
 };
 
 /** What the owner typed about the location, for reference beside a missing ZIP. */
@@ -90,7 +90,7 @@ export function summarizeGeography(vessels: GeoVessel[]): Geography {
 
   for (const v of vessels) {
     if (!v.storage_zip) {
-      missingZip.push({ mxe_id: v.mxe_id, vessel_name: v.vessel_name, rawLocation: rawLocation(v) });
+      missingZip.push({ mxe_id: v.mxe_id, vessel_name: v.vessel_name, storage_state: v.storage_state, rawLocation: rawLocation(v) });
       continue;
     }
     const tracked = trackedState(v.storage_state);

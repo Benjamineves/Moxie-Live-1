@@ -11,6 +11,8 @@ import { normalizeStateCode, stateName } from "./us-states.ts";
  *   - registration: app/dashboard/new/actions.ts#createVessel
  *   - the Storage section: lib/owner-actions.ts#updateVesselOwnerFields,
  *     via storagePatchForSave below
+ *   - admin backfill: app/admin/geography/actions.ts#backfillStorageZip,
+ *     via adminBackfillPatch below
  * storage-zip.test.mts fails if either stops calling it.
  *
  * Source: Census 2020 ZCTA-to-county file (scripts/generate-zip-county.mjs).
@@ -101,4 +103,27 @@ export function storagePatchForSave(
   const checked = checkStorageZip(patch.storage_zip, state);
   if (!checked.ok) return checked;
   return { ok: true, set: { storage_zip: checked.zip, storage_county: checked.county } };
+}
+
+/**
+ * Admin backfill of a vessel that has no ZIP yet (/admin/geography, Missing
+ * ZIP). The same check as an owner's save. A vessel with a state on file is
+ * checked against it and its state is left alone; only a vessel with no
+ * state takes the one the admin picks, and then it is written too.
+ */
+export function adminBackfillPatch(
+  rawZip: unknown,
+  storedState: string | null,
+  chosenState: unknown,
+):
+  | { ok: true; set: { storage_zip: string; storage_county: string; storage_state?: string } }
+  | { ok: false; error: string } {
+  const stored = normalizeStateCode(storedState);
+  const state = stored ?? normalizeStateCode(typeof chosenState === "string" ? chosenState : null);
+  const checked = checkStorageZip(rawZip, state);
+  if (!checked.ok) return checked;
+  return {
+    ok: true,
+    set: { storage_zip: checked.zip, storage_county: checked.county, ...(stored ? {} : { storage_state: state! }) },
+  };
 }

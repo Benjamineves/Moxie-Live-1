@@ -123,3 +123,26 @@ test("the 0.9 MB lookup is imported only by the server-side module", () => {
   walk2(SRC);
   assert.deepEqual(clientImporters, [], "a client component imports the ZIP lookup");
 });
+
+test("admin backfill: stored state wins and is kept; a missing state takes the admin's pick", async () => {
+  const { adminBackfillPatch } = await import("./storage-zip.ts");
+  assert.deepEqual(adminBackfillPatch("94965", "CA", "FL"), { ok: true, set: { storage_zip: "94965", storage_county: "Marin County" } }, "stored CA used, pick ignored, state not rewritten");
+  assert.equal(adminBackfillPatch("33477", "CA", null).ok, false, "FL ZIP on a CA vessel refused");
+  assert.deepEqual(adminBackfillPatch("33477", null, "FL"), {
+    ok: true,
+    set: { storage_zip: "33477", storage_county: "Palm Beach County", storage_state: "FL" },
+  });
+  assert.equal(adminBackfillPatch("94965", null, null).ok, false, "no state anywhere");
+  assert.equal(adminBackfillPatch("9496", "CA", null).ok, false);
+});
+
+test("the admin backfill action is admin-only, validates first, and only fills an empty ZIP", () => {
+  const src = read("app/admin/geography/actions.ts");
+  const body = src.slice(src.indexOf("export async function backfillStorageZip("));
+  const admin = body.search(/requireAdmin\(\)/);
+  const check = body.search(/adminBackfillPatch\(zip, vessel\.storage_state, state\)/);
+  const write = body.search(/\.update\(patch\.set\)/);
+  assert.ok(admin > 0 && admin < check && check < write, "requireAdmin, then the check, then the write");
+  assert.match(body.slice(write), /\.is\("storage_zip", null\)/, "never overwrites an owner's ZIP");
+  assert.doesNotMatch(body, /storage_county:\s*(?!patch)/, "county only from the check");
+});
