@@ -26,6 +26,10 @@ import { getDormantInfo } from "@/lib/vessel-dormancy";
 
 export type OwnerProfileTier = PublicProfileProps & {
   storage_zip?: string | null;
+  // Owner-only since 2026-09-25 (off the public profile).
+  storage_description?: string | null;
+  marina_name?: string | null;
+  marina_city?: string | null;
   qr_status?: string | null;
   lifecycle_status?: string | null;
   decommission_reason?: string | null;
@@ -128,11 +132,8 @@ export function VesselOwnerProfile({
     public_notes: tier.public_notes,
     photo_url: tier.photo_url,
     storage_type: tier.storage_type,
-    storage_description: tier.storage_description,
     storage_state: tier.storage_state,
     storage_city: tier.storage_city,
-    marina_name: tier.marina_name,
-    marina_city: tier.marina_city,
   };
 
   // Same marina+mooring grouping as VesselPublicProfile — the owner-only
@@ -351,12 +352,14 @@ export function VesselOwnerProfile({
             <Row label="Slip notes" value={tier.slip_notes} />
           </dl>
         ) : null}
-        {isMarinaStorage ? (
-          <p className="mt-2 px-1 font-[family-name:var(--font-dm)] text-xs text-[var(--text2)]">
-            Of these, marinas you share with see only your slip number. Your home marina is shown on your public profile
-            and doesn&apos;t give that marina access.
-          </p>
+        {!isMarinaStorage && tier.storage_description ? (
+          <dl className="mt-4 rounded-xl border border-[var(--divider)] bg-[var(--white)] p-5 shadow-sm">
+            <Row label="Description" value={tier.storage_description} />
+          </dl>
         ) : null}
+        <p className="mt-2 px-1 font-[family-name:var(--font-dm)] text-xs text-[var(--text2)]">
+          Only you can see your marina and storage details. Your public profile shows city and state only.
+        </p>
         {/* Shown whatever the storage type: a grant belongs to the vessel,
             and a boat moved onto a trailer may still have one to remove. */}
         <MarinaAccessPanel

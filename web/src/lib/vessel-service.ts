@@ -90,15 +90,14 @@ export function filterVesselForRole(v: VesselRecord, role: Exclude<ProfileRole, 
     draft_ft: v.draft_ft,
     public_notes: v.public_notes,
     photo_url: v.photo_url,
+    // Public location is the storage TYPE plus city and state, nothing
+    // finer (decided 2026-09-25). The marina name, the legacy marina_city
+    // string and the free-text storage description are owner-only, below —
+    // a stranger scanning a badge shouldn't learn which marina the boat is
+    // in. storage-zip.test.mts checks none of them is here.
     storage_type: v.storage_type,
-    storage_description: v.storage_description,
-    // Same public visibility tier the location fields have always had:
-    // city/state are public, while slip_number/marina_phone/slip_notes
-    // stay owner- and marina-only below.
     storage_state: v.storage_state,
     storage_city: v.storage_city,
-    marina_name,
-    marina_city,
   };
 
   if (role === "public") {
@@ -124,6 +123,9 @@ export function filterVesselForRole(v: VesselRecord, role: Exclude<ProfileRole, 
       // Owner-only, like the slip: where the boat is kept, to the ZIP.
       // Never in basePublic (storage-zip.test.mts checks).
       storage_zip: v.storage_zip ?? null,
+      storage_description: v.storage_description,
+      marina_name,
+      marina_city,
       slip_number: v.slip_number,
       marina_phone: v.marina_phone,
       is_liveaboard: v.is_liveaboard,

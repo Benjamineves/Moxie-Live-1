@@ -46,26 +46,6 @@ inactivity timeout, decided at 30 days (Auth → Sessions; time-box stays 0).
 Leaked-password protection is also a Pro-tier setting (Auth → Attack
 Protection) — switch it on at the same time.
 
-### Pre-launch: take marina name and city off the public scan profile
-**Blocks:** nothing technical; a privacy decision (2026-09-25)
-The public allow-list (`basePublic` in `lib/vessel-service.ts`) includes
-`marina_name` and `marina_city`, so a stranger scanning a badge sees
-"Marina Plaza Harbor · Sausalito". Remove both from `basePublic`; **storage
-city and state stay public**. Knock-ons to handle in the same change:
-- `VesselPublicProfile` builds its location line from them (and falls back
-  to `marina_city` for older rows) — show city/state only.
-- The owner view gets its public section from the same object, and its
-  "Home marina" row reads `marina_name` — move both into the owner block so
-  owners still see them.
-- Copy that says otherwise: the owner Storage note "Your home marina is
-  shown on your public profile" (`VesselOwnerProfile.tsx`) and the intake
-  hint "Appears on your public profile in place of a marina name"
-  (`VesselIntakeForm.tsx`, on the storage description — check whether that
-  field stays public too).
-- A test that `basePublic` has no marina fields (like the ZIP one in
-  `storage-zip.test.mts`). Share links are separate: their location group
-  still carries the marina, by the owner's choice.
-
 ### Pricing numbers
 **Blocks:** Stripe live, FAQ content, upgrade CTAs
 Basic setup fee, Full annual price, transfer fee. Also settles the
@@ -636,6 +616,13 @@ outright. Offering the saved card removes re-entry friction on the upgrade
 path; the edit button adds no capability the portal doesn't already give.
 
 ## Done
+
+**Public scan profile no longer shows the marina** (2026-09-25): marina
+name, the legacy marina city and the storage description moved from
+`basePublic` to the owner block; a stranger sees storage type + city/state
+("Marina / Slip · Sausalito, CA"). Owner view keeps Home marina and gains a
+Description row; copy updated; `public-profile-fields.test.mts`. Share
+links unchanged. ·
 
 **Geography rebuilt on a required storage ZIP** (2026-09-25): the old
 "Vessels by region" card read 0 in every CA region because its keyword

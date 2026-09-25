@@ -11,14 +11,13 @@ export type PublicProfileProps = {
   public_notes: string | null;
   photo_url: string | null;
   storage_type: string | null;
-  storage_description: string | null;
   storage_state: string | null;
   storage_city: string | null;
-  marina_name: string | null;
-  marina_city: string | null;
 };
 
 const STORAGE_TYPE_LABELS: Record<string, string> = {
+  marina: "Marina / Slip",
+  mooring: "Mooring",
   trailer: "Trailer",
   home: "Home / Driveway",
   yard: "Boatyard / Storage",
@@ -38,29 +37,19 @@ export function VesselPublicProfile(props: PublicProfileProps & { hideFooter?: b
     public_notes,
     photo_url,
     storage_type,
-    storage_description,
     storage_state,
     storage_city,
-    marina_name,
-    marina_city,
     hideFooter,
   } = props;
 
-  // Prefer the structured city/state captured at intake; fall back to
-  // the legacy combined marina_city string for rows registered before
-  // those columns existed, so older vessels keep rendering normally.
-  const locationLine =
-    [storage_city, storage_state].filter(Boolean).join(", ") || marina_city || null;
-
-  // marina + mooring share the "Home Marina" render (same grouping the
-  // intake form's storage-type pill uses); trailer/home/yard/other get the
-  // generic "Storage" render with a type label + free-text description.
-  const isMarinaStorage = storage_type == null || storage_type === "marina" || storage_type === "mooring";
-  const marinaLine =
-    isMarinaStorage && (marina_name || locationLine)
-      ? [marina_name, locationLine].filter(Boolean).join(" · ")
-      : null;
-  const storageLabel = !isMarinaStorage ? STORAGE_TYPE_LABELS[storage_type ?? ""] ?? "Storage" : null;
+  // Public location: the storage type and city/state — never the marina
+  // name or the owner's free-text description (owner-only since
+  // 2026-09-25). No marina_city fallback: that legacy "City, ST" string
+  // came from the marina field. A vessel with neither type nor city/state
+  // shows no row.
+  const typeLabel = storage_type ? (STORAGE_TYPE_LABELS[storage_type] ?? "Storage") : null;
+  const cityState = [storage_city, storage_state].filter(Boolean).join(", ") || null;
+  const storageLine = [typeLabel, cityState].filter(Boolean).join(" · ") || null;
 
   return (
     <article className="mx-auto max-w-lg px-5 pb-16 pt-10 md:px-8">
@@ -117,23 +106,13 @@ export function VesselPublicProfile(props: PublicProfileProps & { hideFooter?: b
             {draft_ft != null ? `${draft_ft} ft` : "—"}
           </dd>
         </div>
-        {marinaLine ? (
-          <div className="flex justify-between gap-4 border-b border-[var(--divider)] pb-3">
-            <dt className="font-[family-name:var(--font-dm)] text-xs uppercase tracking-[0.12em] text-[var(--text3)]">
-              Home Marina
-            </dt>
-            <dd className="text-right font-[family-name:var(--font-dm)] text-sm text-[var(--text)]">
-              {marinaLine}
-            </dd>
-          </div>
-        ) : null}
-        {storageLabel ? (
+        {storageLine ? (
           <div className="flex justify-between gap-4 border-b border-[var(--divider)] pb-3">
             <dt className="font-[family-name:var(--font-dm)] text-xs uppercase tracking-[0.12em] text-[var(--text3)]">
               Storage
             </dt>
             <dd className="text-right font-[family-name:var(--font-dm)] text-sm text-[var(--text)]">
-              {[storageLabel, storage_description, locationLine].filter(Boolean).join(" · ")}
+              {storageLine}
             </dd>
           </div>
         ) : null}

@@ -436,7 +436,6 @@ export function VesselIntakeForm() {
               />
               <span className="font-[family-name:var(--font-dm)] text-xs text-[var(--text2)]">
                 Optional. City and state are already captured above — use this only to add a specific place name.
-                Appears on your public profile in place of a marina name.
               </span>
             </Field>
           )}
