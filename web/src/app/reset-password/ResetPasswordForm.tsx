@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { MIN_PASSWORD_LENGTH } from "@/lib/password-policy";
 
 type Strength = "empty" | "weak" | "fair" | "strong";
 
@@ -21,7 +22,7 @@ function scorePassword(value: string): Strength {
 }
 
 const STRENGTH_HINT: Record<Strength, string> = {
-  empty: "At least 8 characters",
+  empty: `At least ${MIN_PASSWORD_LENGTH} characters`,
   weak: "Too short — needs 8+ characters",
   fair: "Fair — try adding numbers",
   strong: "Strong password",
@@ -65,7 +66,7 @@ export function ResetPasswordForm() {
     e.preventDefault();
     setError(null);
 
-    if (password.length < 8) {
+    if (password.length < MIN_PASSWORD_LENGTH) {
       setPasswordError(true);
       return;
     }
@@ -135,7 +136,7 @@ export function ResetPasswordForm() {
           <input
             type="password"
             autoComplete="new-password"
-            placeholder="At least 8 characters"
+            placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`}
             value={password}
             onChange={(e) => {
               setPassword(e.target.value);

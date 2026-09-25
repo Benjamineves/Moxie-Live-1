@@ -18,6 +18,22 @@ _Last updated 24 September 2026_
 Test mode today. Switching means live keys in Vercel and re-pointing the
 webhook at the apex.
 
+### Pre-launch: CAPTCHA on sign-up, sign-in and password reset (Cloudflare Turnstile)
+**Blocks:** open signup at launch without an easy way to exhaust auth email
+**Depends on:** a Turnstile site key (your Cloudflare account)
+Signup is open and the auth email budget is small, so scripted sign-ups can
+use it up and stop real confirmation/reset emails. Order matters: the forms
+must send a captcha token BEFORE CAPTCHA is switched on in Supabase (Auth →
+Attack Protection), or every sign-in fails. Code behind a flag first, then
+the dashboard setting, then flip the flag in the same deploy.
+
+### Pre-launch: custom SMTP for Supabase Auth email (e.g. Resend)
+**Blocks:** auth email volume above 25/hour (current limit, Auth → Rate Limits)
+**Depends on:** SMTP credentials; the sending domain's DNS (see DMARC item)
+Confirmation and password-reset emails go through Supabase's mailer at 25
+per hour. Unverified: whether custom SMTP is already configured (Auth →
+Emails → SMTP Settings) — check before assuming either way.
+
 ### Pricing numbers
 **Blocks:** Stripe live, FAQ content, upgrade CTAs
 Basic setup fee, Full annual price, transfer fee. Also settles the
@@ -279,16 +295,21 @@ and 30 verifications per IP per 5 min; redirect list limited to our two
 domains; refresh-token reuse interval 10 s. Open:
 
 - **Medium — no CAPTCHA with open signup and a 25/hour email budget.**
+  → Moved to Tier 1 as a pre-launch item (Turnstile), 2026-09-25.
   Scripted sign-ups (30 per IP per 5 min, more from several IPs) can use up
   the hour's confirmation/reset emails, so real sign-ups and password resets
   stop arriving. Turning CAPTCHA on in the dashboard alone would break every
   sign-in: the forms must send a captcha token first (code, then setting).
-- **Low — password minimum is inconsistent and probably 6.** Signup's form
+- **Low — password minimum is inconsistent and probably 6.** **Fixed
+  2026-09-25:** server minimum set to 8 in the dashboard, Secure email change
+  on; both forms use `MIN_PASSWORD_LENGTH` (lib/password-policy.ts). Signup's form
   says 6 (`minLength={6}`), reset says 8; the server-side minimum and
   leaked-password check haven't been read yet (Supabase's default is 6, no
   character rules). The server setting is what enforces.
 - **Low — sessions never expire** (time-box and inactivity both 0). Includes
   admin sessions.
+  Decided 2026-09-25: 30-day inactivity timeout, a dashboard setting
+  (Auth → Sessions) — not yet confirmed set.
 
 
 ### Geography rebuild on a required storage ZIP (staged)

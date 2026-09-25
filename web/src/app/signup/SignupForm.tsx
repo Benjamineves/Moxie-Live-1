@@ -5,6 +5,7 @@ import Link from "next/link";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { safeNextPath } from "@/lib/safe-next";
+import { MIN_PASSWORD_LENGTH } from "@/lib/password-policy";
 
 type Props = { nextPath: string };
 
@@ -18,6 +19,10 @@ export function SignupForm({ nextPath }: Props) {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(`Use at least ${MIN_PASSWORD_LENGTH} characters.`);
+      return;
+    }
     const supabase = createSupabaseBrowserClient();
     if (!supabase) {
       setError("Missing Supabase configuration.");
@@ -98,7 +103,8 @@ export function SignupForm({ nextPath }: Props) {
             type="password"
             autoComplete="new-password"
             required
-            minLength={6}
+            minLength={MIN_PASSWORD_LENGTH}
+            placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="rounded-lg border border-[var(--divider)] bg-[var(--white)] px-3 py-2.5 text-sm font-normal normal-case tracking-normal text-[var(--text)] outline-none ring-[var(--gold)] focus:ring-2"
