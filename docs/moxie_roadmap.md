@@ -3,7 +3,7 @@
 Open items and what depends on what. Update as items close; add what
 turns up. Where this disagrees with the code, the code wins.
 
-_Last updated 24 September 2026_
+_Last updated 25 September 2026_ · Launch gate: `prelaunch-checklist.md`
 
 ---
 
@@ -78,7 +78,7 @@ question.
 ## Tier 3 — Unblocked once Tier 1 lands
 
 ### Service records and miscellaneous documents (Full Access)
-**Built and deployed 2026-09-16; migration `20261005` is run** (confirmed by querying the table, which holds real entries). `20261006` clears the seller's document filenames on transfer and is **not yet run**. The design below
+**Built and deployed 2026-09-16; migration `20261005` is run** (confirmed by querying the table, which holds real entries). `20261006` clears the seller's document filenames on transfer and **is run** (confirmed 2026-09-16). The design below
 is as shipped. Still open: the three questions in the build report
 (editing after creation, a deleted entry's file, and whether a buyer
 sees the seller's logged-at dates), plus the copy pass on `/pricing` and
@@ -326,9 +326,8 @@ domains; refresh-token reuse interval 10 s. Open:
 
 ### Commercial interest list is collecting; nothing sends to it yet
 `/pricing` now captures email + optional business type instead of opening a
-mail client (2026-09-21). Migration `20261009_commercial_interest.sql` is
-**written, not run** — until it is, a submission reports "something went
-wrong at our end" rather than a false success, and nothing is recorded.
+mail client (2026-09-21). Migration `20261009_commercial_interest.sql` **is run** (its tables and
+`record_commercial_interest` are in the 2026-09-25 security snapshot).
 
 **When commercial launches, this list is the reason it exists:** export the
 CSV from `/admin/commercial-interest` and email it once. Anyone who signed
