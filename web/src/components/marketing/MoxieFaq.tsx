@@ -277,6 +277,9 @@ export function MoxieFaq({ isAuthenticated }: { isAuthenticated: boolean }) {
                 badge, vessel name, make, model, year, HIN, photo, the chain of title, the registration document, and
                 the service history — the entries and their dates, without the attached files.
               </p>
+              <p className={`mb-2 ${body}`}>
+                Your registration document goes to the buyer and may show your name and address, as it would in any boat sale.
+              </p>
               <p className={body}>
                 <strong className="font-semibold text-[var(--navy)]">Stays with you:</strong>{" "}
                 your insurance, your boater card, your fishing licence, your contact and emergency details, and the

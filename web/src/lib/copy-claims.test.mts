@@ -60,3 +60,14 @@ test("/signup offers email sign-up only, with no setup instructions", () => {
   assert.doesNotMatch(page, /Google|Apple|Supabase|confirmations are\s+disabled|Or email/);
   assert.doesNotMatch(page, /<OAuthButtons/);
 });
+
+test("the seller is told the registration document carries, in the panel and the FAQ", () => {
+  const line = "Your registration document goes to the buyer and may show your name and address, as it would in any boat sale.";
+  for (const rel of ["components/vessel-edit/TransferOwnershipPanel.tsx", "components/marketing/MoxieFaq.tsx"]) {
+    const text = readFileSync(join(SRC, rel), "utf8").replace(/\s+/g, " ");
+    assert.ok(text.includes(line), `${rel} is missing the registration carry-over note`);
+  }
+  const faq = readFileSync(join(SRC, "components/marketing/MoxieFaq.tsx"), "utf8");
+  const carries = faq.indexOf("Carries to the buyer:");
+  assert.ok(carries > 0 && faq.indexOf("may show your name and address", carries) < faq.indexOf("Stays with you:", carries), "the note sits under Carries to the buyer");
+});

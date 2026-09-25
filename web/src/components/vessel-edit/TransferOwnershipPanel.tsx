@@ -262,6 +262,9 @@ export function TransferOwnershipPanel({ mxeId, activeTransfer }: { mxeId: strin
         storage details, and documents (insurance, boater card) stay yours and stop showing on this vessel once
         transferred. You&apos;ll pay the transfer fee once the buyer accepts — nothing is charged now.
       </p>
+      <p className="font-[family-name:var(--font-dm)] text-xs text-[var(--text2)]">
+        Your registration document goes to the buyer and may show your name and address, as it would in any boat sale.
+      </p>
       {/* Said before the address is submitted, not after. We email a
           person who never signed up, on the strength of this seller
           typing their address — they should know that is what the button
