@@ -57,6 +57,8 @@ it's done. Status: **done** · **open** (code/work to do) · **needs Ben**
 | FAQ share-link answer reworded to what's built (file names only; marina access opens registration/insurance). Viewing is post-launch | done | — |
 | Homepage waitlist "we'll follow up" — list now stores, but nothing in admin shows it | open | — |
 | Maintenance-history lines on the home page | done (service records shipped) | — |
+| `/login` intro: provider line and developer setup text removed; email sign-in only | done | — |
+| `/signup` intro still says "Continue with Google or Apple…" and has Supabase confirmation wording | open | **Yes** |
 
 ## Legal
 

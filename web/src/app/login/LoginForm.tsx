@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { OAuthButtons } from "@/components/auth/OAuthButtons";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { safeNextPath } from "@/lib/safe-next";
 import { useCaptcha } from "@/components/auth/useCaptcha";
@@ -52,25 +51,10 @@ export function LoginForm({ nextPath }: Props) {
         Sign in
       </h1>
       <p className="mt-2 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
-        Sign in with Google or Apple, or use email. Add your app URL and{" "}
-        <code className="rounded bg-[var(--cream2)] px-1 text-xs">/auth/callback</code> under Supabase → Authentication
-        → URL Configuration.
+        Use the email and password on your account.
       </p>
 
-      <OAuthButtons nextPath={nextPath} className="mt-8" />
-
-      <div className="relative mt-10">
-        <div className="absolute inset-0 flex items-center" aria-hidden>
-          <div className="w-full border-t border-[var(--divider)]" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase tracking-[0.12em]">
-          <span className="bg-[var(--cream)] px-3 font-[family-name:var(--font-dm)] text-[var(--text3)]">
-            Or email
-          </span>
-        </div>
-      </div>
-
-      <form onSubmit={onSubmit} className="mt-10 flex flex-col gap-4">
+      <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-4">
         <label className="flex flex-col gap-1 font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
           Email
           <input

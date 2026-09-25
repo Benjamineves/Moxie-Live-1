@@ -46,3 +46,10 @@ test("the FAQ doesn't say a share link opens documents", () => {
   assert.match(answer, /can&apos;t be opened from a share link/);
   assert.doesNotMatch(answer, />\s*Yes,/, "the old answer opened with an unqualified yes");
 });
+
+test("/login offers email sign-in only, with no setup instructions", () => {
+  const src = stripComments(readFileSync(join(SRC, "app/login/LoginForm.tsx"), "utf8"));
+  const login = src.slice(src.indexOf("  return (")); // the rendered page, not the client calls above it
+  assert.doesNotMatch(login, /Google|Apple|Supabase|auth\/callback|URL Configuration|Or email/, "a provider that isn't on, or developer setup text");
+  assert.doesNotMatch(login, /<OAuthButtons/);
+});
