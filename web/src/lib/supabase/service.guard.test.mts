@@ -113,7 +113,6 @@ test("a missing key never becomes vessel data", () => {
  */
 const PUBLIC_CLIENT_ALLOWED = new Map<string, string>([
   ["lib/supabase-public.ts", "defines it"],
-  ["lib/owner-verify.ts", "users self-read fallback, not vessels"],
 ]);
 
 test("only the allow-list reads through the anon-key public client", () => {
@@ -125,6 +124,15 @@ test("only the allow-list reads through the anon-key public client", () => {
     if (/\bgetPublicSupabase\s*\(/.test(src)) offenders.push(rel);
   }
   assert.deepEqual(offenders, [], `anon has no SELECT on vessels; read with the service role and filter:\n  ${offenders.join("\n  ")}`);
+});
+
+test("owner lookup goes through the shared service helper, never anon", () => {
+  // A config failure used to fall back to the anon key and come out as
+  // "Forbidden — sign in as the vessel owner".
+  const src = readFileSync(join(SRC, "lib/owner-verify.ts"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.match(src, /requireSupabaseServiceClient\(/);
+  assert.doesNotMatch(src, /\bcreateClient\s*\(|getPublicSupabase/);
 });
 
 test("the waitlist never reports success without storing", () => {

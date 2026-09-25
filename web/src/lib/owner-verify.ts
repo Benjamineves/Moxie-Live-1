@@ -1,23 +1,25 @@
-import { createClient } from "@supabase/supabase-js";
-import { getPublicSupabase } from "./supabase-public.ts";
-import type { PermissiveDatabase } from "./supabase/schema-stub.ts";
+import { requireSupabaseServiceClient } from "./supabase/service.ts";
 
-/** Resolve vessel owner email for permission checks. Prefer service role when set (server-only). */
+/**
+ * Resolve a vessel owner's email for permission checks.
+ *
+ * Service role only, through the shared helper, so a missing key is a 500.
+ * This used to build its own client and, on any failure, fall back to the
+ * anon key — which RLS gave zero rows (and, since 20261013, no grant at
+ * all) — returning null. Callers read null as "not the owner", so a broken
+ * deploy told real owners "Forbidden — sign in as the vessel owner": a
+ * configuration fault reported as a fact about the visitor.
+ *
+ * A query error still yields null (the caller's refusal), but is logged.
+ */
 export async function getOwnerEmailByUserId(ownerId: string): Promise<string | null> {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL?.trim();
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY?.trim();
-
-  if (url && serviceKey) {
-    const admin = createClient<PermissiveDatabase>(url, serviceKey, { auth: { persistSession: false } });
-    const { data, error } = await admin.from("users").select("email").eq("id", ownerId).maybeSingle();
-    if (!error && data?.email) return data.email;
+  const service = requireSupabaseServiceClient("lib/owner-verify");
+  const { data, error } = await service.from("users").select("email").eq("id", ownerId).maybeSingle();
+  if (error) {
+    console.error(`[owner-verify] users read failed for ${ownerId}: ${error.message}`);
+    return null;
   }
-
-  const anon = getPublicSupabase();
-  if (!anon) return null;
-  const { data, error } = await anon.from("users").select("email").eq("id", ownerId).maybeSingle();
-  if (error || !data?.email) return null;
-  return data.email;
+  return (data as { email: string | null } | null)?.email ?? null;
 }
 
 export function emailsMatch(a: string | undefined | null, b: string | undefined | null) {
