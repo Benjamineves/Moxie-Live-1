@@ -195,7 +195,12 @@ where it could be done read-only. Ranked; none fixed yet.
 1. **High — `vessel-photos` INSERT/UPDATE are `auth.uid() IS NOT NULL`** on a
    public bucket with no size or type limit: any signed-in account can
    replace any vessel's public photo, or host arbitrary files there.
-   *Code shipped; `20261012` written, not run* (also covers #4 and #5).
+   **Done 2026-09-25** (`20261012` run, also #4 size/type and #5). Shown
+   with two accounts: before, B overwrote A's fixture photo and stored a
+   publicly served SVG, and anon listed the bucket; after, B's overwrite and
+   plant get RLS 403s, SVG/HTML and >10 MB are refused in both buckets, anon
+   lists nothing, B's own uploads work, real photo URLs still load. Probe
+   files deleted.
 2. **Medium — default privileges** give anon/authenticated ALL on every new
    table and EXECUTE on every new function/sequence the `postgres` role
    creates in `public`/`storage`. Safety rests on each migration remembering
@@ -203,9 +208,9 @@ where it could be done read-only. Ranked; none fixed yet.
 3. **Medium (correctness) — homepage waitlist has never stored anyone**:
    RLS on, no INSERT policy, 0 rows ever; every submit returns 500. Missing
    config returns `ok: true` ("stored locally only") — a false success.
-   *Fixed in code 2026-09-25* (service-role write, config failure is a 500,
-   DB errors no longer echoed to visitors); a real submission not yet
-   observed. **Still open:** the homepage says "we'll follow up", but
+   **Fixed 2026-09-25** (service-role write, config failure is a 500, DB
+   errors no longer echoed to visitors). One live probe submission stored
+   (`waitlist-probe@example.com`, left in the table). **Still open:** the homepage says "we'll follow up", but
    nothing shows the list anywhere — no admin page, unlike commercial interest.
 4. **Medium — no size/type limits on `vessel-docs`**; direct uploads bypass
    the app's storage cap (`checkStorageCapacity` is only called by the client).
