@@ -1,26 +1,35 @@
 import type { ProfileRole, VesselPreview, VesselRecord } from "@/types/vessel";
-import { getPublicSupabase } from "@/lib/supabase-public";
-import { AnonKeyNotConfiguredError } from "@/lib/supabase/server";
+import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 
 function normalizeRecord(row: Record<string, unknown>): VesselRecord {
   const r = row as VesselRecord;
   return r;
 }
 
+/**
+ * The whole row, read with the SERVICE ROLE. Callers must pass it through
+ * filterVesselForRole / toPreview before any of it leaves the server.
+ *
+ * This used to read with the anon key, which only worked because anon had
+ * SELECT on vessels — every column of every public row, so anyone holding
+ * the key from the browser bundle could read mailing addresses straight
+ * from /rest/v1/vessels. 20261010 revokes that grant; this read no longer
+ * depends on it. `is_public = true` is the row rule the anon RLS policy
+ * applied, kept here so the service role doesn't widen what resolves.
+ *
+ * A missing service role throws (a 500), never demo data — the old anon
+ * path once served a FAKE BOAT at a real MXE ID.
+ */
 export async function fetchVesselByMxeId(mxeId: string): Promise<VesselRecord | null> {
   const normalized = mxeId.trim().toUpperCase();
-  const supabase = getPublicSupabase();
+  const supabase = requireSupabaseServiceClient(`lib/vessel-service ${normalized}`);
 
-  if (!supabase) {
-    // Was `return getDemoVessel(normalized)`, which served a FAKE BOAT at a
-    // real MXE ID: a stranger scanning a hull badge would read invented
-    // details as though they were the registry's. A missing anon key is a
-    // broken deploy, and the page it produces must say so.
-    console.error(`[config] Supabase anon key missing at lib/vessel-service (${normalized}).`);
-    throw new AnonKeyNotConfiguredError(`lib/vessel-service ${normalized}`);
-  }
-
-  const { data, error } = await supabase.from("vessels").select("*").eq("mxe_id", normalized).maybeSingle();
+  const { data, error } = await supabase
+    .from("vessels")
+    .select("*")
+    .eq("mxe_id", normalized)
+    .eq("is_public", true)
+    .maybeSingle();
 
   if (error) {
     // A real Supabase/query error must surface, not be masked by demo data.

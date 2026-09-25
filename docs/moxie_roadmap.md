@@ -3,7 +3,7 @@
 Open items and what depends on what. Update as items close; add what
 turns up. Where this disagrees with the code, the code wins.
 
-_Last updated 20 September 2026_
+_Last updated 24 September 2026_
 
 ---
 
@@ -187,6 +187,30 @@ Currently `p=none`. Moving to `quarantine` makes spoofing harder.
 ---
 
 ## Correctness — open
+
+### Anon key could read every column of `vessels` — code shipped, migration not run
+Found 2026-09-24 in the geography audit: anon (and any signed-in browser) had
+table SELECT on `vessels`, with only an `is_public` row rule, so
+`/rest/v1/vessels?select=*` with the public key returned mailing addresses and
+every other column. The scan page and `/api/vessels/[mxeId]{,/preview}` now
+read with the service role (keeping `is_public = true` in the query).
+`20261010_revoke_public_vessel_reads.sql` revokes the grant and drops the
+policy — **written, not run; run after the deploy.** Then re-probe with the
+anon key (expect `42501`) and check the owner view.
+
+**Blocks** the geography rebuild's Stage 1: `storage_zip` must not exist while
+anon can read the table.
+
+### Geography rebuild on a required storage ZIP (staged)
+The "Vessels by region" card reads 0 in every CA region because the
+classifier never reads `storage_city`, the only city column new vessels fill.
+Being replaced, not patched: required `storage_zip` → county (Census ZCTA
+file, land-area tiebreak) → region config, on a new `/admin/geography`
+page, counting `qr_status = 'active'` minus decommissioned (the overview
+changes to match). Stages: 0.5 security (above) · 1 ZIP + county (clears on
+transfer; migration before the code that writes it; share-link location
+group gains storage city/state) · 2 region config (FL/WA county lists need
+approval) · 3 page · 4 inline backfill.
 
 ### Commercial interest list is collecting; nothing sends to it yet
 `/pricing` now captures email + optional business type instead of opening a

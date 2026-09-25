@@ -95,11 +95,41 @@ test("only the allow-list calls createSupabaseServerClient directly", () => {
   assert.deepEqual(offenders, [], `these must use requireSupabaseServerClient instead:\n  ${offenders.join("\n  ")}`);
 });
 
-test("a missing anon key never becomes vessel data", () => {
+test("a missing key never becomes vessel data", () => {
   const src = readFileSync(join(SRC, "lib/vessel-service.ts"), "utf8")
     .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
   assert.doesNotMatch(src, /getDemoVessel/, "a real MXE ID must never render an invented boat");
-  assert.match(src, /throw new AnonKeyNotConfiguredError/);
+  assert.match(src, /requireSupabaseServiceClient\(/);
+});
+
+/**
+ * The anon key ships in the browser bundle, so anything it can read, anyone
+ * can read — straight from /rest/v1, past every allow-list the pages apply.
+ * anon had SELECT on every column of `vessels` (mailing_zip was readable);
+ * 20261010 revokes it and the scan page reads with the service role. These
+ * are the only callers left, and neither touches `vessels`.
+ */
+const PUBLIC_CLIENT_ALLOWED = new Map<string, string>([
+  ["lib/supabase-public.ts", "defines it"],
+  ["app/api/waitlist/route.ts", "anon insert into waitlist"],
+  ["lib/owner-verify.ts", "users self-read fallback, not vessels"],
+]);
+
+test("only the allow-list reads through the anon-key public client", () => {
+  const offenders: string[] = [];
+  for (const file of sourceFiles(SRC)) {
+    const rel = file.slice(SRC.length);
+    if (PUBLIC_CLIENT_ALLOWED.has(rel)) continue;
+    const src = readFileSync(file, "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    if (/\bgetPublicSupabase\s*\(/.test(src)) offenders.push(rel);
+  }
+  assert.deepEqual(offenders, [], `anon has no SELECT on vessels; read with the service role and filter:\n  ${offenders.join("\n  ")}`);
+});
+
+test("the service-role vessel read keeps the is_public row rule the anon policy applied", () => {
+  const src = readFileSync(join(SRC, "lib/vessel-service.ts"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  assert.match(src, /\.from\("vessels"\)[\s\S]*?\.eq\("is_public",\s*true\)/);
 });
 
 test("a share link says it is dead only when the token says so", () => {
