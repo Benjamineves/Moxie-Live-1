@@ -6,6 +6,7 @@ import { isValidStateCode, normalizeStateCode } from "@/lib/us-states";
 import { VESSEL_LIMIT, type SubscriptionTier } from "@/lib/tier-config";
 import { countActiveVessels, evaluateVesselCap } from "@/lib/vessel-cap";
 import { isAdminEmail } from "@/lib/admin-verify";
+import { FOREIGN_PATH_ERROR, isOwnPhotoUrl, isOwnStoragePath } from "@/lib/storage-path";
 
 const STORAGE_TYPES = ["marina", "mooring", "trailer", "home", "yard", "other"] as const;
 export type StorageType = (typeof STORAGE_TYPES)[number];
@@ -76,6 +77,15 @@ export async function createVessel(
     data: { user },
   } = await authClient.auth.getUser();
   if (!user) return { error: "You must be signed in." };
+
+  // Uploaded files must be the caller's own: the documents route later signs
+  // these paths with the service role. lib/storage-path.ts.
+  for (const path of [input.doc_registration_url, input.doc_insurance_url]) {
+    if (path?.trim() && !isOwnStoragePath(path.trim(), user.id)) return { error: FOREIGN_PATH_ERROR };
+  }
+  if (input.photo_url?.trim() && !isOwnPhotoUrl(input.photo_url.trim(), user.id, process.env.NEXT_PUBLIC_SUPABASE_URL)) {
+    return { error: FOREIGN_PATH_ERROR };
+  }
 
   const service = requireSupabaseServiceClient("/app/dashboard/new/actions");
   const ownerEmail = user.email?.trim().toLowerCase();

@@ -246,6 +246,10 @@ traced into their helpers. None fixed yet.
    so this reaches any stranger. Derived from code; not yet demonstrated.
    Live data 2026-09-25: all 9 stored document/attachment/evidence paths sit
    in their owner's folder — no sign it has been used.
+   **Fixed in code 2026-09-25** (with #5): `lib/storage-path.ts` — every
+   action that stores a client path or photo URL requires it to be in the
+   caller's own auth-id folder, before the write; guard test fails if a new
+   action stores a path without it.
 2. **Medium — open redirect after sign-in.** `/login` and `/signup` accept
    any `next` starting with `/` (so `//evil.example`); `/auth/callback`
    rejects `//` but not `/\evil.example`, which the URL parser resolves to

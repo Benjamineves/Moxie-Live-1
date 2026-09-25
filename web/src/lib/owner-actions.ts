@@ -13,6 +13,7 @@ import { FULL_STORAGE_CAP_BYTES } from "@/lib/tier-config";
 import { getAccountStorageUsageBytes } from "@/lib/storage-usage";
 import { loadVesselMarinaAccess } from "@/lib/marina-access";
 import { marinaAccessToReview, type MarinaGrantToReview } from "@/lib/marina-copy";
+import { FOREIGN_PATH_ERROR, isOwnPhotoUrl, isOwnStoragePath } from "./storage-path.ts";
 
 /**
  * Updates photo_url on an already-existing vessel — the counterpart to
@@ -38,6 +39,8 @@ export async function updateVesselPhoto(mxeId: string, photoUrl: string): Promis
   if (!vessel || !ownerIds.includes(vessel.owner_id)) {
     return { error: "Vessel not found." };
   }
+  // Only a photo this caller uploaded — see lib/storage-path.ts.
+  if (!isOwnPhotoUrl(photoUrl, user.id, process.env.NEXT_PUBLIC_SUPABASE_URL)) return { error: FOREIGN_PATH_ERROR };
 
   const { error } = await service.from("vessels").update({ photo_url: photoUrl }).eq("id", vessel.id);
   if (error) return { error: error.message };
@@ -276,6 +279,10 @@ export async function updateVesselDocument(
   const service = requireSupabaseServiceClient("/lib/owner-actions");
   const vessel = await loadOwnedVessel(service, mxeId, ownerIds);
   if (!vessel) return { error: "Vessel not found." };
+  // The documents route signs whatever path is stored here with the service
+  // role, so this is the only check between a caller and someone else's
+  // file. lib/storage-path.ts.
+  if (!isOwnStoragePath(url, user.id)) return { error: FOREIGN_PATH_ERROR };
 
   const column = DOC_COLUMN[docType];
   // Replacing a document always rewrites its filename too, including to
@@ -357,6 +364,8 @@ export async function submitIdentityCorrectionRequest(
 
   const { user, ownerIds } = await resolveOwnerIds(authClient);
   if (!user) return { error: "You must be signed in." };
+  // The admin review page signs this path; it must be the caller's own file.
+  if (!isOwnStoragePath(documentPath, user.id)) return { error: FOREIGN_PATH_ERROR };
 
   const service = requireSupabaseServiceClient("/lib/owner-actions");
   const { data: vesselRow } = await service

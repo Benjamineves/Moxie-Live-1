@@ -5,6 +5,7 @@ import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { resolveOwnerIds } from "@/lib/vessel-ownership";
 import { validateServiceRecord, tierAllowsServiceRecords } from "@/lib/service-records";
+import { FOREIGN_PATH_ERROR, isOwnStoragePath } from "@/lib/storage-path";
 import {
   deleteServiceRecord,
   insertServiceRecord,
@@ -66,6 +67,9 @@ export async function addServiceRecord(
 
   const checked = validateServiceRecord(input, new Date());
   if (!checked.ok) return { error: checked.error };
+  // The attachment route signs this path with the service role — it must be
+  // a file the caller uploaded. lib/storage-path.ts.
+  if (input.file && !isOwnStoragePath(input.file.path, ctx.ownerId)) return { error: FOREIGN_PATH_ERROR };
 
   const service = requireSupabaseServiceClient("dashboard/[mxeId]/service/actions add");
   const result = await insertServiceRecord(service, {
