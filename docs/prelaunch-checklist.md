@@ -13,7 +13,7 @@ it's done. Status: **done** · **open** (code/work to do) · **needs Ben**
 | Document and photo buckets: own-folder policies, 10 MB + type limits (`20261011`, `20261012`) | done | — |
 | Stored-path check, safe sign-in redirects, owner lookup, Apple button hidden (authz audit) | done | — |
 | Dependency vulnerabilities: `next` 16.3.6, `sharp` 0.35.4, transitive fixes — `npm audit --omit=dev` reports 0 (2026-09-25). Re-run before launch | done | — |
-| CAPTCHA (Cloudflare Turnstile) on sign-up, sign-in, reset — code behind a flag first, then the Supabase setting | needs Ben (site key), then open | **Yes** |
+| CAPTCHA (Cloudflare Turnstile) on sign-up, sign-in, reset — code shipped behind `NEXT_PUBLIC_CAPTCHA_ENABLED` (off); turn on per `lib/captcha-config.ts` | needs Ben (site + secret key, then Vercel env, then Supabase) | **Yes** |
 | Stripe webhook secret: live-mode endpoint's `whsec_` in Vercel Production, webhook pointed at the apex; confirm a test event verifies | needs Ben | **Yes** |
 | Vercel env review: Production has live values only, no test keys; `CRON_SECRET` set; `ADMIN_EMAILS` without `ben@`; service-role key not in Preview | needs Ben | **Yes** |
 | Leaked-password protection; 30-day session inactivity timeout | needs Ben (Supabase Pro) | — |

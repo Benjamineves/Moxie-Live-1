@@ -6,6 +6,7 @@ import { OAuthButtons } from "@/components/auth/OAuthButtons";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { safeNextPath } from "@/lib/safe-next";
 import { MIN_PASSWORD_LENGTH } from "@/lib/password-policy";
+import { useCaptcha } from "@/components/auth/useCaptcha";
 
 type Props = { nextPath: string };
 
@@ -15,6 +16,7 @@ export function SignupForm({ nextPath }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [done, setDone] = useState(false);
+  const captcha = useCaptcha();
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -28,14 +30,22 @@ export function SignupForm({ nextPath }: Props) {
       setError("Missing Supabase configuration.");
       return;
     }
+    if (!captcha.ready) {
+      setError("Complete the security check first.");
+      return;
+    }
     setPending(true);
     const origin = window.location.origin;
     const { error: signErr } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(safeNextPath(nextPath))}` },
+      options: {
+        emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(safeNextPath(nextPath))}`,
+        ...(captcha.token ? { captchaToken: captcha.token } : {}),
+      },
     });
     setPending(false);
+    captcha.reset();
     if (signErr) {
       setError(signErr.message);
       return;
@@ -110,12 +120,16 @@ export function SignupForm({ nextPath }: Props) {
             className="rounded-lg border border-[var(--divider)] bg-[var(--white)] px-3 py-2.5 text-sm font-normal normal-case tracking-normal text-[var(--text)] outline-none ring-[var(--gold)] focus:ring-2"
           />
         </label>
+        {captcha.widget}
+        {captcha.configError ? (
+          <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">{captcha.configError}</p>
+        ) : null}
         {error ? (
           <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">{error}</p>
         ) : null}
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || !captcha.ready || !!captcha.configError}
           className="mt-2 rounded-lg bg-[var(--navy-deep)] px-4 py-3 font-[family-name:var(--font-dm)] text-sm font-medium text-[var(--gold)] transition hover:bg-[var(--navy)] disabled:opacity-50"
         >
           {pending ? "Creating…" : "Sign up"}

@@ -6,6 +6,7 @@ import Link from "next/link";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { safeNextPath } from "@/lib/safe-next";
+import { useCaptcha } from "@/components/auth/useCaptcha";
 
 type Props = { nextPath: string };
 
@@ -15,6 +16,7 @@ export function LoginForm({ nextPath }: Props) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const captcha = useCaptcha();
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -24,9 +26,18 @@ export function LoginForm({ nextPath }: Props) {
       setError("Missing Supabase configuration.");
       return;
     }
+    if (!captcha.ready) {
+      setError("Complete the security check first.");
+      return;
+    }
     setPending(true);
-    const { error: signErr } = await supabase.auth.signInWithPassword({ email, password });
+    const { error: signErr } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+      options: captcha.token ? { captchaToken: captcha.token } : undefined,
+    });
     setPending(false);
+    captcha.reset();
     if (signErr) {
       setError(signErr.message);
       return;
@@ -88,12 +99,16 @@ export function LoginForm({ nextPath }: Props) {
         >
           Forgot password?
         </Link>
+        {captcha.widget}
+        {captcha.configError ? (
+          <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">{captcha.configError}</p>
+        ) : null}
         {error ? (
           <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">{error}</p>
         ) : null}
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || !captcha.ready || !!captcha.configError}
           className="mt-2 rounded-lg bg-[var(--navy-deep)] px-4 py-3 font-[family-name:var(--font-dm)] text-sm font-medium text-[var(--gold)] transition hover:bg-[var(--navy)] disabled:opacity-50"
         >
           {pending ? "Signing in…" : "Sign in"}

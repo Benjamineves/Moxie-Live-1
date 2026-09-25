@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { useCaptcha } from "@/components/auth/useCaptcha";
 
 const RESEND_SECONDS = 30;
 
@@ -13,7 +14,7 @@ const RESEND_SECONDS = 30;
 // other than a locally-caught malformed email always lands on "check your
 // inbox." Real failures (network, rate limit) are logged, never surfaced
 // as a different state, so there's no observable signal to enumerate with.
-async function requestReset(email: string) {
+async function requestReset(email: string, captchaToken?: string) {
   const supabase = createSupabaseBrowserClient();
   if (!supabase) {
     console.error("[forgot-password] Missing Supabase configuration.");
@@ -22,6 +23,7 @@ async function requestReset(email: string) {
   const origin = window.location.origin;
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: `${origin}/auth/callback?next=${encodeURIComponent("/reset-password")}`,
+    ...(captchaToken ? { captchaToken } : {}),
   });
   if (error) {
     console.error("[forgot-password] resetPasswordForEmail failed:", error.message);
@@ -35,6 +37,10 @@ export function ForgotPasswordForm() {
   const [pending, setPending] = useState(false);
   const [resendSeconds, setResendSeconds] = useState(RESEND_SECONDS);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  // This form never reveals an error (no account enumeration), so a send
+  // without a token would fail silently behind "Check your inbox". Both
+  // sends therefore wait for a token when CAPTCHA is on.
+  const captcha = useCaptcha();
 
   function startResendTimer() {
     setResendSeconds(RESEND_SECONDS);
@@ -64,16 +70,19 @@ export function ForgotPasswordForm() {
       return;
     }
     setEmailError(false);
+    if (!captcha.ready) return;
     setPending(true);
-    await requestReset(trimmed);
+    await requestReset(trimmed, captcha.token);
     setPending(false);
+    captcha.reset();
     setSent(true);
     startResendTimer();
   }
 
   async function onResend() {
-    if (resendSeconds > 0) return;
-    await requestReset(email.trim());
+    if (resendSeconds > 0 || !captcha.ready) return;
+    await requestReset(email.trim(), captcha.token);
+    captcha.reset();
     startResendTimer();
   }
 
@@ -96,10 +105,11 @@ export function ForgotPasswordForm() {
           <br />
           Tap it on this device — the link expires in 15 minutes.
         </p>
+        {captcha.widget ? <div className="mt-6 flex justify-center">{captcha.widget}</div> : null}
         <button
           type="button"
           onClick={onResend}
-          disabled={resendSeconds > 0}
+          disabled={resendSeconds > 0 || !captcha.ready}
           className="mt-6 w-full rounded-lg border border-[var(--gold-line)] px-5 py-3 font-[family-name:var(--font-dm)] text-xs font-semibold uppercase tracking-[0.1em] text-[var(--navy)] transition hover:bg-[var(--gold-dim)] disabled:opacity-40"
         >
           Resend link
@@ -144,9 +154,13 @@ export function ForgotPasswordForm() {
             Enter a valid email address
           </p>
         ) : null}
+        {captcha.widget}
+        {captcha.configError ? (
+          <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">{captcha.configError}</p>
+        ) : null}
         <button
           type="submit"
-          disabled={pending}
+          disabled={pending || !captcha.ready || !!captcha.configError}
           className="mt-2 rounded-lg bg-[var(--navy-deep)] px-4 py-3 font-[family-name:var(--font-dm)] text-sm font-medium text-[var(--gold)] transition hover:bg-[var(--navy)] disabled:opacity-50"
         >
           {pending ? "Sending…" : "Send reset link →"}
