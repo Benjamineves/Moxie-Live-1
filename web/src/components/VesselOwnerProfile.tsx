@@ -358,7 +358,8 @@ export function VesselOwnerProfile({
           </dl>
         ) : null}
         <p className="mt-2 px-1 font-[family-name:var(--font-dm)] text-xs text-[var(--text2)]">
-          Only you can see your marina and storage details. Your public profile shows city and state only.
+          Only you can see your marina and storage details. Your public profile shows city and state only. Marinas
+          you&apos;ve given access to can see your slip number.
         </p>
         {/* Shown whatever the storage type: a grant belongs to the vessel,
             and a boat moved onto a trailer may still have one to remove. */}

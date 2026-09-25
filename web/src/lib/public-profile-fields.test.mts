@@ -33,7 +33,11 @@ test("the public profile component can't render them, and has no marina_city fal
 
 test("copy matches: owner note says so; the intake hint no longer promises the marina is public", () => {
   const owner = read("components/VesselOwnerProfile.tsx").replace(/\s+/g, " ");
-  assert.ok(owner.includes("Only you can see your marina and storage details. Your public profile shows city and state only."));
+  assert.ok(
+    owner.includes(
+      "Only you can see your marina and storage details. Your public profile shows city and state only. Marinas you&apos;ve given access to can see your slip number.",
+    ),
+  );
   assert.doesNotMatch(owner, /home marina is shown on your public profile/i);
   assert.doesNotMatch(read("app/dashboard/new/VesselIntakeForm.tsx"), /Appears on your public profile/);
 });
