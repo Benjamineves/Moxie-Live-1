@@ -18,6 +18,7 @@ it's done. Status: **done** · **open** (code/work to do) · **needs Ben**
 | Vercel env review: Production has live values only, no test keys; `CRON_SECRET` set; `ADMIN_EMAILS` without `ben@`; service-role key not in Preview | needs Ben | **Yes** |
 | Leaked-password protection; 30-day session inactivity timeout | needs Ben (Supabase Pro) | — |
 | Per-user storage quota (uploads can exceed the plan's 500 MB, 10 MB at a time) | open (deferred) | — |
+| Public scan profile: remove marina name and city from the allow-list (storage city/state stay public) | open | **Yes** |
 
 ## Payments
 
