@@ -254,16 +254,23 @@ traced into their helpers. None fixed yet.
    any `next` starting with `/` (so `//evil.example`); `/auth/callback`
    rejects `//` but not `/\evil.example`, which the URL parser resolves to
    `https://evil.example/` (checked with the same parser).
+   **Fixed 2026-09-25:** one `safeNextPath` (lib/safe-next.ts) at every
+   entry point; keeps only paths that resolve to our own origin.
 3. **Medium (correctness) — "Sign in with Apple" is live on /login and
    /signup; Apple is not enabled** in Supabase Auth (authorize returns
    "provider is not enabled").
+   **Fixed 2026-09-25:** hidden behind `APPLE_OAUTH_ENABLED = false`, like
+   Google; with no provider enabled the block renders nothing.
 4. **Low (correctness) — `getOwnerEmailByUserId`** builds its own service
    client and falls back to anon on any failure, so a broken deploy reads as
    "Forbidden — sign in as the vessel owner"; it also sits outside the
    service-client guard test.
+   **Fixed 2026-09-25:** service role via `requireSupabaseServiceClient`
+   only; no anon fallback.
 5. **Low — correction-request `documentPath` unvalidated**: an owner can
    make the admin review page show another owner's file as evidence
    (admin-only). Same fix as #1.
+   **Fixed with #1.**
 
 Auth settings read from `/auth/v1/settings`: signup open, email
 confirmation required, email provider only. Rate limits, password policy,
