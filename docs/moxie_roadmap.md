@@ -188,26 +188,13 @@ Currently `p=none`. Moving to `quarantine` makes spoofing harder.
 
 ## Correctness — open
 
-### Anon key could read every column of `vessels` — code shipped, migration not run
-Found 2026-09-24 in the geography audit: anon (and any signed-in browser) had
-table SELECT on `vessels`, with only an `is_public` row rule, so
-`/rest/v1/vessels?select=*` with the public key returned mailing addresses and
-every other column. The scan page and `/api/vessels/[mxeId]{,/preview}` now
-read with the service role (keeping `is_public = true` in the query).
-`20261010_revoke_public_vessel_reads.sql` revokes the grant and drops the
-policy — **written, not run; run after the deploy.** Then re-probe with the
-anon key (expect `42501`) and check the owner view.
-
-**Blocks** the geography rebuild's Stage 1: `storage_zip` must not exist while
-anon can read the table.
-
 ### Geography rebuild on a required storage ZIP (staged)
 The "Vessels by region" card reads 0 in every CA region because the
 classifier never reads `storage_city`, the only city column new vessels fill.
 Being replaced, not patched: required `storage_zip` → county (Census ZCTA
 file, land-area tiebreak) → region config, on a new `/admin/geography`
 page, counting `qr_status = 'active'` minus decommissioned (the overview
-changes to match). Stages: 0.5 security (above) · 1 ZIP + county (clears on
+changes to match). Stages: 0.5 security (done 2026-09-24) · 1 ZIP + county (clears on
 transfer; migration before the code that writes it; share-link location
 group gains storage city/state) · 2 region config (FL/WA county lists need
 approval) · 3 page · 4 inline backfill.
@@ -486,6 +473,16 @@ outright. Offering the saved card removes re-entry friction on the upgrade
 path; the edit button adds no capability the portal doesn't already give.
 
 ## Done
+
+**Public key can no longer read `vessels`** (2026-09-24): anon and
+authenticated had table SELECT with only an `is_public` row rule, so
+`/rest/v1/vessels?select=*` with the browser's key returned every column
+(mailing_zip included). Scan page and `/api/vessels/[mxeId]{,/preview}` read
+with the service role, keeping `is_public = true` in the query;
+`20261010_revoke_public_vessel_reads.sql` run. Verified after: anon gets
+`42501` on the table and on a single column; live scan pages, preview and
+public API still answer. `authenticated` is covered by the migration's guard
+block, not by a probe (needs a signed-in JWT). ·
 
 **Small-text and contrast sweep** (2026-09-20): 117 elements below 11px
 across 35 files raised to an 11px floor — the three roadmap items (the grey
