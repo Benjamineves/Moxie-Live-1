@@ -188,8 +188,30 @@ Currently `p=none`. Moving to `quarantine` makes spoofing harder.
 
 ## Correctness — open
 
-### Full grants / RLS / storage-policy audit against live — next, before geography Stage 1
-Every table, view, function and bucket, checked live, ranked by severity.
+### Grants / RLS / storage audit (2026-09-25, against live) — open findings
+Snapshot from `supabase/audit/security_snapshot.sql`; each item checked live
+where it could be done read-only. Ranked; none fixed yet.
+
+1. **High — `vessel-photos` INSERT/UPDATE are `auth.uid() IS NOT NULL`** on a
+   public bucket with no size or type limit: any signed-in account can
+   replace any vessel's public photo, or host arbitrary files there.
+2. **Medium — default privileges** give anon/authenticated ALL on every new
+   table and EXECUTE on every new function/sequence the `postgres` role
+   creates in `public`/`storage`. Safety rests on each migration remembering
+   RLS and REVOKE.
+3. **Medium (correctness) — homepage waitlist has never stored anyone**:
+   RLS on, no INSERT policy, 0 rows ever; every submit returns 500. Missing
+   config returns `ok: true` ("stored locally only") — a false success.
+4. **Medium — no size/type limits on `vessel-docs`**; direct uploads bypass
+   the app's storage cap (`checkStorageCapacity` is only called by the client).
+5. **Low — anon can list `vessel-photos`** (owner auth uids, MXE folders).
+6. **Low — three policies now error** (`ownership_history`,
+   `vessel_documents`, `vessel_payments` subquery `vessels`, revoked in
+   20261010): signed-in reads get 42501. Nothing in the app uses them.
+7. **Low — TRUNCATE/TRIGGER/REFERENCES and write grants** on 20 public tables
+   to anon/authenticated; RLS doesn't cover TRUNCATE, but no API path issues it.
+8. **Low — `mxe_id_seq` USAGE/UPDATE to anon/authenticated**; not reachable
+   through any API today.
 
 ### Geography rebuild on a required storage ZIP (staged)
 The "Vessels by region" card reads 0 in every CA region because the
