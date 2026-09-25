@@ -53,3 +53,10 @@ test("/login offers email sign-in only, with no setup instructions", () => {
   assert.doesNotMatch(login, /Google|Apple|Supabase|auth\/callback|URL Configuration|Or email/, "a provider that isn't on, or developer setup text");
   assert.doesNotMatch(login, /<OAuthButtons/);
 });
+
+test("/signup offers email sign-up only, with no setup instructions", () => {
+  const src = stripComments(readFileSync(join(SRC, "app/signup/SignupForm.tsx"), "utf8"));
+  const page = src.slice(src.indexOf("  if (done) {"));
+  assert.doesNotMatch(page, /Google|Apple|Supabase|confirmations are\s+disabled|Or email/);
+  assert.doesNotMatch(page, /<OAuthButtons/);
+});

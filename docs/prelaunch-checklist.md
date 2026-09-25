@@ -58,7 +58,7 @@ it's done. Status: **done** · **open** (code/work to do) · **needs Ben**
 | Homepage waitlist "we'll follow up" — list now stores, but nothing in admin shows it | open | — |
 | Maintenance-history lines on the home page | done (service records shipped) | — |
 | `/login` intro: provider line and developer setup text removed; email sign-in only | done | — |
-| `/signup` intro still says "Continue with Google or Apple…" and has Supabase confirmation wording | open | **Yes** |
+| `/signup`: provider line, "Or email" divider and Supabase confirmation wording removed; email sign-up only | done | — |
 
 ## Legal
 

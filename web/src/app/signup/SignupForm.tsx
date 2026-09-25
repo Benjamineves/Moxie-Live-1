@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { OAuthButtons } from "@/components/auth/OAuthButtons";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
 import { safeNextPath } from "@/lib/safe-next";
 import { MIN_PASSWORD_LENGTH } from "@/lib/password-policy";
@@ -60,8 +59,9 @@ export function SignupForm({ nextPath }: Props) {
           Check your email
         </h1>
         <p className="mt-4 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
-          If confirmation is required, use the link Supabase sends—then sign in. If confirmations are
-          disabled, you can go straight to login.
+          We sent a confirmation link to <span className="font-semibold text-[var(--navy)]">{email}</span>. Open it
+          to confirm your account. If it doesn&apos;t sign you in — say you opened it on another device — sign in
+          below with your email and password.
         </p>
         <Link
           className="mt-8 inline-block font-[family-name:var(--font-dm)] text-sm text-[var(--blue-fg)] underline"
@@ -79,23 +79,10 @@ export function SignupForm({ nextPath }: Props) {
         Create account
       </h1>
       <p className="mt-2 font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">
-        Continue with Google or Apple for the fastest setup, or create an account with email and password.
+        Create an account with your email and a password.
       </p>
 
-      <OAuthButtons nextPath={nextPath} className="mt-8" />
-
-      <div className="relative mt-10">
-        <div className="absolute inset-0 flex items-center" aria-hidden>
-          <div className="w-full border-t border-[var(--divider)]" />
-        </div>
-        <div className="relative flex justify-center text-xs uppercase tracking-[0.12em]">
-          <span className="bg-[var(--cream)] px-3 font-[family-name:var(--font-dm)] text-[var(--text3)]">
-            Or email
-          </span>
-        </div>
-      </div>
-
-      <form onSubmit={onSubmit} className="mt-10 flex flex-col gap-4">
+      <form onSubmit={onSubmit} className="mt-8 flex flex-col gap-4">
         <label className="flex flex-col gap-1 font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
           Email
           <input
