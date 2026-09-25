@@ -272,11 +272,24 @@ traced into their helpers. None fixed yet.
    (admin-only). Same fix as #1.
    **Fixed with #1.**
 
-Auth settings read from `/auth/v1/settings`: signup open, email
-confirmation required, email provider only. Rate limits, password policy,
-leaked-password check and redirect allow-list need reading from the
-dashboard. Email confirmation is load-bearing: transfer acceptance trusts
-the session email.
+Auth settings (API + dashboard, 2026-09-25): signup open, email
+confirmation ON (load-bearing — transfer acceptance trusts the session
+email), email provider only, rate limits 25 emails/hour, 30 sign-ups/ins
+and 30 verifications per IP per 5 min; redirect list limited to our two
+domains; refresh-token reuse interval 10 s. Open:
+
+- **Medium — no CAPTCHA with open signup and a 25/hour email budget.**
+  Scripted sign-ups (30 per IP per 5 min, more from several IPs) can use up
+  the hour's confirmation/reset emails, so real sign-ups and password resets
+  stop arriving. Turning CAPTCHA on in the dashboard alone would break every
+  sign-in: the forms must send a captcha token first (code, then setting).
+- **Low — password minimum is inconsistent and probably 6.** Signup's form
+  says 6 (`minLength={6}`), reset says 8; the server-side minimum and
+  leaked-password check haven't been read yet (Supabase's default is 6, no
+  character rules). The server setting is what enforces.
+- **Low — sessions never expire** (time-box and inactivity both 0). Includes
+  admin sessions.
+
 
 ### Geography rebuild on a required storage ZIP (staged)
 The "Vessels by region" card reads 0 in every CA region because the
