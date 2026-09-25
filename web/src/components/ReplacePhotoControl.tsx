@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { uploadVesselPhoto } from "@/lib/vessel-uploads";
 import { updateVesselPhoto, checkStorageCapacity } from "@/lib/owner-actions";
+import { PHOTO_ACCEPT } from "@/lib/upload-limits";
 
 /**
  * Renders only when vessels.photo_url is already set — the replace
@@ -52,7 +53,7 @@ export function ReplacePhotoControl({ mxeId }: { mxeId: string }) {
         {uploading ? "Uploading…" : "Replace photo"}
         <input
           type="file"
-          accept="image/*"
+          accept={PHOTO_ACCEPT}
           disabled={uploading}
           onChange={(e) => onFileSelected(e.target.files)}
           className="hidden"

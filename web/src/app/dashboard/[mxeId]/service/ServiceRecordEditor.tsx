@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { SERVICE_CATEGORIES, type ServiceRecord } from "@/lib/service-records";
 import { uploadServiceRecordFile } from "@/lib/vessel-uploads";
 import { addServiceRecord, editServiceRecord, removeServiceRecord } from "./actions";
+import { DOCUMENT_ACCEPT } from "@/lib/upload-limits";
 
 /**
  * Add and edit service entries.
@@ -166,7 +167,7 @@ export function ServiceRecordEditor({ mxeId, records }: { mxeId: string; records
       {!editing ? (
         <label className="flex flex-col gap-1.5">
           <span className={labelClass}>Invoice or receipt (optional)</span>
-          <input type="file" accept="application/pdf,image/*" onChange={(e) => setFile(e.target.files?.[0] ?? null)} className={field} />
+          <input type="file" accept={DOCUMENT_ACCEPT} onChange={(e) => setFile(e.target.files?.[0] ?? null)} className={field} />
           <span className="font-[family-name:var(--font-dm)] text-[11px] text-[var(--text3)]">
             Stays yours if you sell the boat. The entry carries to the buyer; the file does not.
           </span>

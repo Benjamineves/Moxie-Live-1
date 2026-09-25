@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { uploadVesselPhoto } from "@/lib/vessel-uploads";
 import { updateVesselPhoto, checkStorageCapacity } from "@/lib/owner-actions";
+import { PHOTO_ACCEPT } from "@/lib/upload-limits";
 
 /**
  * Renders only when vessels.photo_url is null (caller's responsibility —
@@ -67,7 +68,7 @@ export function AddPhotoNudge({ mxeId, vesselName }: { mxeId: string; vesselName
           {uploading ? "Uploading…" : "Add"}
           <input
             type="file"
-            accept="image/*"
+            accept={PHOTO_ACCEPT}
             disabled={uploading}
             onChange={(e) => onFileSelected(e.target.files)}
             className="hidden"

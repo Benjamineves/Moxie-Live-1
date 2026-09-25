@@ -8,6 +8,7 @@ import { StorageTypePicker, isMarinaGroup, storageTypeLabel } from "@/components
 import { vesselTypes } from "@/lib/vessel-types";
 import { US_STATES } from "@/lib/us-states";
 import { createVessel, type StorageType } from "./actions";
+import { DOCUMENT_ACCEPT, PHOTO_ACCEPT } from "@/lib/upload-limits";
 
 type FormState = {
   vessel_name: string;
@@ -406,7 +407,7 @@ export function VesselIntakeForm() {
         <div className="mt-6 grid gap-5">
           <UploadField
             label="Vessel photo"
-            accept="image/*"
+            accept={PHOTO_ACCEPT}
             progress={uploadProgress.photo}
             note={form.photo_url ? "Uploaded" : "Image, max 10MB"}
             onChange={(files) => onUpload(files, "photo", "photo_url", "photo")}
@@ -417,14 +418,14 @@ export function VesselIntakeForm() {
           ) : null}
           <UploadField
             label="Registration document (optional)"
-            accept="application/pdf,image/*"
+            accept={DOCUMENT_ACCEPT}
             progress={uploadProgress.registration}
             note={form.doc_registration_url ? "Uploaded" : "PDF or image, max 10MB"}
             onChange={(files) => onUpload(files, "registration", "doc_registration_url", "registration")}
           />
           <UploadField
             label="Insurance card (optional)"
-            accept="application/pdf,image/*"
+            accept={DOCUMENT_ACCEPT}
             progress={uploadProgress.insurance}
             note={form.doc_insurance_url ? "Uploaded" : "PDF or image, max 10MB"}
             onChange={(files) => onUpload(files, "insurance", "doc_insurance_url", "insurance")}

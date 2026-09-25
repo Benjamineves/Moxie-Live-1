@@ -1,4 +1,5 @@
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { uploadRefusal } from "@/lib/upload-limits";
 
 export type DocType = "registration" | "insurance" | "boater_card" | "fishing_license";
 
@@ -56,6 +57,9 @@ function extFor(file: File) {
  *    photo_url, so the token is what makes the new photo reachable.
  */
 export async function uploadVesselPhoto(file: File, pathKey: string): Promise<string> {
+  const refusal = uploadRefusal(file, "photo");
+  if (refusal) throw new Error(refusal);
+
   const supabase = createSupabaseBrowserClient();
   if (!supabase) throw new Error("Missing Supabase browser configuration.");
 
@@ -103,6 +107,9 @@ export async function uploadVesselDocument(
   pathKey: string,
   docType: DocType,
 ): Promise<{ path: string; fileName: string }> {
+  const refusal = uploadRefusal(file, "document");
+  if (refusal) throw new Error(refusal);
+
   const supabase = createSupabaseBrowserClient();
   if (!supabase) throw new Error("Missing Supabase browser configuration.");
 
@@ -143,6 +150,9 @@ export async function uploadVesselDocument(
  * same shape the four primary documents already have after a transfer.
  */
 export async function uploadServiceRecordFile(file: File, mxeId: string): Promise<{ path: string; fileName: string }> {
+  const refusal = uploadRefusal(file, "document");
+  if (refusal) throw new Error(refusal);
+
   const supabase = createSupabaseBrowserClient();
   if (!supabase) throw new Error("Missing Supabase browser configuration.");
 
@@ -163,6 +173,9 @@ export async function uploadServiceRecordFile(file: File, mxeId: string): Promis
 }
 
 export async function uploadCorrectionRequestDocument(file: File, mxeId: string): Promise<string> {
+  const refusal = uploadRefusal(file, "document");
+  if (refusal) throw new Error(refusal);
+
   const supabase = createSupabaseBrowserClient();
   if (!supabase) throw new Error("Missing Supabase browser configuration.");
 

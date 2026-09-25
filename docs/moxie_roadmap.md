@@ -195,6 +195,7 @@ where it could be done read-only. Ranked; none fixed yet.
 1. **High — `vessel-photos` INSERT/UPDATE are `auth.uid() IS NOT NULL`** on a
    public bucket with no size or type limit: any signed-in account can
    replace any vessel's public photo, or host arbitrary files there.
+   *Code shipped; `20261012` written, not run* (also covers #4 and #5).
 2. **Medium — default privileges** give anon/authenticated ALL on every new
    table and EXECUTE on every new function/sequence the `postgres` role
    creates in `public`/`storage`. Safety rests on each migration remembering
@@ -204,6 +205,11 @@ where it could be done read-only. Ranked; none fixed yet.
    config returns `ok: true` ("stored locally only") — a false success.
 4. **Medium — no size/type limits on `vessel-docs`**; direct uploads bypass
    the app's storage cap (`checkStorageCapacity` is only called by the client).
+   Size/type part in `20261012`. **Per-user quota enforcement deferred**
+   (decided 2026-09-25): a signed-in user can still exceed the plan's storage
+   figure (Basic/Full "500MB") by uploading straight to their own folder,
+   10 MB at a time. Needs a server-side quota check or a Storage hook — its
+   own design.
 5. **Low — anon can list `vessel-photos`** (owner auth uids, MXE folders).
 6. **Low — three policies now error** (`ownership_history`,
    `vessel_documents`, `vessel_payments` subquery `vessels`, revoked in

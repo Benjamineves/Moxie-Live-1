@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { uploadCorrectionRequestDocument } from "@/lib/vessel-uploads";
 import { submitIdentityCorrectionRequest } from "@/lib/owner-actions";
 import { inputClass, labelClass, editTriggerClass, saveButtonClass, cancelButtonClass } from "./formStyles";
+import { DOCUMENT_ACCEPT } from "@/lib/upload-limits";
 
 type LockedField = "hin" | "make" | "model" | "year" | "length_ft" | "draft_ft" | "engine";
 
@@ -126,7 +127,7 @@ export function RequestIdentityCorrection({
         Supporting document (registration or title, PDF or image)
         <input
           type="file"
-          accept="application/pdf,image/*"
+          accept={DOCUMENT_ACCEPT}
           onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           className={inputClass}
         />

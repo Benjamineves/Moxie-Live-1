@@ -17,6 +17,7 @@ import { getOfflineMeta, openOfflineDocument } from "@/lib/offline-vessel-store"
 import { vesselDocumentUrl } from "@/lib/document-url";
 import { useIsOnline } from "@/lib/use-is-online";
 import type { DocumentFileMeta, VesselDocumentMeta } from "@/lib/document-metadata";
+import { DOCUMENT_ACCEPT } from "@/lib/upload-limits";
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 
@@ -487,7 +488,7 @@ function DocumentFileRow({
             {uploading ? "Uploading…" : url ? "Replace" : "Add"}
             <input
               type="file"
-              accept="application/pdf,image/*"
+              accept={DOCUMENT_ACCEPT}
               disabled={uploading}
               onChange={(e) => onFileSelected(e.target.files)}
               className="hidden"
