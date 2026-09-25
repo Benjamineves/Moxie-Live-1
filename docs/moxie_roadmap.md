@@ -34,6 +34,15 @@ Confirmation and password-reset emails go through Supabase's mailer at 25
 per hour. Unverified: whether custom SMTP is already configured (Auth →
 Emails → SMTP Settings) — check before assuming either way.
 
+### Pre-launch: Supabase Pro upgrade
+**Blocks:** session inactivity timeout, daily backups
+**Depends on:** nothing (billing decision)
+On the free plan today. Pro brings daily backups (none today — a bad
+migration or a deleted row has no restore point) and the Auth session
+inactivity timeout, decided at 30 days (Auth → Sessions; time-box stays 0).
+Leaked-password protection is also a Pro-tier setting (Auth → Attack
+Protection) — switch it on at the same time.
+
 ### Pricing numbers
 **Blocks:** Stripe live, FAQ content, upgrade CTAs
 Basic setup fee, Full annual price, transfer fee. Also settles the
@@ -308,8 +317,8 @@ domains; refresh-token reuse interval 10 s. Open:
   character rules). The server setting is what enforces.
 - **Low — sessions never expire** (time-box and inactivity both 0). Includes
   admin sessions.
-  Decided 2026-09-25: 30-day inactivity timeout, a dashboard setting
-  (Auth → Sessions) — not yet confirmed set.
+  Decided 2026-09-25: 30-day inactivity timeout. Needs Supabase Pro — see
+  the Pro upgrade item in Tier 1.
 
 
 ### Geography rebuild on a required storage ZIP (staged)
@@ -318,7 +327,7 @@ classifier never reads `storage_city`, the only city column new vessels fill.
 Being replaced, not patched: required `storage_zip` → county (Census ZCTA
 file, land-area tiebreak) → region config, on a new `/admin/geography`
 page, counting `qr_status = 'active'` minus decommissioned (the overview
-changes to match). Stages: 0.5 security (done 2026-09-24) · 0.6 docs bucket, grants and authz audits (done 2026-09-25) · 1 ZIP + county (**in progress** — `20261014` written, not run; clears on
+changes to match). Stages: 0.5 security (done 2026-09-24) · 0.6 docs bucket, grants and authz audits (done 2026-09-25) · 1 ZIP + county (`20261014` run 2026-09-25, app code shipped; clears on
 transfer; migration before the code that writes it; share-link location
 group gains storage city/state) · 2 region config (FL/WA county lists need
 approval) · 3 page · 4 inline backfill.

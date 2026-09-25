@@ -36,6 +36,10 @@ export type VesselRecord = {
   storage_state: string | null;
   /** City name only, no state suffix. Captured for every storage type. */
   storage_city: string | null;
+  /** 5-digit ZIP where the vessel is kept. Owner-only; never public. */
+  storage_zip?: string | null;
+  /** Derived server-side from storage_zip. Never public. */
+  storage_county?: string | null;
   marina_name: string | null;
   /** Legacy combined "City, ST" string — marina/mooring rows predating storage_city/storage_state. */
   marina_city: string | null;

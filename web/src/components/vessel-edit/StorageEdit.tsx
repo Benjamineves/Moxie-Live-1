@@ -12,6 +12,7 @@ type Fields = {
   storage_type: StorageType;
   storage_description: string;
   storage_state: string;
+  storage_zip: string;
   storage_city: string;
   marina_name: string;
   slip_number: string;
@@ -25,6 +26,7 @@ export function StorageEdit({
   storage_type,
   storage_description,
   storage_state,
+  storage_zip,
   storage_city,
   marina_name,
   marina_city,
@@ -39,6 +41,7 @@ export function StorageEdit({
   storage_type: string | null | undefined;
   storage_description: string | null | undefined;
   storage_state: string | null | undefined;
+  storage_zip: string | null | undefined;
   storage_city: string | null | undefined;
   marina_name: string | null | undefined;
   marina_city: string | null | undefined;
@@ -51,6 +54,7 @@ export function StorageEdit({
     storage_type: (storage_type as StorageType) ?? "marina",
     storage_description: storage_description ?? "",
     storage_state: storage_state ?? "",
+    storage_zip: storage_zip ?? "",
     // Seed the new city field from the legacy combined "City, ST"
     // string for vessels that predate storage_city, so editing one
     // doesn't start from blank and silently drop its location.
@@ -109,6 +113,23 @@ export function StorageEdit({
             </option>
           ))}
         </select>
+      </label>
+
+      {/* Required to save this section (the server checks it lies in the
+          state above and derives the county). Existing vessels fill it in
+          the next time the section is saved. */}
+      <label className={labelClass}>
+        ZIP code where it&apos;s kept
+        <input
+          className={inputClass}
+          value={values.storage_zip}
+          onChange={(e) => setValues((p) => ({ ...p, storage_zip: e.target.value }))}
+          inputMode="numeric"
+          autoComplete="postal-code"
+          maxLength={10}
+          placeholder="e.g. 94965"
+        />
+        <span className="mt-1 normal-case tracking-normal text-[var(--text2)]">Only you see this.</span>
       </label>
 
       <label className={labelClass}>
@@ -215,6 +236,7 @@ export function StorageEdit({
                 storage_type: values.storage_type,
                 storage_description: marinaGroup ? null : values.storage_description.trim() || null,
                 storage_state: values.storage_state || null,
+                storage_zip: values.storage_zip.trim() || null,
                 storage_city: values.storage_city.trim() || null,
                 marina_name: nextMarinaName,
                 // Cleared once the structured city/state are set, so a

@@ -25,6 +25,7 @@ import { DECOMMISSION_REASON_LABELS, type DecommissionReason } from "@/lib/vesse
 import { getDormantInfo } from "@/lib/vessel-dormancy";
 
 export type OwnerProfileTier = PublicProfileProps & {
+  storage_zip?: string | null;
   qr_status?: string | null;
   lifecycle_status?: string | null;
   decommission_reason?: string | null;
@@ -323,6 +324,7 @@ export function VesselOwnerProfile({
             storage_type={tier.storage_type}
             storage_description={tier.storage_description}
             storage_state={tier.storage_state}
+            storage_zip={tier.storage_zip}
             storage_city={tier.storage_city}
             marina_name={tier.marina_name}
             marina_city={tier.marina_city}
@@ -333,6 +335,11 @@ export function VesselOwnerProfile({
             vesselName={tier.vessel_name}
           />
         </div>
+        <p className="mt-2 px-1 font-[family-name:var(--font-dm)] text-xs text-[var(--text2)]">
+          {tier.storage_zip
+            ? `ZIP where it's kept: ${tier.storage_zip} · only you see this.`
+            : "Add the ZIP where it's kept — Edit, then Save. Only you see it."}
+        </p>
         {isMarinaStorage ? (
           <dl className="mt-4 rounded-xl border border-[var(--divider)] bg-[var(--white)] p-5 shadow-sm">
             {/* Same name as under the photo, and the one row a marina you

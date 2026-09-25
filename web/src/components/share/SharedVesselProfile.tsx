@@ -114,12 +114,14 @@ export function SharedVesselProfile({
                   label="Marina"
                   value={[vessel.marina_name, vessel.marina_city].filter(Boolean).join(", ") || null}
                 />
+                <Row label="City" value={[vessel.storage_city, vessel.storage_state].filter(Boolean).join(", ") || null} />
                 <Row label="Slip" value={vessel.slip_number} />
                 <Row label="Marina phone" value={vessel.marina_phone} />
               </dl>
             ) : (
               <dl>
                 <Row label="Storage" value={vessel.storage_description} />
+                <Row label="City" value={[vessel.storage_city, vessel.storage_state].filter(Boolean).join(", ") || null} />
               </dl>
             )}
           </section>

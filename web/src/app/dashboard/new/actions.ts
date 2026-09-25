@@ -7,6 +7,7 @@ import { VESSEL_LIMIT, type SubscriptionTier } from "@/lib/tier-config";
 import { countActiveVessels, evaluateVesselCap } from "@/lib/vessel-cap";
 import { isAdminEmail } from "@/lib/admin-verify";
 import { FOREIGN_PATH_ERROR, isOwnPhotoUrl, isOwnStoragePath } from "@/lib/storage-path";
+import { checkStorageZip } from "@/lib/storage-zip";
 
 const STORAGE_TYPES = ["marina", "mooring", "trailer", "home", "yard", "other"] as const;
 export type StorageType = (typeof STORAGE_TYPES)[number];
@@ -28,6 +29,7 @@ export type CreateVesselInput = {
   doc_insurance_filename?: string | null;
   storage_type: StorageType;
   storage_state: string;
+  storage_zip: string;
   storage_city?: string | null;
   storage_description?: string | null;
   marina_name?: string | null;
@@ -57,6 +59,22 @@ function validate(input: CreateVesselInput) {
 }
 
 /**
+ * Step 2 of the intake form asks this so a wrong ZIP is caught on the step
+ * where it was typed. Advisory only — createVessel runs the same check and
+ * is what enforces it. Signed-in only, so the lookup isn't a free public
+ * API.
+ */
+export async function checkStorageZipForIntake(zip: string, state: string): Promise<{ error?: string }> {
+  const authClient = await requireSupabaseServerClient("app/dashboard/new/actions zip");
+  const {
+    data: { user },
+  } = await authClient.auth.getUser();
+  if (!user) return { error: "You must be signed in." };
+  const checked = checkStorageZip(zip, state);
+  return checked.ok ? {} : { error: checked.error };
+}
+
+/**
  * previewNextMxeId used to live here. It burned a sequence value to show
  * the customer their MXE ID on the review screen, before the vessel
  * existed — and stage 7 makes that unworkable: the ID now comes from the
@@ -70,6 +88,10 @@ export async function createVessel(
 ): Promise<{ mxeId?: string; error?: string; code?: "VESSEL_CAP_REACHED" }> {
   const basicError = validate(input);
   if (basicError) return { error: basicError };
+  // Required, and must lie in the storage state; the county is derived
+  // here and nowhere else (lib/storage-zip.ts).
+  const zipCheck = checkStorageZip(input.storage_zip, input.storage_state);
+  if (!zipCheck.ok) return { error: zipCheck.error };
 
   const authClient = await requireSupabaseServerClient("app/dashboard/new/actions");
 
@@ -207,6 +229,8 @@ export async function createVessel(
       // schema (and in the display fallback) only for rows that predate
       // this change.
       storage_state: normalizeStateCode(input.storage_state),
+      storage_zip: zipCheck.zip,
+      storage_county: zipCheck.county,
       storage_city: input.storage_city?.trim() || null,
       storage_description: isMarinaStorage ? null : input.storage_description?.trim() || null,
       marina_name: isMarinaStorage ? input.marina_name?.trim() || null : null,

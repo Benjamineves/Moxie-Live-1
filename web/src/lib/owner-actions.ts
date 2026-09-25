@@ -14,6 +14,7 @@ import { getAccountStorageUsageBytes } from "@/lib/storage-usage";
 import { loadVesselMarinaAccess } from "@/lib/marina-access";
 import { marinaAccessToReview, type MarinaGrantToReview } from "@/lib/marina-copy";
 import { FOREIGN_PATH_ERROR, isOwnPhotoUrl, isOwnStoragePath } from "./storage-path.ts";
+import { storagePatchForSave } from "./storage-zip.ts";
 
 /**
  * Updates photo_url on an already-existing vessel — the counterpart to
@@ -68,6 +69,7 @@ type OwnerPatch = Partial<{
   storage_type: string;
   storage_description: string | null;
   storage_state: string | null;
+  storage_zip: string | null;
   storage_city: string | null;
   marina_name: string | null;
   marina_city: string | null;
@@ -108,6 +110,7 @@ const OWNER_FIELDS = [
   "storage_type",
   "storage_description",
   "storage_state",
+  "storage_zip",
   "storage_city",
   "marina_name",
   "marina_city",
@@ -211,6 +214,19 @@ export async function updateVesselOwnerFields(
       update.storage_state = null;
     }
   }
+
+  // A Storage save must carry a ZIP that lies in the resulting state; the
+  // county is derived from it here — never taken from the client, since
+  // storage_county isn't in OWNER_FIELDS (lib/storage-zip.ts).
+  let storedState: string | null = null;
+  if (!("storage_state" in update)) {
+    const { data: current, error: stateError } = await service.from("vessels").select("storage_state").eq("id", vessel.id).maybeSingle();
+    if (stateError) return { error: stateError.message };
+    storedState = (current as { storage_state: string | null } | null)?.storage_state ?? null;
+  }
+  const zip = storagePatchForSave(update, storedState);
+  if (!zip.ok) return { error: zip.error };
+  Object.assign(update, zip.set);
 
   // A change of home marina is when to ask about marinas that can still see
   // this vessel (marina access spec §2.4). Decided against the name as

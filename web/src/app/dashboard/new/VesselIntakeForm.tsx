@@ -7,7 +7,7 @@ import { uploadVesselDocument, uploadVesselPhoto, type DocType } from "@/lib/ves
 import { StorageTypePicker, isMarinaGroup, storageTypeLabel } from "@/components/StorageTypePicker";
 import { vesselTypes } from "@/lib/vessel-types";
 import { US_STATES } from "@/lib/us-states";
-import { createVessel, type StorageType } from "./actions";
+import { checkStorageZipForIntake, createVessel, type StorageType } from "./actions";
 import { DOCUMENT_ACCEPT, PHOTO_ACCEPT } from "@/lib/upload-limits";
 
 type FormState = {
@@ -21,6 +21,7 @@ type FormState = {
   public_notes: string;
   storage_type: StorageType;
   storage_state: string;
+  storage_zip: string;
   storage_city: string;
   marina_name: string;
   slip_number: string;
@@ -52,6 +53,7 @@ export function VesselIntakeForm() {
     public_notes: "",
     storage_type: "marina",
     storage_state: "",
+    storage_zip: "",
     storage_city: "",
     marina_name: "",
     slip_number: "",
@@ -196,8 +198,24 @@ export function VesselIntakeForm() {
         setGeneralError("Select the state where your vessel is stored.");
         return;
       }
-      setGeneralError(null);
-      setStep(3);
+      // Format here; whether the ZIP is really in that state is the
+      // server's call (the lookup never ships to the browser). createVessel
+      // checks it again — this is only so the answer arrives on this step.
+      if (!/^\d{5}(-\d{4})?$/.test(form.storage_zip.trim())) {
+        setErrors((p) => ({ ...p, storage_zip: "Enter the 5-digit ZIP code where the boat is kept." }));
+        setGeneralError(null);
+        return;
+      }
+      startTransition(async () => {
+        const checked = await checkStorageZipForIntake(form.storage_zip, form.storage_state);
+        if (checked.error) {
+          setErrors((p) => ({ ...p, storage_zip: checked.error ?? "" }));
+          return;
+        }
+        setErrors((p) => ({ ...p, storage_zip: "" }));
+        setGeneralError(null);
+        setStep(3);
+      });
       return;
     }
     if (step === 3) {
@@ -226,6 +244,7 @@ export function VesselIntakeForm() {
           doc_insurance_filename: form.doc_insurance_filename || null,
           storage_type: form.storage_type,
           storage_state: form.storage_state,
+          storage_zip: form.storage_zip.trim(),
           storage_city: form.storage_city || null,
           storage_description: form.storage_description || null,
           marina_name: form.marina_name || null,
@@ -316,6 +335,27 @@ export function VesselIntakeForm() {
                 </option>
               ))}
             </select>
+          </Field>
+
+          {/* Required: it places the boat in a county for the admin
+              geography page. Never shown publicly. */}
+          <Field label="ZIP code where it's kept" required error={errors.storage_zip}>
+            <input
+              value={form.storage_zip}
+              onChange={(e) => {
+                const next = e.target.value;
+                setForm((p) => ({ ...p, storage_zip: next }));
+                setErrors((p) => ({ ...p, storage_zip: "" }));
+              }}
+              inputMode="numeric"
+              autoComplete="postal-code"
+              maxLength={10}
+              placeholder="e.g. 94965"
+              className="input"
+            />
+            <span className="font-[family-name:var(--font-dm)] text-xs text-[var(--text2)]">
+              The marina, yard or address where the boat is. Not shown on your public profile.
+            </span>
           </Field>
 
           <Field label="How is it stored?">
@@ -451,7 +491,7 @@ export function VesselIntakeForm() {
             {[
               storageTypeLabel[form.storage_type],
               isMarinaGroup(form.storage_type) ? form.marina_name : form.storage_description,
-              [form.storage_city, form.storage_state].filter(Boolean).join(", "),
+              [form.storage_city, [form.storage_state, form.storage_zip.trim()].filter(Boolean).join(" ")].filter(Boolean).join(", "),
             ]
               .filter(Boolean)
               .join(" · ")}

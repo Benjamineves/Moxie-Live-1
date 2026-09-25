@@ -45,6 +45,8 @@ export type FilteredShareVessel = {
   marina_city?: string | null;
   storage_type?: string | null;
   storage_description?: string | null;
+  storage_city?: string | null;
+  storage_state?: string | null;
   slip_number?: string | null;
   marina_phone?: string | null;
   owner_name?: string | null;
@@ -141,6 +143,11 @@ export function filterVesselForShare(
     out.marina_city = vessel.marina_city ?? vessel.marinas?.city ?? null;
     out.storage_type = vessel.storage_type;
     out.storage_description = vessel.storage_description;
+    // City and state, added 2026-09-25: new vessels keep their city here, not
+    // in marina_city, so a shared Location showed no town at all. The ZIP and
+    // county are NOT part of this group — owner-only (share-filter.test.mts).
+    out.storage_city = vessel.storage_city;
+    out.storage_state = vessel.storage_state;
     out.slip_number = vessel.slip_number;
     out.marina_phone = vessel.marina_phone;
   }

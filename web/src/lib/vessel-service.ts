@@ -121,6 +121,9 @@ export function filterVesselForRole(v: VesselRecord, role: Exclude<ProfileRole, 
       lifecycle_status: v.lifecycle_status,
       decommission_reason: v.decommission_reason,
       dormant_cause: v.dormant_cause,
+      // Owner-only, like the slip: where the boat is kept, to the ZIP.
+      // Never in basePublic (storage-zip.test.mts checks).
+      storage_zip: v.storage_zip ?? null,
       slip_number: v.slip_number,
       marina_phone: v.marina_phone,
       is_liveaboard: v.is_liveaboard,
