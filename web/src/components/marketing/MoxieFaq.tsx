@@ -219,8 +219,10 @@ export function MoxieFaq({ isAuthenticated }: { isAuthenticated: boolean }) {
 
           <Question id="share-documents" q="Can I show my documents to someone — a surveyor, a buyer, my marina?">
             <p className={body}>
-              Yes, with a share link you create and control. You choose what it includes and you can revoke it at any
-              time. No account needed on their end.
+              Partly. A share link you create shows the vessel details you choose, and can list which documents you
+              have on file by name — the files themselves can&apos;t be opened from a share link yet. You can revoke it
+              at any time, and no account is needed on their end. A marina you give access to can open your
+              registration and insurance, if you choose to share them.
             </p>
           </Question>
         </Section>

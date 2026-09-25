@@ -52,9 +52,9 @@ it's done. Status: **done** · **open** (code/work to do) · **needs Ben**
 
 | Item | Status | Blocker |
 |---|---|---|
-| "Unlimited documents" — `/pricing`, upgrade form, signup bundle; documents are four fixed slots | open (remove or build) | **Yes** |
-| "Email reminders" — upgrade form, badge payment page; nothing sends them | open (remove or ship scheduler reminders) | **Yes** |
-| FAQ "show my documents" via share link — recipients see file names only, can't open them | open (reword or build) | **Yes** |
+| "Unlimited documents" — removed from `/pricing`, upgrade form, signup bundle, badge payment page | done | — |
+| "Email reminders" — removed from upgrade form and badge payment page | done | — |
+| FAQ share-link answer reworded to what's built (file names only; marina access opens registration/insurance). Viewing is post-launch | done | — |
 | Homepage waitlist "we'll follow up" — list now stores, but nothing in admin shows it | open | — |
 | Maintenance-history lines on the home page | done (service records shipped) | — |
 

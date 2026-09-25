@@ -30,9 +30,7 @@ const PLAN_OPTIONS: {
     price: SUBSCRIPTION_AMOUNT_USD.full,
     features: [
       "5 vessels",
-      "Unlimited documents (500MB storage)",
       "Trusted Contact sharing",
-      "Email reminders before insurance/registration lapse",
       "Priority badge production",
     ],
   },

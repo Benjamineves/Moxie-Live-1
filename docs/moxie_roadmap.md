@@ -402,6 +402,11 @@ Same discipline as the email-reminder and unlimited-documents copy: the
 site may not say a thing the product — or the filing — doesn't support.
 
 ### App copy promises email reminders that nothing sends
+**Fixed 2026-09-25:** "Email reminders" removed from the upgrade form and the
+badge payment page, and "Unlimited documents" from those plus the signup
+bundle and `/pricing` (row and † footnote); `copy-claims.test.mts` fails if
+either returns. Re-add the reminder line only when the scheduler sends one.
+
 The Full plan list and badge checkout both mention email reminders. The
 template exists; nothing sends it. Direct violation of the standing copy
 rule. Either remove the claims or wait for the scheduler.
@@ -564,6 +569,16 @@ downgraded on the first run. It must also compare against what was paid
   after payment.
 
 ---
+
+## Post-launch
+
+### Share-link document viewing
+Share links list documents by file name only; the recipient can't open them
+(the FAQ now says so, 2026-09-25). Opening them means a share-scoped
+document route: resolve the token, check the share's `docs` flag and expiry,
+then stream through a short-lived signed URL like the owner and marina
+routes — never the raw path. Decide first whether a revoked or expired link
+must also stop a download already started.
 
 ## Spec drift
 

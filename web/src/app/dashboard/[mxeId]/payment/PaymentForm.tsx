@@ -81,9 +81,9 @@ export function PaymentForm({ mxeId, vesselName, vesselTag, publishableKey, amou
             ))}
           </ul>
           <p className="mt-3 font-[family-name:var(--font-dm)] text-[11px] italic leading-relaxed text-[var(--text3)]">
-            Every vessel needs its own badge — this covers {vesselName}&apos;s specifically. Want unlimited
-            documents, sharing, and email reminders across your whole fleet? That&apos;s Full Access, a separate
-            account-wide upgrade available anytime from Account &amp; Billing.
+            Every vessel needs its own badge — this covers {vesselName}&apos;s specifically. Want room for more
+            vessels and a service history for each? That&apos;s Full Access, a separate account-wide upgrade
+            available anytime from Account &amp; Billing.
           </p>
         </div>
 

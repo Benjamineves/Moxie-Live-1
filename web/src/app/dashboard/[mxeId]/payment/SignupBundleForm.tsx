@@ -39,7 +39,7 @@ const PLAN_OPTIONS: {
     tier: "full",
     label: "Full Access",
     price: SUBSCRIPTION_AMOUNT_USD.full,
-    features: ["5 vessels", "Unlimited documents (500MB storage)", "Trusted Contact sharing", "Priority badge production"],
+    features: ["5 vessels", "Trusted Contact sharing", "Priority badge production"],
   },
 ];
 

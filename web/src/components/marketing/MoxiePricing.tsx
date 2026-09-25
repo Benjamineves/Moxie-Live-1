@@ -4,14 +4,10 @@ import { MarketingFooter } from "@/components/marketing/MarketingFooter";
 import { CommercialInterestForm } from "@/components/marketing/CommercialInterestForm";
 import {
   VESSEL_LIMIT,
-  BASIC_DOCUMENT_LIMIT,
-  FULL_STORAGE_CAP_BYTES,
   BADGE_FEE_AMOUNT_USD,
   SUBSCRIPTION_AMOUNT_USD,
   TRANSFER_FEE_AMOUNT_USD,
 } from "@/lib/tier-config";
-
-const FULL_STORAGE_CAP_MB = FULL_STORAGE_CAP_BYTES / (1024 * 1024);
 
 const WHAT_IT_DOES = [
   {
@@ -36,7 +32,6 @@ type TierRow = { label: string; basic: string; full: string };
 
 const TIER_ROWS: TierRow[] = [
   { label: "Vessels", basic: `${VESSEL_LIMIT.basic}`, full: `${VESSEL_LIMIT.full}` },
-  { label: "Documents per vessel", basic: `${BASIC_DOCUMENT_LIMIT}`, full: `Unlimited†` },
   { label: "Trusted Contact Sharing", basic: "Included", full: "Included" },
   { label: "QR badge & public profile", basic: "Included", full: "Included" },
   { label: "Ownership transfer fee", basic: `$${TRANSFER_FEE_AMOUNT_USD.basic}`, full: `$${TRANSFER_FEE_AMOUNT_USD.full}` },
@@ -217,10 +212,6 @@ export function MoxiePricing({ isAuthenticated }: { isAuthenticated: boolean }) 
             </table>
           </div>
 
-          <p className="mt-5 font-[family-name:var(--font-dm)] text-xs text-[var(--text3)]">
-            † Full&apos;s document storage is capped at {FULL_STORAGE_CAP_MB}MB total across the account, not per
-            vessel.
-          </p>
 
           <div
             id="commercial-interest"
