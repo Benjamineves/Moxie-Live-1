@@ -201,10 +201,13 @@ where it could be done read-only. Ranked; none fixed yet.
    plant get RLS 403s, SVG/HTML and >10 MB are refused in both buckets, anon
    lists nothing, B's own uploads work, real photo URLs still load. Probe
    files deleted.
-2. **Medium — default privileges** give anon/authenticated ALL on every new
-   table and EXECUTE on every new function/sequence the `postgres` role
-   creates in `public`/`storage`. Safety rests on each migration remembering
-   RLS and REVOKE.
+2. **Medium — default privileges** — **Done 2026-09-25** with #6–#8
+   (`20261013` run): postgres's defaults no longer grant anon/authenticated
+   anything on new tables, sequences or functions (the guard created one of
+   each to prove it). After: all 26 public tables refuse anon with 42501,
+   B's signed-in session gets 42501 on all 9 tables probed, anon RPC to
+   `next_mxe_id` refused; scan page, public API, dashboard, pricing and the
+   waitlist route unchanged.
 3. **Medium (correctness) — homepage waitlist has never stored anyone**:
    RLS on, no INSERT policy, 0 rows ever; every submit returns 500. Missing
    config returns `ok: true` ("stored locally only") — a false success.
@@ -220,12 +223,12 @@ where it could be done read-only. Ranked; none fixed yet.
    10 MB at a time. Needs a server-side quota check or a Storage hook — its
    own design.
 5. **Low — anon can list `vessel-photos`** (owner auth uids, MXE folders).
-6. **Low — three policies now error** (`ownership_history`,
+6. **Low (done 2026-09-25, `20261013`) — three policies now error** (`ownership_history`,
    `vessel_documents`, `vessel_payments` subquery `vessels`, revoked in
    20261010): signed-in reads get 42501. Nothing in the app uses them.
-7. **Low — TRUNCATE/TRIGGER/REFERENCES and write grants** on 18 public tables
+7. **Low (done 2026-09-25, `20261013`) — TRUNCATE/TRIGGER/REFERENCES and write grants** on 18 public tables
    to anon/authenticated; RLS doesn't cover TRUNCATE, but no API path issues it.
-8. **Low — `mxe_id_seq` USAGE/UPDATE to anon/authenticated**; not reachable
+8. **Low (done 2026-09-25, `20261013`) — `mxe_id_seq` USAGE/UPDATE to anon/authenticated**; not reachable
    through any API today.
 
 ### Geography rebuild on a required storage ZIP (staged)
