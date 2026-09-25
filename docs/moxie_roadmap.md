@@ -332,8 +332,7 @@ file, land-area tiebreak) → region config, on a new `/admin/geography`
 page, counting `qr_status = 'active'` minus decommissioned (the overview
 changes to match). Stages: 0.5 security (done 2026-09-24) · 0.6 docs bucket, grants and authz audits (done 2026-09-25) · 1 ZIP + county (**done 2026-09-25**, verified live: MXE-01024 saved 94965 → Marin County; missing and wrong-state ZIPs refused in the Storage editor and on the intake step; ZIP/county absent from the public API and page; clears on
 transfer; migration before the code that writes it; share-link location
-group gains storage city/state) · 2 region config (FL/WA county lists need
-approval) · 3 page · 4 inline backfill.
+group gains storage city/state) · 2 region config (**done 2026-09-25**: `lib/region-config.ts` — CA incl. Delta, FL 7, WA 5; the old keyword classifier still exists until Stage 3 retires it) · 3 page · 4 inline backfill.
 
 ### Commercial interest list is collecting; nothing sends to it yet
 `/pricing` now captures email + optional business type instead of opening a
