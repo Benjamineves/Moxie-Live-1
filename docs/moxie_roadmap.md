@@ -27,12 +27,15 @@ must send a captcha token BEFORE CAPTCHA is switched on in Supabase (Auth →
 Attack Protection), or every sign-in fails. Code behind a flag first, then
 the dashboard setting, then flip the flag in the same deploy.
 
-### Pre-launch: custom SMTP for Supabase Auth email (e.g. Resend)
-**Blocks:** auth email volume above 25/hour (current limit, Auth → Rate Limits)
-**Depends on:** SMTP credentials; the sending domain's DNS (see DMARC item)
-Confirmation and password-reset emails go through Supabase's mailer at 25
-per hour. Unverified: whether custom SMTP is already configured (Auth →
-Emails → SMTP Settings) — check before assuming either way.
+### Pre-launch: raise the Auth email rate limit; confirm Resend covers volume
+**Blocks:** confirmation and password-reset emails at launch volume
+**Depends on:** an estimate of launch-week sign-ups
+Custom SMTP is already configured (Resend, smtp.resend.com — confirmed
+2026-09-25), so the 25 emails/hour in Auth → Rate Limits is a setting, not
+Supabase's built-in mailer cap. Raise it before launch, and check the Resend
+plan's daily/monthly limits cover expected auth email plus the app's own
+notifications (both send through Resend). CAPTCHA (above) stops scripted
+sign-ups from spending the higher limit.
 
 ### Pre-launch: Supabase Pro upgrade
 **Blocks:** session inactivity timeout, daily backups
