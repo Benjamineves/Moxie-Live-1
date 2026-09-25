@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { requireSupabaseServerClient } from "@/lib/supabase/server";
 import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { resolveOwnerIds } from "@/lib/vessel-ownership";
+import { previouslyOwnedDocumentHref } from "@/lib/previously-owned-documents";
 
 type Props = {
   params: Promise<{ transferId: string }>;
@@ -50,8 +51,10 @@ function Row({ label, value }: { label: string; value: string | number | null | 
   );
 }
 
-function DocLink({ label, url }: { label: string; url: string | null | undefined }) {
-  if (!url) return null;
+// `stored` only decides whether the row shows. It is a storage path, never a
+// link: the bucket is private, and the path alone is a relative URL that 404s.
+function DocLink({ label, stored, href }: { label: string; stored: string | null | undefined; href: string }) {
+  if (!stored) return null;
   return (
     <div className="flex justify-between gap-4 border-b border-[var(--divider)] py-3 last:border-0">
       <dt className="font-[family-name:var(--font-dm)] text-xs uppercase tracking-[0.12em] text-[var(--text3)]">
@@ -59,7 +62,7 @@ function DocLink({ label, url }: { label: string; url: string | null | undefined
       </dt>
       <dd>
         <a
-          href={url}
+          href={href}
           target="_blank"
           rel="noreferrer"
           className="font-[family-name:var(--font-dm)] text-sm text-[var(--blue-fg)] underline"
@@ -175,9 +178,13 @@ export default async function PreviouslyOwnedPage({ params }: Props) {
           Your documents
         </h2>
         <dl className="mt-4 rounded-xl border border-[var(--divider)] bg-[var(--white)] p-5 shadow-sm">
-          <DocLink label="Registration (as of transfer)" url={s.doc_registration_url} />
-          <DocLink label="Insurance card" url={s.doc_insurance_url} />
-          <DocLink label="CA boater card" url={s.doc_boater_card_url} />
+          <DocLink
+            label="Registration (as of transfer)"
+            stored={s.doc_registration_url}
+            href={previouslyOwnedDocumentHref(transfer.id, "registration")}
+          />
+          <DocLink label="Insurance card" stored={s.doc_insurance_url} href={previouslyOwnedDocumentHref(transfer.id, "insurance")} />
+          <DocLink label="CA boater card" stored={s.doc_boater_card_url} href={previouslyOwnedDocumentHref(transfer.id, "boater_card")} />
         </dl>
 
         {s.public_notes ? (

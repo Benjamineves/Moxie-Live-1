@@ -188,6 +188,21 @@ Currently `p=none`. Moving to `quarantine` makes spoofing harder.
 
 ## Correctness — open
 
+### Any signed-in account could read and overwrite every owner's documents — code shipped, migration not run
+Found 2026-09-24: the `vessel-docs` bucket's policies were
+`auth.uid() IS NOT NULL` for SELECT/INSERT/UPDATE, so any account could list
+the bucket, download every document and overwrite any of them.
+`20261011_vessel_docs_owner_folder_policies.sql` scopes SELECT/INSERT/UPDATE/
+DELETE to the caller's own folder (option A; rollback in
+`supabase/rollbacks/`). **Written, not run.** No app read depends on the old
+rule (all reads are service-role signed URLs). The previously-owned page's
+"View →" links, which had always 404'd (raw path as href), now go through a
+seller-checked route. Verify with two accounts once run. `vessel-photos`
+INSERT/UPDATE have the same shape — in the full grants audit.
+
+### Full grants / RLS / storage-policy audit against live — next, before geography Stage 1
+Every table, view, function and bucket, checked live, ranked by severity.
+
 ### Geography rebuild on a required storage ZIP (staged)
 The "Vessels by region" card reads 0 in every CA region because the
 classifier never reads `storage_city`, the only city column new vessels fill.

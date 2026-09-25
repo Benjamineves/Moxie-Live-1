@@ -5,20 +5,13 @@ import { emailsMatch, getOwnerEmailByUserId } from "@/lib/owner-verify";
 import { isDocumentLocked, type DocumentSlot } from "@/lib/vessel-transfer";
 import { getOwnerBillingSummary } from "@/lib/billing-service";
 import { decideMarinaDocument, resolveMarinaViewer } from "@/lib/marina-access";
+import { documentContentType } from "@/lib/document-content-type";
 
 const SIGNED_URL_TTL_SECONDS = 60;
 
 const DOC_TYPES = ["registration", "insurance", "boater_card", "fishing_license"] as const;
 type DocType = (typeof DOC_TYPES)[number];
 
-function contentTypeFor(path: string) {
-  const ext = path.split(".").pop()?.toLowerCase();
-  if (ext === "pdf") return "application/pdf";
-  if (ext === "png") return "image/png";
-  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
-  if (ext === "webp") return "image/webp";
-  return "application/octet-stream";
-}
 
 /**
  * Owner-only document bytes, proxied through our own origin.
@@ -161,7 +154,7 @@ export async function GET(request: Request, context: { params: Promise<{ mxeId: 
   return new NextResponse(fileRes.body, {
     status: 200,
     headers: {
-      "Content-Type": contentTypeFor(path),
+      "Content-Type": documentContentType(path),
       // Never cache at the HTTP layer with a long TTL — this response is
       // deliberately cached client-side ONLY via the explicit "save for
       // offline" flow (Cache API, opt-in), not implicitly by the browser
