@@ -12,7 +12,7 @@ it's done. Status: **done** · **open** (code/work to do) · **needs Ben**
 | Public key can't read `vessels`; public schema grants and default privileges closed (`20261010`, `20261013`) | done | — |
 | Document and photo buckets: own-folder policies, 10 MB + type limits (`20261011`, `20261012`) | done | — |
 | Stored-path check, safe sign-in redirects, owner lookup, Apple button hidden (authz audit) | done | — |
-| Dependency vulnerabilities: `npm audit` (prod, 2026-09-25) — **1 critical** (`next` DoS, fix `next@16.3.6`), **4 high** (`sharp` → 0.35.4 major; `postcss`, `nanoid`, `ws` transitive), 1 moderate. Upgrade, then re-run | open | **Yes** |
+| Dependency vulnerabilities: `next` 16.3.6 + `postcss`/`nanoid`/`ws`/`baseline-browser-mapping` fixed; **`sharp` 0.35 major bump** remaining | open | **Yes** |
 | CAPTCHA (Cloudflare Turnstile) on sign-up, sign-in, reset — code behind a flag first, then the Supabase setting | needs Ben (site key), then open | **Yes** |
 | Stripe webhook secret: live-mode endpoint's `whsec_` in Vercel Production, webhook pointed at the apex; confirm a test event verifies | needs Ben | **Yes** |
 | Vercel env review: Production has live values only, no test keys; `CRON_SECRET` set; `ADMIN_EMAILS` without `ben@`; service-role key not in Preview | needs Ben | **Yes** |

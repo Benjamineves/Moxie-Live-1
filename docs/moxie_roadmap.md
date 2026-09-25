@@ -553,6 +553,11 @@ downgraded on the first run. It must also compare against what was paid
 - **`shipped_at` / `received_at` renames** + per-identity despatch
   timestamp. From the provisioning build; do together.
 - **Confirm `ben@` removed from `ADMIN_EMAILS`** in Vercel.
+- **`@next/next/no-location-assign-relative-destination` warnings (5)**, new with
+  eslint-config-next 16.3.6: the badge, signup-bundle, transfer and two
+  upgrade payment forms navigate with `window.location.href` after Stripe
+  confirms. Possibly deliberate (a full reload after payment); decide, then
+  switch to `router.push` or disable the rule on those lines with a reason.
 - **No vessel cap check on the plan picker.** A cancelled owner
   resubscribing to Basic with more lapsed vessels than Basic allows isn't
   warned at the Pay click; `reconcile_vessel_overflow` still enforces it
