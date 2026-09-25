@@ -4,8 +4,7 @@ import { requireAdmin } from "@/lib/admin-verify";
 import { requireSupabaseServiceClient } from "@/lib/supabase/service";
 import { AdminNav } from "@/components/AdminNav";
 import { decideHealth } from "@/lib/scheduler/health";
-import { AdminGeoMap } from "@/components/AdminGeoMap";
-import { GEO_REGIONS, classifyRegion, resolveVesselLocationSource } from "@/lib/vessel-geo";
+import { countedVesselsFilter, summarizeGeography, topRegions, type GeoVessel } from "@/lib/geography";
 import { readBadgePoolStatus, POOL_AMBER_THRESHOLD, POOL_RED_THRESHOLD } from "@/lib/badge-pool";
 import { notifyVesselsLapsedAfterPaymentFailure, notifyVesselsLocked } from "@/lib/dormancy-notify";
 
@@ -67,10 +66,13 @@ export default async function AdminOverviewPage() {
 
   const [{ count: totalVessels }, { count: vesselsThisWeek }, { count: vesselsThisMonth }, { data: vesselDates }] =
     await Promise.all([
-      service.from("vessels").select("id", { count: "exact", head: true }),
-      service.from("vessels").select("id", { count: "exact", head: true }).gte("created_at", weekAgo.toISOString()),
-      service.from("vessels").select("id", { count: "exact", head: true }).gte("created_at", monthStart.toISOString()),
-      service.from("vessels").select("created_at").order("created_at", { ascending: true }),
+      // Paid, not decommissioned — the same rule as /admin/geography
+      // (lib/geography.ts), so a vessel count means one thing across admin.
+      // Was every row, including unpaid registrations and decommissioned boats.
+      countedVesselsFilter(service.from("vessels").select("id", { count: "exact", head: true })),
+      countedVesselsFilter(service.from("vessels").select("id", { count: "exact", head: true })).gte("created_at", weekAgo.toISOString()),
+      countedVesselsFilter(service.from("vessels").select("id", { count: "exact", head: true })).gte("created_at", monthStart.toISOString()),
+      countedVesselsFilter(service.from("vessels").select("created_at")).order("created_at", { ascending: true }),
     ]);
 
   const { data: ownerRows } = await service.from("users").select("subscription_tier").eq("role", "owner");
@@ -125,39 +127,15 @@ export default async function AdminOverviewPage() {
 
   const ratioFullPct = totalOwners > 0 ? Math.round((fullCount / totalOwners) * 100) : 0;
 
-  // Region-level geo breakdown -- see lib/vessel-geo.ts for the
-  // classification rules. marina_city/storage_description are the
-  // location sources; the legacy marinas join covers MXE-00001/00002,
-  // which predate the marina_city column.
-  const { data: geoVessels } = await service
-    .from("vessels")
-    .select("id, mxe_id, storage_type, marina_id, marina_city, storage_description, storage_state");
-  const { data: marinaRows } = await service.from("marinas").select("id, city, state");
-  const legacyMarinaLocation = new Map(
-    (marinaRows ?? []).map((m) => [m.id as string, [m.city, m.state].filter(Boolean).join(", ") || null]),
+  // Compact geography summary; the full breakdown is /admin/geography.
+  const { data: geoRows, error: geoError } = await countedVesselsFilter(
+    service
+      .from("vessels")
+      .select("mxe_id, vessel_name, storage_state, storage_zip, storage_county, storage_city, storage_description, marina_name, marina_city"),
   );
-
-  const geoCounts: Record<string, number> = {};
-  const unclassifiedVessels: { mxeId: string; source: string | null }[] = [];
-  for (const v of (geoVessels ?? []) as {
-    mxe_id: string;
-    storage_type: string | null;
-    marina_id: string | null;
-    marina_city: string | null;
-    storage_description: string | null;
-    storage_state: string | null;
-  }[]) {
-    const legacy = v.marina_id ? (legacyMarinaLocation.get(v.marina_id) ?? null) : null;
-    const source = resolveVesselLocationSource(v, legacy);
-    const region = classifyRegion(source);
-    geoCounts[region] = (geoCounts[region] ?? 0) + 1;
-    if (region === "unclassified") {
-      unclassifiedVessels.push({ mxeId: v.mxe_id, source });
-    }
-  }
-  const rankedGeoRegions = GEO_REGIONS.map((r) => ({ ...r, count: geoCounts[r.key] ?? 0 })).sort(
-    (a, b) => b.count - a.count,
-  );
+  if (geoError) throw new Error(`vessels read failed: ${geoError.message}`);
+  const geo = summarizeGeography((geoRows ?? []) as GeoVessel[]);
+  const leadingRegions = topRegions(geo, 3);
 
   // Scheduler health (spec §7): the same rule the uptime monitor polls.
   const { data: latestRunRow, error: latestRunError } = await service
@@ -201,7 +179,7 @@ export default async function AdminOverviewPage() {
           <div className="flex flex-wrap items-end justify-between gap-6">
             <div>
               <p className="font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.14em] text-[var(--text3)]">
-                Total registered vessels
+                Paid, active vessels
               </p>
               <p className="mt-1 font-[family-name:var(--font-display)] text-6xl font-light text-[var(--navy)]">
                 {totalVessels ?? 0}
@@ -244,10 +222,10 @@ export default async function AdminOverviewPage() {
         {/* 3. Signups over time */}
         <section className="mb-8 rounded-2xl border border-[var(--divider)] bg-[var(--white)] p-6 shadow-sm">
           <p className="mb-4 font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.14em] text-[var(--text3)]">
-            New vessel registrations by month
+            New vessel registrations by month (paid, active today)
           </p>
           {months.length === 0 ? (
-            <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--text3)]">No vessels registered yet.</p>
+            <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--text3)]">No paid, active vessels yet.</p>
           ) : (
             <>
               {/* Fixed-height bar row: children default to align-items:stretch
@@ -281,45 +259,36 @@ export default async function AdminOverviewPage() {
           )}
         </section>
 
-        {/* Geographic breakdown (region-level; marina-level precision is a
-            later change). Map covers the three named CA regions only --
-            "Other" and "Unclassified" aren't single points, so they show
-            up in the ranked list but not on the map. */}
-        <section className="mb-8 rounded-2xl border border-[var(--divider)] bg-[var(--white)] p-6 shadow-sm">
-          <p className="mb-4 font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.14em] text-[var(--text3)]">
-            Vessels by region
+        {/* Compact summary only — the maps, per-state tabs, out-of-state
+            list and missing-ZIP entries live on /admin/geography. */}
+        <Link
+          href="/admin/geography"
+          className="mb-8 block rounded-2xl border border-[var(--divider)] bg-[var(--white)] p-6 shadow-sm transition hover:border-[var(--gold-line)]"
+        >
+          <p className="mb-3 font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.14em] text-[var(--text3)]">
+            Where vessels are kept
           </p>
-          <div className="grid gap-6 sm:grid-cols-2 sm:items-center">
-            <AdminGeoMap counts={geoCounts} />
-            <ol className="flex flex-col gap-2">
-              {rankedGeoRegions.map((r) => (
+          {leadingRegions.length === 0 ? (
+            <p className="font-[family-name:var(--font-dm)] text-sm text-[var(--text2)]">No vessel has a storage ZIP yet.</p>
+          ) : (
+            <ol className="flex flex-col gap-1">
+              {leadingRegions.map((r) => (
                 <li
-                  key={r.key}
-                  className="border-b border-[var(--divider)] pb-2 font-[family-name:var(--font-dm)] text-sm text-[var(--navy)] last:border-b-0"
+                  key={`${r.stateCode}-${r.label}`}
+                  className="flex items-center justify-between font-[family-name:var(--font-dm)] text-sm text-[var(--navy)]"
                 >
-                  <div className="flex items-center justify-between">
-                    <span className={r.key === "unclassified" ? "text-[var(--text3)]" : undefined}>{r.label}</span>
-                    <span className="font-semibold">{r.count}</span>
-                  </div>
-                  {r.key === "unclassified" && r.count > 0 ? (
-                    <details className="mt-1">
-                      <summary className="cursor-pointer text-xs text-[var(--blue-fg)] underline">
-                        View raw entries
-                      </summary>
-                      <ul className="mt-1 flex flex-col gap-0.5 border-l border-[var(--divider)] pl-3">
-                        {unclassifiedVessels.map((v) => (
-                          <li key={v.mxeId} className="text-xs text-[var(--text3)]">
-                            {v.mxeId}: {v.source ?? "(no location data)"}
-                          </li>
-                        ))}
-                      </ul>
-                    </details>
-                  ) : null}
+                  <span>
+                    {r.label} <span className="text-[var(--text3)]">{r.stateCode}</span>
+                  </span>
+                  <span className="font-semibold">{r.count}</span>
                 </li>
               ))}
             </ol>
-          </div>
-        </section>
+          )}
+          <p className="mt-3 font-[family-name:var(--font-dm)] text-xs text-[var(--text2)]">
+            {geo.missingZip.length} missing ZIP · <span className="text-[var(--blue-fg)] underline">Geography →</span>
+          </p>
+        </Link>
 
         {/* 4. Needs attention */}
         {/* Above "Needs attention" rather than inside it, because it is
