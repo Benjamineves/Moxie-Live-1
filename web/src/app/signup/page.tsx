@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { SignupForm } from "./SignupForm";
+import { safeNextPath } from "@/lib/safe-next";
 
 export const metadata: Metadata = {
   title: "Create account · Moxie",
@@ -11,7 +12,7 @@ type Props = {
 
 export default async function SignupPage({ searchParams }: Props) {
   const sp = await searchParams;
-  const nextPath = sp.next && sp.next.startsWith("/") ? sp.next : "/dashboard";
+  const nextPath = safeNextPath(sp.next);
 
   return (
     <div className="min-h-screen bg-[var(--cream)]">

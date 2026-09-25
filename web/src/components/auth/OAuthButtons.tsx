@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { safeNextPath } from "@/lib/safe-next";
 
 type Provider = "google" | "apple";
 
@@ -17,11 +18,11 @@ type Props = {
 // this can flip back to true.
 const GOOGLE_OAUTH_ENABLED = false;
 
-function normalizeNext(path: string) {
-  const p = path.startsWith("/") ? path : `/${path}`;
-  if (!p.startsWith("/") || p.startsWith("//")) return "/dashboard";
-  return p;
-}
+// Same for Apple (2026-09-25): the button was live on /login and /signup
+// while the provider was not enabled in Supabase Auth, so every click ended
+// in "provider is not enabled". Needs an Apple Services ID and key
+// registered as a provider before this flips.
+const APPLE_OAUTH_ENABLED = false;
 
 export function OAuthButtons({ nextPath, className = "" }: Props) {
   const [error, setError] = useState<string | null>(null);
@@ -36,7 +37,7 @@ export function OAuthButtons({ nextPath, className = "" }: Props) {
     }
     setPending(provider);
     const origin = window.location.origin;
-    const next = normalizeNext(nextPath);
+    const next = safeNextPath(nextPath);
     const redirectTo = `${origin}/auth/callback?next=${encodeURIComponent(next)}`;
 
     const { data, error: oauthErr } = await supabase.auth.signInWithOAuth({
@@ -62,6 +63,10 @@ export function OAuthButtons({ nextPath, className = "" }: Props) {
     setError("Could not start sign-in.");
   }
 
+  // Nothing to offer: render nothing, not a "Continue with" heading over an
+  // empty list.
+  if (!GOOGLE_OAUTH_ENABLED && !APPLE_OAUTH_ENABLED) return null;
+
   return (
     <div className={className}>
       <p className="mb-3 text-center font-[family-name:var(--font-dm)] text-xs font-medium uppercase tracking-[0.12em] text-[var(--text3)]">
@@ -85,17 +90,21 @@ export function OAuthButtons({ nextPath, className = "" }: Props) {
             )}
           </button>
         ) : null}
-        <button
-          type="button"
-          disabled={pending !== null}
-          onClick={() => signInWith("apple")}
-          className="flex items-center justify-center gap-2 rounded-lg border border-[var(--navy-deep)] bg-[var(--navy-deep)] px-4 py-3 font-[family-name:var(--font-dm)] text-sm font-medium text-[var(--cream)] transition hover:bg-[var(--navy)] disabled:opacity-50"
-        >
-          {pending === "apple" ? "Redirecting…" : "Sign in with Apple"}
-        </button>
+        {APPLE_OAUTH_ENABLED ? (
+          <button
+            type="button"
+            disabled={pending !== null}
+            onClick={() => signInWith("apple")}
+            className="flex items-center justify-center gap-2 rounded-lg border border-[var(--navy-deep)] bg-[var(--navy-deep)] px-4 py-3 font-[family-name:var(--font-dm)] text-sm font-medium text-[var(--cream)] transition hover:bg-[var(--navy)] disabled:opacity-50"
+          >
+            {pending === "apple" ? "Redirecting…" : "Sign in with Apple"}
+          </button>
+        ) : null}
       </div>
       {error ? (
-        <p className="mt-3 font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">{error}</p>
+        <p className="mt-3 font-[family-name:var(--font-dm)] text-sm text-[var(--red-fg)]">
+          {error}
+        </p>
       ) : null}
     </div>
   );

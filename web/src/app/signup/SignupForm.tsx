@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { safeNextPath } from "@/lib/safe-next";
 
 type Props = { nextPath: string };
 
@@ -27,7 +28,7 @@ export function SignupForm({ nextPath }: Props) {
     const { error: signErr } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(nextPath)}` },
+      options: { emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(safeNextPath(nextPath))}` },
     });
     setPending(false);
     if (signErr) {

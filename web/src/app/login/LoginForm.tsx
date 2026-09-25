@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { OAuthButtons } from "@/components/auth/OAuthButtons";
 import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+import { safeNextPath } from "@/lib/safe-next";
 
 type Props = { nextPath: string };
 
@@ -30,7 +31,7 @@ export function LoginForm({ nextPath }: Props) {
       setError(signErr.message);
       return;
     }
-    router.push(nextPath.startsWith("/") ? nextPath : `/${nextPath}`);
+    router.push(safeNextPath(nextPath));
     router.refresh();
   }
 

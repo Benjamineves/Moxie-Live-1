@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { LoginForm } from "./LoginForm";
+import { safeNextPath } from "@/lib/safe-next";
 
 export const metadata: Metadata = {
   title: "Sign in · Moxie",
@@ -11,7 +12,7 @@ type Props = {
 
 export default async function LoginPage({ searchParams }: Props) {
   const sp = await searchParams;
-  const nextPath = sp.next && sp.next.startsWith("/") ? sp.next : "/dashboard";
+  const nextPath = safeNextPath(sp.next);
 
   return (
     <div className="min-h-screen bg-[var(--cream)]">
