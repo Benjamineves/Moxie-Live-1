@@ -65,7 +65,7 @@ it's done. Status: **done** · **open** (code/work to do) · **needs Ben**
 
 | Item | Status | Blocker |
 |---|---|---|
-| Terms of service and privacy policy — **no pages exist**; needed before taking payments and holding owners' documents | needs Ben | **Yes** |
+| Terms of service and privacy policy — `/terms` and `/privacy` exist (noindex, unlinked, placeholder); attorney-reviewed text to drop in, then index and link from footer/signup/checkout | needs Ben (text) | **Yes** |
 | "Patent pending": convert the provisional by **26 Jun 2027** or remove the claim (site, footer, printed badge) | needs Ben | — (date-bound) |
 | Account deletion: none in the app — handled by emailing support (Terms to say so) | done (by policy) | — |
 

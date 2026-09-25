@@ -5,7 +5,7 @@ import { APP_HOST, APP_ORIGIN, MARKETING_HOST, MARKETING_ORIGIN } from "@/lib/si
 // Marketing/static routes allowed to render on moxieyachting.com. Everything
 // else there is an app route and gets redirected to moxieyacht.com — see
 // docs/moxie_digital_pwa_spec.md for why the two domains split this way.
-const MARKETING_PATHS = new Set(["/", "/pricing", "/faq"]);
+const MARKETING_PATHS = new Set(["/", "/pricing", "/faq", "/terms", "/privacy"]);
 
 function domainRedirect(request: NextRequest): NextResponse | null {
   // request.nextUrl.hostname reflects the server's own bind address, not
