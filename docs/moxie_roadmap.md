@@ -231,6 +231,42 @@ where it could be done read-only. Ranked; none fixed yet.
 8. **Low (done 2026-09-25, `20261013`) — `mxe_id_seq` USAGE/UPDATE to anon/authenticated**; not reachable
    through any API today.
 
+### App authorization + Auth settings audit (2026-09-25) — open findings
+Every route handler (17) and server action (46) read; ownership/role checks
+traced into their helpers. None fixed yet.
+
+1. **High — stored-path IDOR: any signed-in account can download any
+   owner's documents through our own routes.** `updateVesselDocument`,
+   `createVessel` and `addServiceRecord` store a client-supplied storage path
+   after checking only vessel ownership; the documents and service-record
+   routes then sign whatever path is stored, with the service role — the
+   bucket's folder policies never apply. Inputs are public: every photo URL
+   on a scan page carries the owner's auth id and MXE ID, and document names
+   are fixed (`insurance.pdf`). Signup is open and a pending vessel is free,
+   so this reaches any stranger. Derived from code; not yet demonstrated.
+   Live data 2026-09-25: all 9 stored document/attachment/evidence paths sit
+   in their owner's folder — no sign it has been used.
+2. **Medium — open redirect after sign-in.** `/login` and `/signup` accept
+   any `next` starting with `/` (so `//evil.example`); `/auth/callback`
+   rejects `//` but not `/\evil.example`, which the URL parser resolves to
+   `https://evil.example/` (checked with the same parser).
+3. **Medium (correctness) — "Sign in with Apple" is live on /login and
+   /signup; Apple is not enabled** in Supabase Auth (authorize returns
+   "provider is not enabled").
+4. **Low (correctness) — `getOwnerEmailByUserId`** builds its own service
+   client and falls back to anon on any failure, so a broken deploy reads as
+   "Forbidden — sign in as the vessel owner"; it also sits outside the
+   service-client guard test.
+5. **Low — correction-request `documentPath` unvalidated**: an owner can
+   make the admin review page show another owner's file as evidence
+   (admin-only). Same fix as #1.
+
+Auth settings read from `/auth/v1/settings`: signup open, email
+confirmation required, email provider only. Rate limits, password policy,
+leaked-password check and redirect allow-list need reading from the
+dashboard. Email confirmation is load-bearing: transfer acceptance trusts
+the session email.
+
 ### Geography rebuild on a required storage ZIP (staged)
 The "Vessels by region" card reads 0 in every CA region because the
 classifier never reads `storage_city`, the only city column new vessels fill.
