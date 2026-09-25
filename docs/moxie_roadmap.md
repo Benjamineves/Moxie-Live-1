@@ -218,7 +218,7 @@ where it could be done read-only. Ranked; none fixed yet.
 6. **Low — three policies now error** (`ownership_history`,
    `vessel_documents`, `vessel_payments` subquery `vessels`, revoked in
    20261010): signed-in reads get 42501. Nothing in the app uses them.
-7. **Low — TRUNCATE/TRIGGER/REFERENCES and write grants** on 20 public tables
+7. **Low — TRUNCATE/TRIGGER/REFERENCES and write grants** on 18 public tables
    to anon/authenticated; RLS doesn't cover TRUNCATE, but no API path issues it.
 8. **Low — `mxe_id_seq` USAGE/UPDATE to anon/authenticated**; not reachable
    through any API today.
